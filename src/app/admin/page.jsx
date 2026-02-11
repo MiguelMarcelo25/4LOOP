@@ -1,5 +1,5 @@
 'use client';
-import Sidebar from '../components/admin/sidebar';
+import Sidebar from '@/app/components/Sidebar';
 import AdminDashboardForm from '../components/admin/AdminDashboardForm';
 
 export default function AdminDashboardPage() {

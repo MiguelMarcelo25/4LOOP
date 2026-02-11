@@ -152,7 +152,7 @@ export default function VerificationOfRequestForm() {
         ← Back to Workbench
       </Button>
 
-      <Typography variant="h6" fontWeight="bold" mb={3}>
+      <Typography variant="h6" fontWeight="bold" mb={3} className="dark:text-white">
         🧾 New Requests
       </Typography>
 
@@ -164,6 +164,14 @@ export default function VerificationOfRequestForm() {
           value={searchField}
           onChange={(e) => setSearchField(e.target.value)}
           sx={{ width: 220 }}
+          className="dark:bg-slate-800 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
+          SelectProps={{
+            MenuProps: {
+              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
+            }
+          }}
         >
           {searchFields.map((f) => (
             <MenuItem key={f.value} value={f.value}>
@@ -181,16 +189,23 @@ export default function VerificationOfRequestForm() {
             setPage(1);
           }}
           fullWidth
+          className="dark:bg-slate-800 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
         />
 
         <FormControl sx={{ width: 160 }}>
-          <InputLabel>Rows per page</InputLabel>
+          <InputLabel className="dark:text-slate-300">Rows per page</InputLabel>
           <Select
             value={limit}
             label="Rows per page"
             onChange={(e) => {
               setLimit(Number(e.target.value));
               setPage(1);
+            }}
+            className="dark:bg-slate-800 dark:text-slate-200"
+            MenuProps={{
+              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
             }}
           >
             {[10, 20, 30, 50].map((size) => (
@@ -202,7 +217,7 @@ export default function VerificationOfRequestForm() {
         </FormControl>
       </Stack>
 
-      <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }}>
+      <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }} className="dark:text-slate-400">
         Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} of {total} requests
       </Typography>
 
@@ -232,11 +247,17 @@ export default function VerificationOfRequestForm() {
                     key={col.key}
                     sx={{ cursor: col.key !== 'actions' ? 'pointer' : 'default', fontWeight: 'bold' }}
                     onClick={() => handleSort(col.key)}
+                    className="dark:bg-slate-800 dark:text-slate-200 border-b dark:border-slate-700"
                   >
                     {col.key !== 'actions' ? (
                       <TableSortLabel
                         active={sortConfig.key === col.key}
                         direction={sortConfig.key === col.key ? sortConfig.direction : 'asc'}
+                        className="dark:text-slate-200 dark:hover:text-slate-100"
+                        sx={{
+                          '&.Mui-active': { color: 'inherit' },
+                          '& .MuiTableSortLabel-icon': { color: 'inherit !important' },
+                        }}
                       >
                         {col.label}
                       </TableSortLabel>
@@ -251,19 +272,19 @@ export default function VerificationOfRequestForm() {
             <TableBody>
               {paginatedRequests.length > 0 ? (
                 paginatedRequests.map((req) => (
-                  <TableRow key={req._id} hover>
-                    <TableCell>{req.requestType}</TableCell>
-                    <TableCell>{req.bidNumber}</TableCell>
-                    <TableCell>{req.businessName}</TableCell>
-                    <TableCell>{req.businessNickname}</TableCell>
-                    <TableCell>{req.businessType}</TableCell>
-                    <TableCell>{req.businessAddress}</TableCell>
-                    <TableCell>
+                  <TableRow key={req._id} hover className="dark:hover:bg-slate-700">
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.requestType}</TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.bidNumber}</TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessName}</TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessNickname}</TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessType}</TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessAddress}</TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">
                       {req.createdAt
                         ? new Date(req.createdAt).toLocaleString('en-PH')
                         : 'N/A'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="dark:border-slate-700">
                       <Button
                         variant="contained"
                         color="primary"
@@ -277,7 +298,7 @@ export default function VerificationOfRequestForm() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={8} align="center" className="dark:text-slate-400 dark:border-slate-700">
                     No pending online requests found.
                   </TableCell>
                 </TableRow>
@@ -301,19 +322,25 @@ export default function VerificationOfRequestForm() {
           </Typography>
 
           <Box>
-            <button
+            <Button
+              variant="outlined"
+              size="small"
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
               disabled={page === 1}
-              style={{ marginRight: '8px' }}
+              sx={{ mr: 1 }}
+              className="dark:text-slate-200 dark:border-slate-600"
             >
               Prev
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
               onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
               disabled={page === totalPages}
+              className="dark:text-slate-200 dark:border-slate-600"
             >
               Next
-            </button>
+            </Button>
           </Box>
         </Stack>
       )}

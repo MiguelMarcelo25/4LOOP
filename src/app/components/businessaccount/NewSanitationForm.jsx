@@ -5,7 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useRouter } from 'next/navigation';
 import * as yup from 'yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Collapse, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from '@mui/material';
+import { Alert, Button, Collapse, FormControl, IconButton, InputLabel, MenuItem, Select, TextField, Stepper, Step, StepLabel, Box } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import RHFTextField from '@/app/components/ReactHookFormElements/RHFTextField';
 import { getBusinessByBid, getUserBusinesses } from '@/app/services/BusinessService';
@@ -41,11 +41,11 @@ const schema = yup.object().shape({
   orNumberHealthCert: yup.string().matches(/^\d*$/, 'O.R. Number must contain digits only').nullable().transform((v, o) => (o === '' ? null : v)),
   healthCertSanitaryFee: yup.number().min(0, 'Must be 0 or greater').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
   healthCertFee: yup.number().min(0, 'Must be 0 or greater').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
-  declaredPersonnel: yup.number().nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
-  declaredPersonnelDueDate: yup.date().nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid date'),
-  healthCertificates: yup.number().nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
+  declaredPersonnel: yup.number().required('Total personnel is required').min(0, 'Must be 0 or greater').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
+  declaredPersonnelDueDate: yup.date().required('Due date is required').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid date'),
+  healthCertificates: yup.number().required('Total with health certificates is required').min(0, 'Must be 0 or greater').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
   healthCertBalanceToComply: yup.number().nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
-  healthCertDueDate: yup.date().nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid date'),
+  healthCertDueDate: yup.date().required('Due date is required').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid date'),
 });
 
 // Utility function for computing 90 days from today
@@ -108,6 +108,16 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   const [isRequestTypeLocked, setIsRequestTypeLocked] = useState(false);
   const [canSubmit, setCanSubmit] = useState(true);
   const [isPersonnelCountLocked, setIsPersonnelCountLocked] = useState(false);
+  
+  // Multi-step wizard state
+  const [activeStep, setActiveStep] = useState(0);
+  const steps = [
+    'Business Information',
+    'Permits & Certificates',
+    'Personnel & Health Certificates',
+    'Inspection & Penalty Records',
+    'Review & Submit'
+  ];
 
   const {
     control,
@@ -413,6 +423,10 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
 
   const onSubmit = async (data) => {
+    // Prevent accidental submission on earlier steps (e.g. Enter key)
+    if (activeStep !== steps.length - 1) {
+      return;
+    }
     const hasActive = await checkBusinessStatus(data.bidNumber);
     if (hasActive) {
       setWarningMessage('🚫 There is already an ongoing sanitation request for this business.');
@@ -449,6 +463,11 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       healthCertificateChecklist: healthCertificateChecklistPayload,
       msrChecklist: msrChecklistPayload,
     });
+  };
+
+  const onError = (errors) => {
+    console.error("Form Validation Errors:", errors);
+    setWarningMessage("Cannot submit: Please check the form for missing or invalid fields.");
   };
 
   const handleSaveDraft = () => {
@@ -698,6 +717,61 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     }
   }, [tickets?.length, setValue]);
 
+  // Step navigation handlers
+  const handleNext = async () => {
+    // Validate current step before proceeding
+    let isValid = true;
+    
+    switch(activeStep) {
+      case 0: // Business Information
+        isValid = await trigger(['bidNumber', 'businessName', 'businessAddress', 'requestType']);
+        break;
+      case 1: // Permits & Certificates
+        // Ensure at least one sanitary permit and one health certificate type is selected
+        const sanitarySelected = sanitaryPermitChecklistState.length > 0;
+        const healthSelected = !!healthCertificateChecklistState;
+        
+        if (!sanitarySelected || !healthSelected) {
+          setWarningMessage('Please select at least one Sanitary Permit and one Health Certificate requirement.');
+          isValid = false;
+        } else {
+          setWarningMessage('');
+          isValid = true;
+        }
+        break;
+      case 2: // Personnel & Health Certificates
+        isValid = await trigger(['declaredPersonnel', 'declaredPersonnelDueDate', 'healthCertificates', 'healthCertDueDate']);
+        if (isValid) {
+          // Additional custom validation if needed
+          const declared = watch('declaredPersonnel');
+          const withCert = watch('healthCertificates');
+          if (declared === '' || withCert === '') {
+            setWarningMessage('Please fill in the personal counts.');
+            isValid = false;
+          }
+        }
+        break;
+      case 3: // Inspection & Penalty Records
+        isValid = true;
+        break;
+      case 4: // Review
+        // This is the submit step
+        break;
+      default:
+        isValid = true;
+    }
+    
+    if (isValid) {
+      setActiveStep((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleBack = () => {
+    setActiveStep((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <>
       {warningMessage && (
@@ -725,14 +799,15 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         <div className="grid grid-cols-2 items-center mb-4">
           {/* Left Column: Back Button + Heading */}
           <div className="flex items-center gap-x-4 justify-start">
-            <Button
+            {/* <Button
               variant="outlined"
               color="primary"
               onClick={() => router.back('/businessaccount/request')}
+              className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
             >
               ← Back
-            </Button>
-            <h3 className="text-2xl font-bold text-gray-600">
+            </Button> */}
+            <h3 className="text-2xl font-bold text-gray-600 dark:text-slate-200">
               New Sanitation Permit Request
             </h3>
           </div>
@@ -742,16 +817,61 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         </div>
       </div>
 
+      {/* Stepper */}
+      <Box sx={{ width: '100%', maxWidth: '6xl', mx: 'auto', px: 2, mb: 4 }}>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((label, index) => (
+            <Step key={label}>
+              <StepLabel
+                sx={{
+                  '& .MuiStepLabel-label': {
+                    color: 'var(--foreground)',
+                    '&.Mui-active': {
+                      color: '#3b82f6',
+                      fontWeight: 600,
+                    },
+                    '&.Mui-completed': {
+                      color: '#10b981',
+                    },
+                  },
+                  '& .MuiStepIcon-root': {
+                    color: 'rgba(148, 163, 184, 0.3)',
+                    '&.Mui-active': {
+                      color: '#3b82f6',
+                    },
+                    '&.Mui-completed': {
+                      color: '#10b981',
+                    },
+                  },
+                }}
+              >
+                {label}
+              </StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Box>
+
       <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="space-y-6 w-full bg-white shadow p-4 rounded px-6">
+        onSubmit={handleSubmit(onSubmit, onError)}
+        onKeyDown={(e) => {
+          // Prevent Enter key from submitting the form unless on the Send button
+          if (e.key === 'Enter' && e.target.type !== 'submit') {
+            e.preventDefault();
+          }
+        }}
+        className="space-y-6 w-full bg-white dark:bg-slate-800 dark:text-slate-200 shadow p-4 rounded px-6">
+        
+        {/* STEP 1: Business Information */}
+        {activeStep === 0 && (
+          <>
         {/* BID NUMBER */}
 
         <div className="w-full max-w-6xl mx-auto px-4">
           <div className="grid grid-cols-2 items-center mb-2">
             {/* Left Column: BID NUMBER */}
             <div className="flex items-center gap-2 justify-start">
-              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
                 BID NUMBER:
               </span>
               <Controller
@@ -763,12 +883,14 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     error={!!errors.bidNumber}
                     className="w-full max-w-[220px]"
                   >
-                    <InputLabel id="bidNumber-label">Select Business</InputLabel>
+                    <InputLabel id="bidNumber-label" className="dark:text-slate-300">Select Business</InputLabel>
                     <Select
                       labelId="bidNumber-label"
                       {...field}
                       value={field.value || ""}
                       onChange={(e) => field.onChange(e.target.value)}
+                      className="dark:text-slate-200 dark:before:border-slate-500 dark:after:border-slate-400"
+                      MenuProps={{ PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } }}
                     >
                       <MenuItem value="">-- Select Business --</MenuItem>
 
@@ -814,8 +936,9 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               helperText={errors?.businessName?.message}
               fullWidth
               className="w-full"
+              InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
             />
-            <span className="text-sm font-medium text-gray-700 mt-1 text-center">
+            <span className="text-sm font-medium text-gray-700 dark:text-slate-300 mt-1 text-center">
               BUSINESS NAME
             </span>
           </div>
@@ -831,8 +954,9 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               helperText={errors?.businessAddress?.message}
               fullWidth
               className="w-full"
+              InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
             />
-            <span className="text-sm font-medium text-gray-700 mt-1 text-center">
+            <span className="text-sm font-medium text-gray-700 dark:text-slate-300 mt-1 text-center">
               BUSINESS ADDRESS
             </span>
           </div>
@@ -849,19 +973,20 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                 variant="standard"
                 label=""
                 fullWidth
+                InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
               />
-              <span className="text-sm font-medium text-gray-700 mt-1 text-center">
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300 mt-1 text-center">
                 SAME EMPLOYEE / NAME OF ESTABLISHMENT
               </span>
             </div>
 
             <div className="flex flex-col justify-center">
               <div className="flex items-center gap-x-7 flex-nowrap">
-                <span className="text-base font-medium text-gray-700 whitespace-nowrap">
+                <span className="text-base font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
                   <b>BUSINESS STATUS:</b>
                 </span>
 
-                <label className="flex items-center gap-2 whitespace-nowrap">
+                <label className="flex items-center gap-2 whitespace-nowrap dark:text-slate-300">
                   <input
                     type="radio"
                     value="New"
@@ -871,7 +996,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                   NEW
                 </label>
 
-                <label className="flex items-center gap-2 whitespace-nowrap">
+                <label className="flex items-center gap-2 whitespace-nowrap dark:text-slate-300">
                   <input
                     type="radio"
                     value="Renewal"
@@ -892,18 +1017,24 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
           </div>
         </div>
+        </>
+        )}
+
+        {/* STEP 2: Permits & Certificates */}
+        {activeStep === 1 && (
+          <>
 
         <div className="w-full max-w-6xl mx-auto px-4 mb-6">
           <div className="grid grid-cols-[2fr_1fr] gap-6">
             {/* Left column */}
             <div className="flex flex-col w-[450px]">
-              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2">
-                <h2 className="text-lg font-bold uppercase text-blue-900">
+              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2 dark:bg-blue-900/30 dark:border-blue-400">
+                <h2 className="text-lg font-bold uppercase text-blue-900 dark:text-blue-200">
                   A. ISSUANCE OF SANITARY PERMIT
                 </h2>
               </div>
 
-              <div className="flex flex-col gap-2 text-sm">
+              <div className="flex flex-col gap-2 text-sm dark:text-slate-300">
                 {sanitaryPermitChecklist.map((item) => (
                   <label
                     key={item.id}
@@ -914,7 +1045,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                       value={item.id}
                       checked={sanitaryPermitChecklistState.includes(item.id)}
                       onChange={handleSanitaryChange}
-                      className="transform scale-125"
+                      className="transform scale-125 accent-blue-600"
                       autoComplete="off" // ✅ prevents browser autofill
                       name={`sanitary-${item.id}`} // ✅ unique names also prevent autofill
                     />
@@ -927,13 +1058,13 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
             {/* Right column */}
             <div className="flex flex-col w-[450px]">
-              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2">
-                <h2 className="text-lg font-bold uppercase text-blue-900">
+              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2 dark:bg-blue-900/30 dark:border-blue-400">
+                <h2 className="text-lg font-bold uppercase text-blue-900 dark:text-blue-200">
                   IF NO OPERATION
                 </h2>
               </div>
 
-              <div className="flex flex-col gap-2 text-sm">
+              <div className="flex flex-col gap-2 text-sm dark:text-slate-300">
                 <h1>Present Latest BIR Quarterly Income Tax Return</h1>
                 <h1>
                   For bulk personnel & no appearance securing health certificate IDs
@@ -946,18 +1077,18 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
           <div className="grid grid-cols-[2fr_1fr] gap-6">
             {/* Left column: B. ISSUANCE OF HEALTH CERTIFICATE */}
             <div className="flex flex-col w-[450px]">
-              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2">
-                <h2 className="text-lg font-bold uppercase text-blue-900">
+              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2 dark:bg-blue-900/30 dark:border-blue-400">
+                <h2 className="text-lg font-bold uppercase text-blue-900 dark:text-blue-200">
                   B. ISSUANCE OF HEALTH CERTIFICATE
                 </h2>
               </div>
 
-              <h1 className="text-base font-semibold mb-3">
+              <h1 className="text-base font-semibold mb-3 dark:text-slate-200">
                 Present Original COPY of the following to Validation Office
               </h1>
 
               {/* Checklist items */}
-              <div className="flex flex-col gap-2 mb-2">
+              <div className="flex flex-col gap-2 mb-2 dark:text-slate-300">
                 {healthCertificateChecklist.map((item) => (
                   <label
                     key={item.id}
@@ -976,23 +1107,25 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                 ))}
               </div>
 
-              <h1 className="font-bold ml-6 mt-3">
+              <h1 className="font-bold ml-6 mt-3 dark:text-slate-200">
                 Present the following to Environmental Sanitation Office
               </h1>
 
-              <h1 className="ml-9">A. Validated Medical Summary</h1>
-              <h1 className="ml-9">B. Official Receipt</h1>
-              <h1 className="ml-12">
-                - Validation fee/person if medical examination was not conducted by the
-                Pasig One Stop Shop Clinic (5th flr.)
-              </h1>
-              <h1 className="ml-12 mb-4">- Health Certificate Fee</h1>
+              <div className="dark:text-slate-300">
+                <h1 className="ml-9">A. Validated Medical Summary</h1>
+                <h1 className="ml-9">B. Official Receipt</h1>
+                <h1 className="ml-12">
+                  - Validation fee/person if medical examination was not conducted by the
+                  Pasig One Stop Shop Clinic (5th flr.)
+                </h1>
+                <h1 className="ml-12 mb-4">- Health Certificate Fee</h1>
+              </div>
 
               {/* Input fields */}
               <div className="grid grid-cols-2 gap-4">
                 {/* ✅ O.R. Date (optional but validates format) */}
                 <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700">
+                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
                     O.R. Date:
                   </label>
                   <RHFTextField
@@ -1001,13 +1134,14 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     type="date"
                     variant="standard"
                     fullWidth
-                    InputLabelProps={{ shrink: true }}
+                    InputLabelProps={{ shrink: true, className: "dark:text-slate-300" }}
+                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
                   />
                 </div>
 
                 {/* ✅ O.R. Number (optional but must be digits) */}
                 <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700">
+                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
                     O.R. Number:
                   </label>
                   <RHFTextField
@@ -1020,7 +1154,9 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     inputProps={{
                       inputMode: 'numeric',
                       maxLength: 20,
+                      className: "dark:text-slate-200"
                     }}
+                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
                     onChange={(e) => {
                       const digitsOnly = e.target.value.replace(/\D/g, '');
                       setValue('orNumberHealthCert', digitsOnly, {
@@ -1033,7 +1169,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
                 {/* ✅ Sanitary Fee (optional, validates number ≥ 0) */}
                 <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700">
+                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
                     Sanitary Fee:
                   </label>
                   <RHFTextField
@@ -1043,7 +1179,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     variant="standard"
                     placeholder="Enter amount"
                     fullWidth
-                    inputProps={{ step: '0.01', min: 0 }}
+                    inputProps={{ step: '0.01', min: 0, className: "dark:text-slate-200" }}
+                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
                     onBlur={(e) => {
                       const value = parseFloat(e.target.value);
                       if (!isNaN(value)) {
@@ -1060,7 +1197,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
                 {/* ✅ Health Certificate Fee (optional, validates number ≥ 0) */}
                 <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700">
+                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
                     Health Cert Fee:
                   </label>
                   <RHFTextField
@@ -1070,7 +1207,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     variant="standard"
                     placeholder="Enter amount"
                     fullWidth
-                    inputProps={{ step: '0.01', min: 0 }}
+                    inputProps={{ step: '0.01', min: 0, className: "dark:text-slate-200" }}
+                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
                     onBlur={(e) => {
                       const value = parseFloat(e.target.value);
                       if (!isNaN(value)) {
@@ -1086,7 +1224,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             </div>
 
             {/* Right column: Bulk Personnel Instructions */}
-            <div className="flex flex-col w-[450px] gap-2 text-sm">
+            <div className="flex flex-col w-[450px] gap-2 text-sm dark:text-slate-300">
               <h1 className="font-bold">
                 FOR BULK PERSONNEL & NO APPEARANCE SECURING HEALTH CERTIFICATE ID'S
               </h1>
@@ -1110,111 +1248,15 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             </div>
           </div>
         </div>
+        </>
+        )}
 
-        {/* C. MINIMUM SANITARY REQUIREMENTS */}
-        <div className="w-full max-w-6xl mx-auto px-4 mb-6">
-
-          <div className="w-[450px] bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2">
-            <h2 className="text-lg font-bold uppercase text-blue-900">      C. MINIMUM SANITARY REQUIREMENTS
-            </h2>
-          </div>
-
-          {/* Column headers */}
-          <div className="grid grid-cols-4 gap-4 mb-2">
-            <div className="text-sm font-bold text-gray-700 text-center">CHECKLIST</div>
-            <div className="text-sm font-bold text-red-700 text-center ml-20">DUE DATE TO COMPLY</div>
-            <div className="text-sm font-bold text-gray-700 text-center">CHECKLIST</div>
-            <div className="text-sm font-bold text-red-700 text-center ml-20">DUE DATE TO COMPLY</div>
-          </div>
-
-          {/* Checklist rows */}
-          <div className="grid grid-cols-2 gap-4">
-            {msrChecklist.map((item) => (
-              <div
-                key={item.id}
-                className="grid grid-cols-[1fr_130px] items-center gap-2 border-b border-gray-100 py-1"
-              >
-                {/* Checklist cell */}
-                <label className="flex items-center gap-2 text-sm text-gray-800">
-                  <input
-                    type="checkbox"
-                    {...register(`msrChecklist.${item.id}.selected`)}
-                    className="transform scale-125 accent-blue-600 mr-2"
-                  />
-                  <span>{item.label}</span>
-                </label>
-
-                {/* Due Date cell */}
-                <RHFTextField
-                  control={control}
-                  name={`msrChecklist.${item.id}.dueDate`}
-                  type="date"
-                  variant="standard"
-                  label=""
-                  disabled
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    readOnly: isLocked,
-                    style: isLocked ? { backgroundColor: "#f5f5f5", color: "#555" } : {},
-                  }}
-
-                  sx={{
-                    color: '#b91c1c',
-                    '& .MuiInputBase-input': {
-                      color: '#b91c1c',
-                      textAlign: 'center',
-                      fontSize: 14,
-                      padding: 0,
-                    },
-                    '& .MuiInput-underline:before': { borderBottomColor: '#b91c1c' },
-                    '& .MuiInput-underline:hover:before': { borderBottomColor: '#b91c1c' },
-                    '& .MuiInput-underline:after': { borderBottomColor: '#b91c1c' },
-                  }}
-                />
-
-              </div>
-            ))}
-          </div>
-
-
-          <div className="flex flex-wrap justify-between gap-1 mb-6 w-full max-w-screen-lg mx-auto -ml-2 mt-2">
-            {/* Left column: NOTE section */}
-            <div className="flex-1 min-w-[300px]">
-              <h3 className="text-base font-semibold mb-1">NOTE:</h3>
-              <h3 className="text-base font-semibold mb-1">
-                - Kindly submit noted deficiencies so we may act upon your application.
-              </h3>
-              <h3 className="text-base font-semibold mb-1">
-                - For updating of Health Certificate and MSR please bring the original copy of the following:
-              </h3>
-              <h3 className="text-base font-semibold mb-1">
-                - For updating of Health Certificate and MSR please bring the original copy of the following:
-              </h3>
-              <h3 className="text-base font-semibold mb-1 ml-6">
-                - Required Minimum Sanitary Requirements (MSR)
-              </h3>
-              <h3 className="text-base font-semibold mb-1 ml-6">
-                - Checklist for Compliance
-              </h3>
-              <h3 className="text-base font-semibold mb-1 ml-6">
-                - Official Receipt of Validation Fee
-              </h3>
-              <h3 className="text-base font-semibold mb-1 ml-6">
-                - Authorization Letter of Company Representative and/or Company I.D. and/or Government issued I.D.
-              </h3>
-            </div>
-
-            {/* Right column: MSR Verified block */}
-            <div className="flex flex-col items-end w-full max-w-xs">
-
-              <h3 className="text-base font-semibold">DINA E. CRUZ</h3>
-              <h3 className="text-sm text-gray-700">MSR, SUPERVISOR</h3>
-            </div>
-          </div>
-        </div>
-        <div className="w-full max-w-screen-lg mx-auto grid grid-cols-2 gap-6">
-          {/* Left Column: Form */}
-          <div className="border border-blue-600 bg-blue-50 rounded-md p-4 space-y-6 -ml-13">
+        {/* STEP 3: Personnel & Health Certificates */}
+        {activeStep === 2 && (
+          <>
+        <div className="w-full max-w-screen-lg mx-auto flex justify-center">
+          {/* Form Container */}
+          <div className="w-full max-w-4xl border border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-md p-8 space-y-6">
 
             {/* Row 1: Declared Personnel + Due Date to Comply */}
             <div className="grid [grid-template-columns:1.5fr_1fr] gap-6 mt-2">
@@ -1222,7 +1264,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               <div className="flex items-center gap-2">
                 <label
                   htmlFor="declaredPersonnel"
-                  className="text-sm font-medium text-gray-700 min-w-[160px]"
+                  className="text-sm font-medium text-gray-700 dark:text-slate-300 min-w-[160px]"
                 >
                   TOTAL NUMBER OF DECLARED PERSONNEL
                 </label>
@@ -1230,7 +1272,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                   id="declaredPersonnel"
                   type="number"
                   {...register('declaredPersonnel')}
-                  className="border border-gray-300 rounded px-2 py-1 w-full max-w-[160px] mt-5"
+                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[160px] mt-5 dark:bg-slate-700 dark:text-slate-200"
                   placeholder="Enter total"
                 />
               </div>
@@ -1239,7 +1281,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               <div className="flex flex-col gap-1 ml-10">
                 <label
                   htmlFor="declaredPersonnelDueDate"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
                 >
                   DUE DATE TO COMPLY
                 </label>
@@ -1247,11 +1289,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                   id="declaredPersonnelDueDate"
                   type="date"
                   {...register('declaredPersonnelDueDate')}
-                  value={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-                    .toISOString()
-                    .split('T')[0]} // ✅ set to 90 days from today
-                  readOnly
-                  className="border border-gray-300 rounded px-2 py-1 w-full max-w-[130px] bg-gray-100 text-gray-700 cursor-not-allowed"
+                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[130px] bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200"
                 />
               </div>
 
@@ -1262,7 +1300,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="healthCertificates"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
                 >
                   TOTAL NUMBER WITH HEALTH CERTIFICATES
                 </label>
@@ -1270,7 +1308,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                   id="healthCertificates"
                   type="number"
                   {...register('healthCertificates')}
-                  className="border border-gray-300 rounded px-2 py-1 w-full max-w-[160px]"
+                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[160px] dark:bg-slate-700 dark:text-slate-200"
                   placeholder="Enter total"
                 />
               </div>
@@ -1278,7 +1316,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="healthCertBalanceToComply"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
                 >
                   BALANCE TO COMPLY
                 </label>
@@ -1286,7 +1324,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                   id="healthCertBalanceToComply"
                   type="text"
                   {...register('healthCertBalanceToComply')}
-                  className="border border-gray-300 rounded px-2 py-1 w-full max-w-[160px] mt-10"
+                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[160px] mt-10 dark:bg-slate-700 dark:text-slate-200"
                   placeholder="Enter balance"
                   onBlur={(e) => {
                     const formatToTwoDecimals = (value) => {
@@ -1308,7 +1346,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               <div className="flex flex-col gap-1 mt-4">
                 <label
                   htmlFor="healthCertDueDate"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
                 >
                   HEALTH CERTIFICATE DUE DATE
                 </label>
@@ -1316,40 +1354,32 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                   id="healthCertDueDate"
                   type="date"
                   {...register('healthCertDueDate')}
-                  value={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-                    .toISOString()
-                    .split('T')[0]}
-                  readOnly
-                  className="border border-gray-300 rounded px-2 py-1 w-full max-w-[130px] bg-gray-100 text-gray-700 cursor-not-allowed"
+                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[130px] bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200"
                 />
               </div>
             </div>
           </div>
+        </div>
+        </>
+        )}
+
+        {/* STEP 4: Inspection & Penalty Records */}
+        {activeStep === 3 && (
+          <>
           {/* Inspection Record */}
-          <fieldset
-            disabled={
-              (bidNumber && requestType === "New") ||
-              (!noRecords && requestType === "Renewal" && (hasInspections || hasPenalties))
-            }
-            className={
-              (bidNumber && requestType === "New") ||
-                (!noRecords && requestType === "Renewal" && (hasInspections || hasPenalties))
-                ? "opacity-50 pointer-events-none"
-                : ""
-            }
-          >
+          <fieldset>
             <div className="w-full max-w-6xl mx-auto px-4 mb-6">
-              <h3 className="text-lg font-bold text-gray-700 mb-2">Inspection Record</h3>
+              <h3 className="text-lg font-bold text-gray-700 dark:text-slate-200 mb-2">Inspection Record</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full table-auto border-separate border-spacing-y-4">
                   <thead className="bg-transparent">
                     <tr>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 text-center"></th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 text-center">Date</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 text-center">
+                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center"></th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center">Date</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center">
                         Actual No. of Personnel Upon Inspection
                       </th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 text-center">Inspected By</th>
+                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center">Inspected By</th>
                     </tr>
                   </thead>
 
@@ -1362,9 +1392,9 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                       const personnelCount = inspectionRecord.personnelCount || "";
 
                       return (
-                        <tr key={label} className="bg-white shadow-sm rounded-md">
+                        <tr key={label} className="bg-white dark:bg-slate-800 shadow-sm rounded-md">
                           {/* Label */}
-                          <td className="px-4 py-2 text-sm text-gray-700 text-center font-medium">
+                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-slate-300 text-center font-medium">
                             {label}
                           </td>
 
@@ -1376,7 +1406,6 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                               variant="standard"
                               type="date"
                               fullWidth
-                              defaultValue={inspectionDate}
                             />
                           </td>
 
@@ -1388,7 +1417,6 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                               variant="standard"
                               type="number"
                               fullWidth
-                              defaultValue={personnelCount}
                               InputProps={{
                                 readOnly:
                                   !!inspectionRecord.personnelCount ||
@@ -1436,29 +1464,16 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
           </fieldset>
 
 
-        </div>
-
         {/* Penalty Record Section */}
-        <fieldset
-          disabled={
-            (bidNumber && requestType === "New") ||
-            (!noRecords && requestType === "Renewal" && (hasInspections || hasPenalties))
-          }
-          className={
-            (bidNumber && requestType === "New") ||
-              (!noRecords && requestType === "Renewal" && (hasInspections || hasPenalties))
-              ? "opacity-50 pointer-events-none"
-              : ""
-          }
-        >
+        <fieldset>
           <div className="w-full max-w-6xl mx-auto px-4 mb-6">
             <div className="grid grid-cols-[2fr_1fr] gap-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-700 mb-2">Penalty Record</h3>
+                <h3 className="text-lg font-bold text-gray-700 dark:text-slate-200 mb-2">Penalty Record</h3>
                 <div className="overflow-x-auto">
                   <table className="min-w-full table-auto border-separate border-spacing-y-4">
                     <thead>
-                      <tr className="bg-transparent text-sm text-gray-700 text-center">
+                      <tr className="bg-transparent text-sm text-gray-700 dark:text-slate-300 text-center">
                         <th className="px-2 py-1">Checklist</th>
                         <th className="px-2 py-1">Offense</th>
                         <th className="px-2 py-1">Year (Inspection)</th>
@@ -1477,9 +1492,9 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                           { label: "MSR" },
                         ]
                       ).map((row, index) => (
-                        <tr key={index} className="bg-white shadow-sm rounded-md">
+                        <tr key={index} className="bg-white dark:bg-slate-800 shadow-sm rounded-md">
                           {/* Checklist */}
-                          <td className="px-2 py-1 text-sm text-gray-700">
+                          <td className="px-2 py-1 text-sm text-gray-700 dark:text-slate-300">
                             <label className="flex items-center gap-2">
                               <input
                                 type="checkbox"
@@ -1603,7 +1618,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                           </td>
 
                           {/* Amount */}
-                          <td className="px-2 py-1 text-center font-semibold text-green-700">
+                          <td className="px-2 py-1 text-center font-semibold text-green-700 dark:text-green-400">
                             <Controller
                               name={`penaltyRecords.${index}.amount`}
                               control={control}
@@ -1639,19 +1654,24 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               </div>
 
               {/* Right Column: Verification */}
-              <div className="flex flex-col justify-center text-sm text-gray-700">
+              <div className="flex flex-col justify-center text-sm text-gray-700 dark:text-slate-300">
                 <p className="font-semibold uppercase mb-4">Payments Verified and Checked:</p>
-                <p className="font-bold text-lg">ELEONOR M. JUNDARINO</p>
+                <p className="font-bold text-lg dark:text-slate-200">ELEONOR M. JUNDARINO</p>
                 <p className="uppercase">Revenue Unit Supervisor</p>
               </div>
             </div>
           </div>
         </fieldset>
+        </>
+        )}
 
+        {/* STEP 5: Review & Submit */}
+        {activeStep === 4 && (
+          <>
         {/* Remark Field - Inline Label and Input */}
         <div className="w-full max-w-6xl mx-auto px-4 mb-6">
           <div className="flex items-center gap-4">
-            <label htmlFor="remarks" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            <label htmlFor="remarks" className="text-sm font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
               Remarks
             </label>
             <RHFTextField
@@ -1663,35 +1683,90 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
               error={!!errors?.remarks}
               helperText={errors?.remarks?.message}
               className="flex-1"
+              multiline
+              rows={3}
+              InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
             />
           </div>
         </div>
 
-        <h1 className="text-blue-700 text-lg font-bold text-center mx-auto max-w-4xl">
+        <h1 className="text-blue-700 dark:text-blue-400 text-lg font-bold text-center mx-auto max-w-4xl">
           PLEASE KEEP A DIGITAL COPY OF THIS FORM FOR YOUR RECORDS. STAY ALERT FOR UPDATES VIA THE APP OR EMAIL REGARDING MINIMUM SANITARY REQUIREMENTS (MSR) AND HEALTH CERTIFICATE STATUS.
-          <span className="text-red-600">
+          <span className="text-red-600 dark:text-red-400">
             ALWAYS HAVE THE REQUIRED CERTIFICATIONS READY DURING INSPECTION OR RENEWAL WHEN REQUESTED BY THE SANITATION OFFICE.
           </span>
         </h1>
 
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-4 pt-6">
+        </>
+        )}
+
+        {/* Navigation Buttons */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, px: 2 }}>
           <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={!canSubmit}
+            type="button"
+            variant="outlined"
+            onClick={handleBack}
+            disabled={activeStep === 0}
+            sx={{
+              color: 'var(--foreground)',
+              borderColor: 'var(--foreground)',
+              '&:hover': {
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              },
+              '&.Mui-disabled': {
+                color: 'rgba(148, 163, 184, 0.5)',
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+              },
+            }}
           >
-            Send
+            Back
           </Button>
 
-          <Button variant="outlined" color="secondary" onClick={handleSaveDraft}>
-            Save as Draft
-          </Button>
-          <Button variant="text" color="error" onClick={handleClear}>
-            Clear
-          </Button>
-        </div>
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column', alignItems: 'flex-end' }}>
+            {!canSubmit && (
+              <p className="text-red-500 text-sm font-medium">
+                Submission disabled: Active request already exists.
+              </p>
+            )}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+            {activeStep === steps.length - 1 ? (
+              // Final step: Show submit buttons
+              <>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={!canSubmit}
+                >
+                  Send
+                </Button>
+                <Button type="button" variant="outlined" color="secondary" onClick={handleSaveDraft}>
+                  Save as Draft
+                </Button>
+                <Button type="button" variant="text" color="error" onClick={handleClear}>
+                  Clear
+                </Button>
+              </>
+            ) : (
+              // Other steps: Show Next button
+              <Button
+                type="button"
+                variant="contained"
+                onClick={handleNext}
+                sx={{
+                  backgroundColor: '#3b82f6',
+                  '&:hover': {
+                    backgroundColor: '#2563eb',
+                  },
+                }}
+              >
+                Next
+              </Button>
+            )}
+          </Box>
+        </Box>
+        </Box>
       </form>
     </>
   );

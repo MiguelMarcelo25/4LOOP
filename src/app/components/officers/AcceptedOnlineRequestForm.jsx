@@ -84,27 +84,28 @@ export default function AcceptedOnlineRequestForm() {
   }
 
   return (
-    <Box className="w-full bg-white shadow rounded-lg">
+    <Box className="w-full bg-white dark:bg-slate-900 shadow rounded-lg border border-gray-200 dark:border-slate-700">
       {/* Back Button */}
-      <div className="flex justify-start mb-6">
+      <div className="flex justify-start mb-6 p-6 pb-0">
         <Button
           variant="outlined"
           color="secondary"
           onClick={() => router.push('/officers/workbench/onlinerequest')}
+          className="dark:text-slate-200 dark:border-slate-600"
         >
           ↩️ Back to Online Request Lists
         </Button>
       </div>
 
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-blue-900 uppercase">
+      <div className="text-center mb-8 px-6">
+        <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-300 uppercase">
           All Business Data
         </h1>
-        <Divider className="my-3" />
+        <Divider className="my-3 dark:border-slate-700" />
       </div>
 
-  <div className="w-full max-w-4xl mx-auto space-y-6 mb-10">
+  <div className="w-full max-w-4xl mx-auto space-y-6 mb-10 px-6">
   {/* Reusable Row */}
   {[
     ['BID Number', business.bidNumber],
@@ -122,8 +123,8 @@ export default function AcceptedOnlineRequestForm() {
   ].reduce((rows, [label, value]) => {
     const pair = (
       <div key={label} className="flex items-start gap-2">
-        <span className="min-w-[140px] text-sm font-semibold text-gray-700">{label}:</span>
-        <span className="flex-1 min-h-[48px] bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
+        <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">{label}:</span>
+        <span className="flex-1 min-h-[48px] bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
           {value}
         </span>
       </div>
@@ -139,8 +140,8 @@ export default function AcceptedOnlineRequestForm() {
 
 <div className="grid grid-cols-1">
   <div className="flex items-start gap-2">
-    <span className="min-w-[140px] text-sm font-semibold text-gray-700">Remarks:</span>
-    <span className="flex-1 min-h-[120px] whitespace-pre-line bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
+    <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">Remarks:</span>
+    <span className="flex-1 min-h-[120px] whitespace-pre-line bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
       {business.remarks || 'None'}
     </span>
   </div>
@@ -151,16 +152,16 @@ export default function AcceptedOnlineRequestForm() {
 
 
 
-      <Divider className="my-10">
-        <Typography variant="h6" fontWeight="bold" color="primary">
+      <Divider className="my-10 dark:border-slate-700">
+        <Typography variant="h6" fontWeight="bold" color="primary" className="dark:text-blue-300">
           MSR
         </Typography>
       </Divider>
 
 
-<div className="w-full max-w-4xl mx-auto space-y-6 mb-10">
+<div className="w-full max-w-4xl mx-auto space-y-6 mb-10 px-6">
  <div>
-    <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
+    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 text-center mb-4">
       A. Sanitary Permit Checklist
     </h3>
     {business.sanitaryPermitChecklist?.length > 0 ? (
@@ -168,21 +169,21 @@ export default function AcceptedOnlineRequestForm() {
         {business.sanitaryPermitChecklist.map((item, idx) => (
           <div
             key={idx}
-            className="bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300"
+            className="bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600"
           >
             {item.label}
           </div>
         ))}
       </div>
     ) : (
-      <p className="text-sm text-gray-500 text-center italic">
+      <p className="text-sm text-gray-500 dark:text-slate-400 text-center italic">
         No checklist items available.
       </p>
     )}
   </div>
 
   <div>
-    <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
+    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 text-center mb-4">
       B. Health Certificate Checklist
     </h3>
     {business.healthCertificateChecklist?.length > 0 ? (
@@ -190,21 +191,21 @@ export default function AcceptedOnlineRequestForm() {
         {business.healthCertificateChecklist.map((item, idx) => (
           <div
             key={idx}
-            className="bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300"
+            className="bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600"
           >
             {item.label}
           </div>
         ))}
       </div>
     ) : (
-      <p className="text-sm text-gray-500 text-center italic">
+      <p className="text-sm text-gray-500 dark:text-slate-400 text-center italic">
         No checklist items available.
       </p>
     )}
   </div>
 
    <div>
-    <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
+    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 text-center mb-4">
       C. Minimum Sanitary Requirements (MSR)
     </h3>
     {business.msrChecklist?.length > 0 ? (
@@ -212,10 +213,10 @@ export default function AcceptedOnlineRequestForm() {
         {business.msrChecklist.map((item, idx) => (
           <div
             key={idx}
-            className="grid grid-cols-4 gap-2 bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300"
+            className="grid grid-cols-4 gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600"
           >
             <div className="col-span-3 font-medium">{item.label}</div>
-            <div className="col-span-1 text-red-700 text-right">
+            <div className="col-span-1 text-red-700 dark:text-red-400 text-right">
               {item.dueDate
                 ? `Due: ${new Date(item.dueDate).toLocaleDateString('en-PH')}`
                 : 'No due date'}
@@ -224,14 +225,14 @@ export default function AcceptedOnlineRequestForm() {
         ))}
       </div>
     ) : (
-      <p className="text-sm text-gray-500 text-center italic">
+      <p className="text-sm text-gray-500 dark:text-slate-400 text-center italic">
         No checklist items available.
       </p>
     )}
   </div>
 
- <Divider className="my-10">
-        <Typography variant="h6" fontWeight="bold" color="primary">
+ <Divider className="my-10 dark:border-slate-700">
+        <Typography variant="h6" fontWeight="bold" color="primary" className="dark:text-blue-300">
           Inspection and Penalty Records
         </Typography>
       </Divider>
@@ -252,8 +253,8 @@ export default function AcceptedOnlineRequestForm() {
   ].reduce((rows, [label, value]) => {
     const pair = (
       <div key={label} className="flex items-start gap-2">
-        <span className="min-w-[180px] text-sm font-semibold text-gray-700">{label}:</span>
-        <span className="flex-1 bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300">
+        <span className="min-w-[180px] text-sm font-semibold text-gray-700 dark:text-slate-300">{label}:</span>
+        <span className="flex-1 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
           {value}
         </span>
       </div>
@@ -269,13 +270,13 @@ export default function AcceptedOnlineRequestForm() {
 
 </div>
 {/* Officer Remarks Input */}
-<div className="w-full max-w-4xl mx-auto mt-10">
+<div className="w-full max-w-4xl mx-auto mt-10 px-6">
   <Typography
     variant="h6"
     fontWeight="bold"
     color="primary"
     gutterBottom
-    className="mb-3"
+    className="mb-3 dark:text-blue-300"
   >
     Remarks
   </Typography>
@@ -288,24 +289,40 @@ export default function AcceptedOnlineRequestForm() {
     value={remark}
     onChange={(e) => setRemark(e.target.value)}
     placeholder="Type your remarks or notes here..."
+    className="bg-gray-50 dark:bg-slate-800 rounded-lg"
+    InputProps={{
+       className: "dark:text-slate-200"
+    }}
+    InputLabelProps={{
+       className: "dark:text-slate-400"
+    }}
     sx={{
-      '& .MuiInputBase-root': {
-        backgroundColor: '#f9fafb', // light gray to match others
-        borderRadius: '8px',
-      },
-      '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: '#d1d5db', // same border tone as info boxes
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderColor: '#d1d5db',
+        },
+        '&:hover fieldset': {
+          borderColor: '#9ca3af',
+        },
+        '&.Mui-focused fieldset': {
+          borderColor: '#3b82f6',
+        },
       },
     }}
   />
 </div>
 
 
-      <div className="flex justify-center gap-4 mt-10">
+      <div className="flex justify-center gap-4 mt-10 mb-6">
         <Button variant="contained" color="primary" onClick={handleUpdate}>
           Proceed
         </Button>
-        <Button variant="outlined" color="secondary" onClick={() => router.back()}>
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={() => router.back()}
+          className="dark:text-slate-200 dark:border-slate-600"
+        >
           Back
         </Button>
       </div>

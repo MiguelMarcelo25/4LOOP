@@ -89,7 +89,7 @@ const onSubmit = (data) => {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-6 mb-8 max-w-4xl">
+      {/* <div className="grid grid-cols-2 gap-6 mb-8 max-w-4xl">
         <div
           onClick={() => router.push('/businessowner/businesses/businesslist')}
           className="bg-white rounded shadow p-6 hover:shadow-md cursor-pointer transition"
@@ -101,7 +101,7 @@ const onSubmit = (data) => {
           <h2 className="text-lg font-medium mb-2">➕ Add a Business</h2>
           <p className="text-sm text-gray-600">Register a new business to your list.</p>
         </div>
-      </div>
+      </div> */}
 
       <h1 className="text-2xl font-semibold mb-6">Add a New Business</h1>
 

@@ -383,14 +383,6 @@ const handleSaveInspection = async () => {
         🧾 Select Business for Inspection
       </Typography>
 
-      <Button
-        variant="outlined"
-        onClick={() => router.push('/officers/inspections')}
-        sx={{ mb: 3 }}
-      >
-        ← Back to Inspections Workbench
-      </Button>
-
       {/* Search & Filters */}
       <Box display="flex" flexDirection="column" gap={2} mb={3}>
         <Box display="flex" gap={2} alignItems="center">

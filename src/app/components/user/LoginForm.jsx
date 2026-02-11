@@ -237,8 +237,8 @@ export default function LoginForm() {
         </div>
       </div>
 
-      <div className="relative z-10 bg-white p-8 rounded-lg shadow-lg w-full max-w-md mt-20">
-        <h1 className="text-2xl font-semibold text-center text-gray-800 mb-6">
+      <div className="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg w-full max-w-md mt-20">
+        <h1 className="text-2xl font-semibold text-center text-gray-800 dark:text-slate-100 mb-6">
           {showReset
             ? "Reset Your Password"
             : showForgot
@@ -255,8 +255,7 @@ export default function LoginForm() {
           <RHFTextField
             control={control}
             name="email"
-            label="Email*"
-            placeholder="Email*"
+            label="Email"
             type="email"
             error={!!errors.email}
             helperText={errors?.email?.message}
@@ -268,8 +267,7 @@ export default function LoginForm() {
               <RHFTextField
                 control={control}
                 name="password"
-                label="Password*"
-                placeholder="Password*"
+                label="Password"
                 type="password"
                 error={!!errors.password}
                 helperText={errors?.password?.message}
@@ -284,7 +282,7 @@ export default function LoginForm() {
                     setSuccessMessage("");
                     reset();
                   }}
-                  className="text-sm text-blue-700 hover:text-blue-900 font-medium"
+                  className="text-sm text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
                 >
                   Forgot Password?
                 </button>
@@ -298,7 +296,7 @@ export default function LoginForm() {
               <button
                 type="button"
                 onClick={switchToLogin}
-                className="text-sm text-blue-700 hover:text-blue-900 font-medium"
+                className="text-sm text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
               >
                 ← Back to Login
               </button>
@@ -338,7 +336,7 @@ export default function LoginForm() {
                 <button
                   type="button"
                   onClick={switchToLogin}
-                  className="text-sm text-blue-700 hover:text-blue-900 font-medium"
+                  className="text-sm text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
                 >
                   ← Back to Login
                 </button>
@@ -348,10 +346,10 @@ export default function LoginForm() {
 
           {/* === STATUS MESSAGES === */}
           {loginError && (
-            <p className="text-red-600 text-sm text-center">{loginError}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm text-center">{loginError}</p>
           )}
           {successMessage && (
-            <p className="text-green-600 text-sm text-center">{successMessage}</p>
+            <p className="text-green-600 dark:text-green-400 text-sm text-center">{successMessage}</p>
           )}
 
           {/* === ACTION BUTTONS === */}
@@ -360,8 +358,8 @@ export default function LoginForm() {
               type="submit"
               disabled={isSubmitting}
               className={`px-6 py-2 rounded-md transition ${isSubmitting
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-900 hover:bg-blue-800 text-white"
+                  ? "bg-gray-400 dark:bg-slate-600 cursor-not-allowed"
+                  : "bg-blue-900 dark:bg-blue-700 hover:bg-blue-800 dark:hover:bg-blue-600 text-white"
                 }`}
             >
               {isSubmitting
@@ -377,7 +375,7 @@ export default function LoginForm() {
               <Link href="/registration">
                 <button
                   type="button"
-                  className="border border-blue-900 text-blue-900 px-6 py-2 rounded-md hover:bg-blue-50 transition"
+                  className="border border-blue-900 dark:border-blue-700 text-blue-900 dark:text-blue-400 px-6 py-2 rounded-md hover:bg-blue-50 dark:hover:bg-slate-700 transition"
                 >
                   Register
                 </button>
@@ -386,11 +384,11 @@ export default function LoginForm() {
           </div>
         </form>
 
-        <footer className="mt-10 text-center text-xs text-gray-400">
-          © 2025 CITY GOVERNMENT OF PASIG
+        <footer className="mt-10 text-center text-xs text-gray-400 dark:text-slate-500">
+          © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
         </footer>
 
-        <p className="mt-2 text-center text-xs text-red-500 font-medium">
+        <p className="mt-2 text-center text-xs text-red-500 dark:text-red-400 font-medium">
           ⚠️ This website is currently under development and not yet officially authorized by the City Government of Pasig.
         </p>
       </div>

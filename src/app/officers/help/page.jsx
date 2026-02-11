@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../../components/officers/sidebar';
+import Sidebar from '@/app/components/Sidebar';
 import HelpForm from '../../components/officers/HelpForm';
 
 export default function HelpPage() {

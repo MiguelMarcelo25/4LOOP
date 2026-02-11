@@ -287,11 +287,11 @@ export default function ViewTicketInspectionForm() {
     }
   };
 
-  if (isLoading) return <Typography>Loading businesses…</Typography>;
+  if (isLoading) return <Typography className="dark:text-slate-200">Loading businesses…</Typography>;
 
   return (
-    <Box p={4}>
-      <Typography variant="h6" fontWeight="bold" mb={2}>
+    <Box p={4} className="min-h-screen">
+      <Typography variant="h6" fontWeight="bold" mb={2} className="dark:text-slate-100">
         🧾 Select Business for Inspection
       </Typography>
 
@@ -299,6 +299,7 @@ export default function ViewTicketInspectionForm() {
         variant="outlined"
         onClick={() => router.push('/officers/inspections')}
         sx={{ mb: 3 }}
+        className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
       >
         ← Back to Inspections Workbench
       </Button>
@@ -313,6 +314,14 @@ export default function ViewTicketInspectionForm() {
             onChange={(e) => setSearchType(e.target.value)}
             size="small"
             sx={{ width: 180 }}
+            className="dark:bg-slate-800 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
+            SelectProps={{
+              MenuProps: {
+                PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
+              }
+            }}
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="bidNumber">BID Number</MenuItem>
@@ -326,17 +335,19 @@ export default function ViewTicketInspectionForm() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             size="small"
+            className="dark:bg-slate-800 rounded"
             InputProps={{
+              className: "dark:text-slate-200",
               startAdornment: (
                 <InputAdornment position="start">
-                  <HiSearch className="text-gray-500" />
+                  <HiSearch className="text-gray-500 dark:text-slate-400" />
                 </InputAdornment>
               ),
             }}
           />
 
           <FormControl sx={{ width: 100 }}>
-            <InputLabel>Rows</InputLabel>
+            <InputLabel className="dark:text-slate-300">Rows</InputLabel>
             <Select
               value={limit}
               label="Rows"
@@ -344,6 +355,8 @@ export default function ViewTicketInspectionForm() {
                 setLimit(e.target.value);
                 setPage(1);
               }}
+              className="dark:text-slate-200 dark:bg-slate-800"
+              MenuProps={{ PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } }}
             >
               {[10, 20, 30, 50].map((val) => (
                 <MenuItem key={val} value={val}>
@@ -354,14 +367,14 @@ export default function ViewTicketInspectionForm() {
           </FormControl>
         </Box>
 
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" className="text-gray-500 dark:text-slate-400">
           Showing <strong>{filteredBusinesses.length}</strong>{' '}
           {filteredBusinesses.length === 1 ? 'business' : 'businesses'}
         </Typography>
       </Box>
 
       {/* 📋 Table */}
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} className="dark:bg-slate-800">
         <Table>
           <TableHead>
             <TableRow>
@@ -379,6 +392,7 @@ export default function ViewTicketInspectionForm() {
                   key={key}
                   onClick={() => handleSort(key)}
                   style={{ cursor: 'pointer', userSelect: 'none' }}
+                  className="dark:text-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 >
                   {label}
                   {renderSortArrow(key)}
@@ -399,15 +413,15 @@ export default function ViewTicketInspectionForm() {
               const maxed = completed >= 2;
 
               return (
-                <TableRow key={business._id}>
-                  <TableCell>{business.bidNumber}</TableCell>
-                  <TableCell>{business.businessName}</TableCell>
-                  <TableCell>{business.businessType}</TableCell>
-                  <TableCell>{business.contactPerson}</TableCell>
-                  <TableCell>{business.inspectionStatus || 'none'}</TableCell>
-                  <TableCell>{completed}</TableCell>
-                  <TableCell>{info.violation || '—'}</TableCell>
-                  <TableCell>
+                <TableRow key={business._id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.bidNumber}</TableCell>
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.businessName}</TableCell>
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.businessType}</TableCell>
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.contactPerson}</TableCell>
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.inspectionStatus || 'none'}</TableCell>
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{completed}</TableCell>
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{info.violation || '—'}</TableCell>
+                  <TableCell className="dark:text-slate-300 dark:border-slate-700">
                     <Box display="flex" gap={1}>
                       <Button
                         variant="outlined"
@@ -419,6 +433,7 @@ export default function ViewTicketInspectionForm() {
                           )
                         }
                         onClick={() => handleViewStatus(business)}
+                        className="dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
                       >
                         View Status
                       </Button>
@@ -438,24 +453,30 @@ export default function ViewTicketInspectionForm() {
           variant="outlined"
           disabled={page === 1}
           onClick={() => setPage((p) => p - 1)}
+          className="dark:text-slate-200 dark:border-slate-600 dark:disabled:text-slate-600 dark:disabled:border-slate-800"
         >
           ← Previous
         </Button>
-        <Typography>
+        <Typography className="dark:text-slate-300">
           Page {page} of {totalPages || 1}
         </Typography>
         <Button
           variant="outlined"
           disabled={page === totalPages}
           onClick={() => setPage((p) => p + 1)}
+          className="dark:text-slate-200 dark:border-slate-600 dark:disabled:text-slate-600 dark:disabled:border-slate-800"
         >
           Next →
         </Button>
       </Box>
 
       {/* Dialog */}
-      <Dialog open={!!selectedBusiness} onClose={handleCloseConfirm}>
-        <DialogTitle>
+      <Dialog 
+        open={!!selectedBusiness} 
+        onClose={handleCloseConfirm}
+        PaperProps={{ className: "dark:bg-slate-800 dark:text-slate-200" }}
+      >
+        <DialogTitle className="dark:text-slate-100">
           Inspection Form for {selectedBusiness?.businessName}
         </DialogTitle>
         <DialogContent>
@@ -463,10 +484,12 @@ export default function ViewTicketInspectionForm() {
             label="Inspection Date"
             type="date"
             fullWidth
-            InputLabelProps={{ shrink: true }}
+            InputLabelProps={{ shrink: true, className: "dark:text-slate-300" }}
             value={inspectionDate}
             onChange={(e) => setInspectionDate(e.target.value)}
             sx={{ mb: 2 }}
+            className="dark:bg-slate-700 rounded mt-2"
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Remarks"
@@ -475,10 +498,13 @@ export default function ViewTicketInspectionForm() {
             rows={3}
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseConfirm}>Cancel</Button>
+          <Button onClick={handleCloseConfirm} className="dark:text-slate-300">Cancel</Button>
           <Button
             variant="contained"
             onClick={handleSaveInspection}

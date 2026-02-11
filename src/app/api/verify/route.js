@@ -17,8 +17,17 @@ export async function POST(req) {
         { status: 400 }
       );
     }
+// Ensure code is string and trimmed to prevent buffer errors and whitespace issues
+    const cleanCode = String(code).trim();
 
-    console.log(`🔍 Verification attempt for ${email} with code ${code}`);
+    if (!cleanCode) {
+      return NextResponse.json(
+        { error: "Verification code is required." },
+        { status: 400 }
+      );
+    }
+
+    console.log(`🔍 Verification attempt for ${email} with code ${cleanCode}`);
 
     const user = await User.findOne({ email });
 
@@ -36,7 +45,7 @@ export async function POST(req) {
     }
 
     // ✅ Use constant-time comparison to prevent timing attacks
-    const codeBuffer = Buffer.from(code);
+    const codeBuffer = Buffer.from(cleanCode);
     const storedBuffer = Buffer.from(user.verificationCode || "");
 
     if (

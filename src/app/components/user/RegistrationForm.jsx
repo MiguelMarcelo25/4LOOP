@@ -109,8 +109,8 @@ export default function RegistrationForm() {
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-blue-900/90"></div>
 
       {/* Registration Form Container */}
-      <div className="relative z-10 bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-center text-gray-800 mb-6">
+      <div className="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 className="text-2xl font-semibold text-center text-gray-800 dark:text-slate-100 mb-6">
           Create Your Account
         </h1>
 
@@ -124,8 +124,7 @@ export default function RegistrationForm() {
           <RHFTextField
             control={control}
             name="email"
-            label="Email*"
-            placeholder="Email*"
+            label="Email"
             type="email"
             autoComplete="off"
             error={!!errors.email || !!emailError}
@@ -137,7 +136,7 @@ export default function RegistrationForm() {
             <RHFTextField
               control={control}
               name="password"
-              label="Password*"
+              label="Password"
               placeholder="Password (min 8 chars, A-Z, a-z, 0-9, symbol)"
               type="password"
               autoComplete="new-password"
@@ -148,10 +147,10 @@ export default function RegistrationForm() {
               <p
                 className={`text-sm mt-1 ${
                   passwordStrength === "Weak"
-                    ? "text-red-500"
+                    ? "text-red-500 dark:text-red-400"
                     : passwordStrength === "Medium"
-                    ? "text-yellow-600"
-                    : "text-green-600"
+                    ? "text-yellow-600 dark:text-yellow-500"
+                    : "text-green-600 dark:text-green-400"
                 }`}
               >
                 Password Strength: {passwordStrength}
@@ -175,7 +174,7 @@ export default function RegistrationForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full bg-blue-900 text-white py-3 rounded-md hover:bg-blue-800 transition ${
+            className={`w-full bg-blue-900 dark:bg-blue-700 text-white py-3 rounded-md hover:bg-blue-800 dark:hover:bg-blue-600 transition ${
               isLoading ? "opacity-70 cursor-not-allowed" : ""
             }`}
           >
@@ -185,20 +184,17 @@ export default function RegistrationForm() {
 
         {/* Footer Links */}
         <div className="text-center mt-6">
-          <hr className="border-t border-gray-300 mb-4" />
-          <p className="text-sm text-gray-700 mb-2">
+          <hr className="border-t border-gray-300 dark:border-slate-600 mb-4" />
+          <p className="text-sm text-gray-700 dark:text-slate-300 mb-2">
+            <Link href="/login">  
             Already have an account? <span className="font-semibold">Login Now!</span>
+            </Link>
           </p>
-          <Link href="/login">
-            <div className="inline-block px-6 py-2 bg-blue-50 text-blue-600 border border-blue-400 rounded-md font-medium hover:bg-blue-100 hover:text-blue-800 transition">
-              Click Here!
-            </div>
-          </Link>
         </div>
 
         {/* Footer */}
-        <footer className="mt-10 text-center text-xs text-gray-400">
-          © 2025 CITY GOVERNMENT OF PASIG
+        <footer className="mt-10 text-center text-xs text-gray-400 dark:text-slate-500">
+          © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
         </footer>
       </div>
     </div>

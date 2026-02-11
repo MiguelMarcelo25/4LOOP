@@ -214,23 +214,15 @@ export default function BusinesslistForm() {
   }
 
   return (
-    <Box className="w-full bg-white shadow rounded-lg p-6">
+    <Box className="w-full bg-white dark:bg-slate-900 shadow rounded-lg p-6">
       {/* Header */}
-      <div className="flex justify-start mb-6">
-        <Button
-          variant="outlined"
-          color="secondary"
-          onClick={() => router.push('/businessaccount/businesses/')}
-        >
-          ↩️ Back to Online Request Lists
-        </Button>
-      </div>
+      
 
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-blue-900 uppercase">
+        <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-300 uppercase">
           My Businesses
         </h1>
-        <Divider className="my-3" />
+        <Divider className="my-3 dark:border-slate-700" />
       </div>
 
       {/* 🔍 Search Controls */}
@@ -258,6 +250,11 @@ export default function BusinesslistForm() {
             onChange={(e) => setSearchType(e.target.value)}
             size="small"
             sx={{ minWidth: 180 }}
+            InputLabelProps={{ className: "dark:text-slate-400" }}
+            SelectProps={{
+              className: "dark:text-slate-200",
+              MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } }
+            }}
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="bidNumber">BID Number</MenuItem>
@@ -277,9 +274,10 @@ export default function BusinesslistForm() {
             size="small"
             fullWidth
             InputProps={{
+              className: "dark:text-slate-200",
               startAdornment: (
                 <InputAdornment position="start">
-                  <HiSearch className="text-gray-500" />
+                  <HiSearch className="text-gray-500 dark:text-slate-400" />
                 </InputAdornment>
               ),
             }}
@@ -289,8 +287,7 @@ export default function BusinesslistForm() {
         {/* ✅ Total Count Display */}
         <Typography
           variant="body2"
-          color="textSecondary"
-          sx={{ mt: 1, textAlign: 'center' }}
+          className="mt-1 text-center text-gray-500 dark:text-slate-400"
         >
           Showing <strong>{filteredBusinesses.length}</strong>{' '}
           {filteredBusinesses.length === 1 ? 'business' : 'businesses'}
@@ -298,297 +295,286 @@ export default function BusinesslistForm() {
       </Box>
 
 
-      {filteredBusinesses.map((business) => {
 
+      {/* Business Tiles Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredBusinesses.map((business) => {
+          const isExpanded = expanded[business._id];
 
-        const isExpanded = expanded[business._id];
-
-        return (
-          <Paper
-            key={business._id}
-            elevation={2}
-            className="p-6 mb-12 rounded-lg border border-gray-300 bg-white relative"
-          >
-            {/* Action Buttons */}
-            <div className="absolute -top-5 -right-5">
-              <Stack direction="row" spacing={1}>
+          return (
+            <Paper
+              key={business._id}
+              elevation={3}
+              className="p-5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-xl transition-shadow duration-300 relative overflow-hidden flex flex-col"
+            >
+              {/* Delete Button */}
+              <div className="absolute top-3 right-3">
                 <Button
                   variant="contained"
                   color="error"
+                  size="small"
                   onClick={() => handleDelete(business._id, business.status)}
-                  startIcon={<HiTrash />}
                   disabled={business.status !== 'draft'}
+                  sx={{ minWidth: 'auto', p: 1 }}
                 >
-                  Delete
+                  <HiTrash size={18} />
                 </Button>
-              </Stack>
-            </div>
+              </div>
 
-            <div className="w-full max-w-4xl mx-auto space-y-6 mb-15">
-              {/* Basic Info */}
-              {[['BID Number', 'bidNumber'],
-              ['Permit Status', 'status'],
-              ['Business Name', 'businessName'],
-              ['Trade Name', 'businessNickname'],
-              ['Business Type', 'businessType'],
-              ['Landmark', 'landmark'],
-              ['Business Address', 'businessAddress']]
-                .reduce((rows, [label, field]) => {
-                  const value = business[field] || '—';
+              {/* Status Badge */}
+              <div className="mb-4">
+                <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full uppercase ${
+                  business.status === 'released' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                  business.status === 'expired' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                  business.status === 'completed' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                  business.status === 'draft' ? 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300' :
+                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                }`}>
+                  {displayStatus(business.status)}
+                </span>
+              </div>
 
-                  const element = (
-                    <div key={field} className="flex items-start gap-2 w-full">
-                      <span className="min-w-[180px] text-sm font-semibold text-gray-700">
-                        {label}:
-                      </span>
-                      <span className="w-full min-h-[40px] bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
-                        {field === 'status' ? displayStatus(value) : value}
-                      </span>
-                    </div>
-                  );
+              {/* BID Number - Prominent */}
+              <div className="mb-3">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">
+                  {business.bidNumber || '—'}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400">BID Number</p>
+              </div>
 
-                  const isFullRow = field === 'businessAddress';
-                  const item = { element, fullRow: isFullRow };
+              {/* Business Name */}
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate" title={business.businessName}>
+                  {business.businessName || '—'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Business Name</p>
+              </div>
 
-                  if (isFullRow || !rows.length || rows[rows.length - 1].length === 2) {
-                    rows.push([item]);
-                  } else {
-                    rows[rows.length - 1].push(item);
-                  }
+              {/* Trade Name */}
+              {business.businessNickname && (
+                <div className="mb-3">
+                  <p className="text-sm text-gray-700 dark:text-slate-300 truncate" title={business.businessNickname}>
+                    {business.businessNickname}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Trade Name</p>
+                </div>
+              )}
 
-                  return rows;
-                }, [])
-                .map((row, i) => (
-                  <div key={i} className="grid grid-cols-2 gap-6">
-                    {row.map(({ element, fullRow }, j) => (
-                      <div key={j} className={fullRow ? 'col-span-2' : ''}>
-                        {element}
-                      </div>
-                    ))}
-                  </div>
-                ))}
+              {/* Business Type */}
+              <div className="mb-3">
+                <p className="text-sm text-gray-700 dark:text-slate-300">
+                  {business.businessType || '—'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Business Type</p>
+              </div>
+
+              {/* Address - Truncated */}
+              <div className="mb-3">
+                <p className="text-sm text-gray-700 dark:text-slate-300 line-clamp-2" title={business.businessAddress}>
+                  {business.businessAddress || '—'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Address</p>
+              </div>
+
+              {/* Landmark */}
+              {business.landmark && (
+                <div className="mb-3">
+                  <p className="text-sm text-gray-700 dark:text-slate-300 truncate" title={business.landmark}>
+                    {business.landmark}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Landmark</p>
+                </div>
+              )}
 
               {/* Contact Info */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="flex items-start gap-2 w-full">
-                  <span className="min-w-[180px] text-sm font-semibold text-gray-700">
-                    Contact Person:
-                  </span>
-                  <span className="w-full min-h-[40px] bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
-                    {business.contactPerson || '—'}
-                  </span>
-                </div>
-
-                <div className="flex items-start gap-2 w-full">
-                  <span className="min-w-[180px] text-sm font-semibold text-gray-700">
-                    Contact Number:
-                  </span>
-                  <span className="w-full min-h-[40px] bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
-                    {business.contactNumber || '—'}
-                  </span>
-                </div>
+              <div className="mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
+                <p className="text-sm text-gray-700 dark:text-slate-300">
+                  {business.contactPerson || '—'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Contact Person</p>
+                <p className="text-sm text-gray-700 dark:text-slate-300">
+                  {business.contactNumber || '—'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Contact Number</p>
               </div>
 
-              {/* Remarks */}
-              <div className="grid grid-cols-1">
-                <div className="flex items-start gap-2">
-                  <span className="min-w-[180px] text-sm font-semibold text-gray-700">
-                    Remarks:
-                  </span>
-                  <span className="flex-1 min-h-[100px] whitespace-pre-line bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
-                    {business.remarks || 'None'}
-                  </span>
+              {/* Inspection Status (if available) */}
+              {business.inspectionStatus && business.inspectionStatus !== '-' && (
+                <div className="mb-3">
+                  <p className="text-sm text-gray-700 dark:text-slate-300">
+                    {business.inspectionStatus}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Inspection Status</p>
                 </div>
+              )}
+
+              {/* Spacer to push button to bottom */}
+              <div className="flex-1"></div>
+
+              {/* View More Button */}
+              <div className="mt-4">
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  fullWidth
+                  size="small"
+                  onClick={() => toggleExpand(business._id)}
+                  startIcon={isExpanded ? <HiChevronUp /> : <HiChevronDown />}
+                  className="dark:text-blue-400 dark:border-blue-400"
+                >
+                  {isExpanded ? 'Hide Details' : 'View More'}
+                </Button>
               </div>
-            </div>
 
+              {/* Expanded Details Modal/Overlay */}
+              {isExpanded && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => toggleExpand(business._id)}>
+                  <div 
+                    className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Modal Header */}
+                    <div className="sticky top-0 bg-white dark:bg-slate-800 border-b dark:border-slate-700 p-4 flex justify-between items-center z-10">
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">
+                        {business.businessName}
+                      </h2>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        size="small"
+                        onClick={() => toggleExpand(business._id)}
+                        startIcon={<HiX />}
+                      >
+                        Close
+                      </Button>
+                    </div>
 
-
-            {/* Toggle Button */}
-            <div className="flex justify-center mt-6">
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={() => toggleExpand(business._id)}
-                startIcon={isExpanded ? <HiChevronUp /> : <HiChevronDown />}
-              >
-                {isExpanded ? 'Hide Details' : 'View More'}
-              </Button>
-            </div>
-
-            {/* Expanded Sections (MSR → End) */}
-            {isExpanded && (
-              <>
-                {/* --- MSR SECTION --- */}
-                <Divider className="my-10">
-                  <Typography variant="h6" fontWeight="bold" color="primary">
-                    MSR
-                  </Typography>
-                </Divider>
-
-                {/* Keep everything below as-is */}
-                {/* Sanitary Permit Checklist */}
-                <div className="w-full max-w-4xl mx-auto space-y-10 mb-15">
-                  <div>
-                    <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
-                      A. Sanitary Permit Checklist
-                    </h3>
-                    {business.sanitaryPermitChecklist?.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {business.sanitaryPermitChecklist.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300"
-                          >
-                            {item.label}
+                    {/* Modal Content */}
+                    <div className="p-6 space-y-6">
+                      {/* Full Business Details */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {[['BID Number', business.bidNumber],
+                          ['Status', displayStatus(business.status)],
+                          ['Business Name', business.businessName],
+                          ['Trade Name', business.businessNickname],
+                          ['Business Type', business.businessType],
+                          ['Landmark', business.landmark],
+                          ['Contact Person', business.contactPerson],
+                          ['Contact Number', business.contactNumber]].map(([label, value]) => (
+                          <div key={label} className="flex flex-col">
+                            <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</span>
+                            <span className="text-sm text-gray-800 dark:text-slate-200 font-medium">{value || '—'}</span>
                           </div>
                         ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 text-center italic">
-                        No checklist items available.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Health Certificate Checklist */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
-                      B. Health Certificate Checklist
-                    </h3>
-                    {business.healthCertificateChecklist?.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {business.healthCertificateChecklist.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300"
-                          >
-                            {item.label}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 text-center italic">
-                        No checklist items available.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Minimum Sanitary Requirements */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
-                      C. Minimum Sanitary Requirements (MSR)
-                    </h3>
-                    {business.msrChecklist?.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {business.msrChecklist.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="grid grid-cols-4 gap-2 bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300"
-                          >
-                            <div className="col-span-3 font-medium">{item.label}</div>
-                            <div className="col-span-1 text-red-700 text-right">
-                              {item.dueDate
-                                ? `Due: ${new Date(item.dueDate).toLocaleDateString('en-PH')}`
-                                : 'No due date'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 text-center italic">
-                        No checklist items available.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* --- INSPECTION & PENALTY RECORDS --- */}
-                <Divider className="my-10">
-                  <Typography variant="h6" fontWeight="bold" color="primary">
-                    Inspection and Penalty Records
-                  </Typography>
-                </Divider>
-
-                <div className="w-full max-w-4xl mx-auto space-y-6 mb-10 mt-10">
-                  {[
-                    [
-                      'Health Cert Fee',
-                      typeof business.healthCertFee === 'number'
-                        ? `₱${new Intl.NumberFormat('en-PH', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }).format(business.healthCertFee)}`
-                        : '—',
-                    ],
-                    [
-                      'Health Cert Sanitary Fee',
-                      typeof business.healthCertSanitaryFee === 'number'
-                        ? `₱${new Intl.NumberFormat('en-PH', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }).format(business.healthCertSanitaryFee)}`
-                        : '—',
-                    ],
-                    [
-                      'OR Date (Health Cert)',
-                      business.orDateHealthCert
-                        ? new Date(business.orDateHealthCert).toLocaleDateString('en-PH')
-                        : '—',
-                    ],
-                    ['OR Number (Health Cert)', business.orNumberHealthCert ?? '—'],
-
-
-
-                    ['Inspection Status', business.inspectionStatus ?? '—'],
-                    ['Inspection Count This Year', business.inspectionCountThisYear ?? '—'],
-                    // Replace this line:
-// ['Recorded Violation', business.recordedViolation ?? '—'],
-
-// With this:
-[
-  'Recorded Violation',
-  business.violations && business.violations.length > 0
-    ? business.violations.map((v, idx) => (
-        <div key={idx} className="flex flex-col gap-1">
-          <span>
-            {formatViolationCode(v.code)} — ₱{v.penalty?.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({v.status})
-          </span>
-        </div>
-      ))
-    : '—'
-],
-
-                    ["Penalty Fee", `₱${business.penaltyFee?.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
-
-                  ]
-                    .reduce((rows, [label, value]) => {
-                      const pair = (
-                        <div key={label} className="flex items-start gap-2">
-                          <span className="min-w-[180px] text-sm font-semibold text-gray-700">
-                            {label}:
-                          </span>
-                          <span className="flex-1 bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300">
-                            {value}
-                          </span>
+                        <div className="col-span-2 flex flex-col">
+                          <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">Business Address</span>
+                          <span className="text-sm text-gray-800 dark:text-slate-200 font-medium">{business.businessAddress || '—'}</span>
                         </div>
-                      );
-                      const lastRow = rows[rows.length - 1];
-                      if (!lastRow || lastRow.length === 2) rows.push([pair]);
-                      else lastRow.push(pair);
-                      return rows;
-                    }, [])
-                    .map((row, i) => (
-                      <div key={i} className="grid grid-cols-2 gap-6">
-                        {row}
+                        <div className="col-span-2 flex flex-col">
+                          <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">Remarks</span>
+                          <span className="text-sm text-gray-800 dark:text-slate-200 font-medium whitespace-pre-line">{business.remarks || 'None'}</span>
+                        </div>
                       </div>
-                    ))}
+
+                      {/* MSR Section */}
+                      <Divider className="dark:border-slate-700">
+                        <Typography variant="h6" fontWeight="bold" color="primary">MSR</Typography>
+                      </Divider>
+
+                      {/* Sanitary Permit Checklist */}
+                      <div>
+                        <h3 className="text-md font-semibold text-blue-900 dark:text-blue-300 mb-3">A. Sanitary Permit Checklist</h3>
+                        {business.sanitaryPermitChecklist?.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {business.sanitaryPermitChecklist.map((item, idx) => (
+                              <div key={idx} className="bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 text-xs px-2 py-1 rounded">
+                                {item.label}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-slate-400 italic">No items</p>
+                        )}
+                      </div>
+
+                      {/* Health Certificate Checklist */}
+                      <div>
+                        <h3 className="text-md font-semibold text-blue-900 dark:text-blue-300 mb-3">B. Health Certificate Checklist</h3>
+                        {business.healthCertificateChecklist?.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {business.healthCertificateChecklist.map((item, idx) => (
+                              <div key={idx} className="bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 text-xs px-2 py-1 rounded">
+                                {item.label}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-slate-400 italic">No items</p>
+                        )}
+                      </div>
+
+                      {/* MSR Checklist */}
+                      <div>
+                        <h3 className="text-md font-semibold text-blue-900 dark:text-blue-300 mb-3">C. Minimum Sanitary Requirements</h3>
+                        {business.msrChecklist?.length > 0 ? (
+                          <div className="space-y-2">
+                            {business.msrChecklist.map((item, idx) => (
+                              <div key={idx} className="bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 text-xs px-2 py-1 rounded flex justify-between">
+                                <span>{item.label}</span>
+                                <span className="text-red-700 dark:text-red-400">
+                                  {item.dueDate ? `Due: ${new Date(item.dueDate).toLocaleDateString('en-PH')}` : 'No due date'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-slate-400 italic">No items</p>
+                        )}
+                      </div>
+
+                      {/* Inspection & Penalty Records */}
+                      <Divider className="dark:border-slate-700">
+                        <Typography variant="h6" fontWeight="bold" color="primary">Inspection & Penalty Records</Typography>
+                      </Divider>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        {[
+                          ['Health Cert Fee', typeof business.healthCertFee === 'number' ? `₱${business.healthCertFee.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'],
+                          ['Health Cert Sanitary Fee', typeof business.healthCertSanitaryFee === 'number' ? `₱${business.healthCertSanitaryFee.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'],
+                          ['OR Date (Health Cert)', business.orDateHealthCert ? new Date(business.orDateHealthCert).toLocaleDateString('en-PH') : '—'],
+                          ['OR Number (Health Cert)', business.orNumberHealthCert ?? '—'],
+                          ['Inspection Status', business.inspectionStatus ?? '—'],
+                          ['Inspection Count This Year', business.inspectionCountThisYear ?? '—'],
+                          ['Penalty Fee', `₱${business.penaltyFee?.toLocaleString('en-PH', { minimumFractionDigits: 2 }) || '0.00'}`],
+                        ].map(([label, value]) => (
+                          <div key={label} className="flex flex-col">
+                            <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</span>
+                            <span className="text-sm text-gray-800 dark:text-slate-200 font-medium">{value}</span>
+                          </div>
+                        ))}
+                        
+                        {/* Violations - Full Width */}
+                        <div className="col-span-2 flex flex-col">
+                          <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">Recorded Violations</span>
+                          <div className="text-sm text-gray-800 dark:text-slate-200">
+                            {business.violations && business.violations.length > 0 ? (
+                              business.violations.map((v, idx) => (
+                                <div key={idx} className="mb-1">
+                                  {formatViolationCode(v.code)} — ₱{v.penalty?.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ({v.status})
+                                </div>
+                              ))
+                            ) : '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
-          </Paper>
-        );
-      })}
+              )}
+            </Paper>
+          );
+        })}
+      </div>
     </Box>
   );
 }

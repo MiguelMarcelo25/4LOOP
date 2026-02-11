@@ -149,11 +149,12 @@ export default function ReleaseForm() {
         color="secondary"
         onClick={() => router.push('/officers/workbench')}
         sx={{ mb: 2 }}
+        className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
       >
         ← Back to Workbench
       </Button>
 
-      <Typography variant="h6" fontWeight="bold" mb={3}>
+      <Typography variant="h6" fontWeight="bold" mb={3} className="dark:text-slate-200">
         🧾 Requests Awaiting Release of Permit
       </Typography>
 
@@ -168,6 +169,9 @@ export default function ReleaseForm() {
             setPage(1);
           }}
           sx={{ width: 220 }}
+          className="dark:bg-slate-700 dark:text-slate-200 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
         >
           {searchFields.map((f) => (
             <MenuItem key={f.value} value={f.value}>
@@ -187,6 +191,9 @@ export default function ReleaseForm() {
             setPage(1);
           }}
           fullWidth
+          className="dark:bg-slate-700 dark:text-slate-200 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
         />
 
         <TextField
@@ -198,6 +205,9 @@ export default function ReleaseForm() {
             setPage(1);
           }}
           sx={{ width: 160 }}
+          className="dark:bg-slate-700 dark:text-slate-200 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
         >
           {[10, 20, 30, 50].map((num) => (
             <MenuItem key={num} value={num}>
@@ -225,7 +235,7 @@ export default function ReleaseForm() {
       {/* 📊 Table */}
       {!isLoading && !isError && (
         <>
-          <TableContainer component={Paper}>
+          <TableContainer component={Paper} className="dark:bg-slate-800">
             <Table>
               <TableHead>
                 <TableRow>
@@ -236,6 +246,7 @@ export default function ReleaseForm() {
                         fontWeight: 'bold',
                         cursor: col.key === 'actions' ? 'default' : 'pointer',
                       }}
+                      className="dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600"
                       onClick={
                         col.key === 'actions'
                           ? undefined
@@ -250,6 +261,11 @@ export default function ReleaseForm() {
                               ? sortConfig.direction
                               : 'asc'
                           }
+                          className="dark:text-slate-200 dark:hover:text-slate-100"
+                          sx={{
+                            '&.Mui-active': { color: 'inherit' },
+                            '& .MuiTableSortLabel-icon': { color: 'inherit !important' },
+                          }}
                         >
                           {col.label}
                         </TableSortLabel>
@@ -264,17 +280,17 @@ export default function ReleaseForm() {
               <TableBody>
                 {paginatedRequests.length > 0 ? (
                   paginatedRequests.map((req) => (
-                    <TableRow key={req._id} hover>
-                      <TableCell>{req.requestType}</TableCell>
-                      <TableCell>{req.bidNumber}</TableCell>
-                      <TableCell>{req.businessName}</TableCell>
-                      <TableCell>{req.businessNickname}</TableCell>
-                      <TableCell>{req.businessType}</TableCell>
-                      <TableCell>{req.businessAddress}</TableCell>
-                      <TableCell>
+                    <TableRow key={req._id} hover className="dark:hover:bg-slate-700 transition-colors">
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.requestType}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.bidNumber}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessName}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessNickname}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessType}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessAddress}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
                         {new Date(req.createdAt).toLocaleString('en-PH')}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
                         <Button
                           variant="contained"
                           color="primary"
@@ -288,7 +304,7 @@ export default function ReleaseForm() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} align="center">
+                    <TableCell colSpan={columns.length} align="center" className="dark:text-slate-300 dark:border-slate-700">
                       No completed requests awaiting release.
                     </TableCell>
                   </TableRow>
@@ -316,6 +332,7 @@ export default function ReleaseForm() {
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(p - 1, 1))}
                 sx={{ mr: 1 }}
+                className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
               >
                 Prev
               </Button>
@@ -324,6 +341,7 @@ export default function ReleaseForm() {
                 size="small"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
               >
                 Next
               </Button>

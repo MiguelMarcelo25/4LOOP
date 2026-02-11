@@ -32,7 +32,19 @@ const RHFRadioButton = ({
             return <FormControlLabel
               key={option.value}
               value={option.value}
-              sx={{width: "100%"}}
+              sx={{
+                width: "100%",
+                color: 'var(--foreground)',
+                '& .MuiTypography-root': {
+                  color: 'var(--foreground)',
+                },
+                '& .MuiRadio-root': {
+                  color: 'rgba(148, 163, 184, 0.5)',
+                  '&.Mui-checked': {
+                    color: '#3b82f6',
+                  },
+                },
+              }}
               control={<Radio />}
               label={
                 <div className='flex items-center gap-8'>

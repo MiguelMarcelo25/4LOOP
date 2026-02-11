@@ -99,13 +99,14 @@ export default function PendingPermitApprovalForm() {
 
   // Main Layout
   return (
-    <Box className="w-full bg-white shadow rounded-lg p-6">
+    <Box className="w-full bg-white dark:bg-slate-900 shadow rounded-lg p-6 border border-gray-200 dark:border-slate-700">
       {/* Back Button */}
       <div className="flex justify-start mb-6">
         <Button
           variant="outlined"
           color="secondary"
           onClick={() => router.push('/officers/workbench/permitapproval')}
+          className="dark:text-slate-200 dark:border-slate-600"
         >
           ↩️ Back to Permit Approval Lists
         </Button>
@@ -113,10 +114,10 @@ export default function PendingPermitApprovalForm() {
 
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-blue-900 uppercase">
+        <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-300 uppercase">
           Permit Approval Business Details
         </h1>
-        <Divider className="my-3" />
+        <Divider className="my-3 dark:border-slate-700" />
       </div>
 
       {/* Business Info */}
@@ -148,10 +149,10 @@ export default function PendingPermitApprovalForm() {
           .reduce((rows, [label, value]) => {
             const pair = (
               <div key={label} className="flex items-start gap-2">
-                <span className="min-w-[140px] text-sm font-semibold text-gray-700">
+                <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">
                   {label}:
                 </span>
-                <span className="flex-1 min-h-[48px] bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
+                <span className="flex-1 min-h-[48px] bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
                   {renderValue(value)}
                 </span>
               </div>
@@ -179,14 +180,26 @@ export default function PendingPermitApprovalForm() {
           value={remark}
           onChange={(e) => setRemark(e.target.value)}
           placeholder="Type your remarks or notes here..."
+          className="bg-gray-50 dark:bg-slate-800 rounded-lg"
+          InputProps={{
+             className: "dark:text-slate-200"
+          }}
+          InputLabelProps={{
+             className: "dark:text-slate-400"
+          }}
           sx={{
-            '& .MuiInputBase-root': {
-              backgroundColor: '#f9fafb',
-              borderRadius: '8px',
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: '#d1d5db',
+              },
+              '&:hover fieldset': {
+                borderColor: '#9ca3af',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#3b82f6',
+              },
             },
-            '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: '#d1d5db',
-            },
+            // Dark mode overrides via CSS class preferred, but here's a fallback
           }}
         />
       </div>

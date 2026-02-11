@@ -110,35 +110,35 @@ export default function ProfileForm() {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white shadow rounded-lg">
-      <h1 className="text-2xl font-semibold mb-6 text-gray-800">Profile Settings</h1>
+    <div className="w-96 h-96  mx-auto p-6 bg-white dark:bg-slate-900 shadow rounded-lg border border-gray-200 dark:border-slate-700">
+      <h1 className="text-2xl font-semibold mb-6 text-gray-800 text-center dark:text-slate-200">Profile Settings</h1>
 
       <form className="space-y-4">
         {/* Full Name (read-only) */}
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
+          <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">Full Name</label>
           <input
             type="text"
             name="fullName"
             value={formData.fullName}
             disabled
-            className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed text-gray-700"
+            className="w-full border rounded px-3 py-2 bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-600 cursor-not-allowed text-gray-700 dark:text-slate-300"
           />
         </div>
 
         {/* Email (read-only) */}
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">Email</label>
           <input
             type="email"
             name="email"
             value={formData.email}
             disabled
-            className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed text-gray-700"
+            className="w-full border rounded px-3 py-2 bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-600 cursor-not-allowed text-gray-700 dark:text-slate-300"
           />
         </div>
 
-        <hr className="my-4" />
+        <hr className="my-4 dark:border-slate-700" />
 
         {/* Change Password Button */}
         {!showPasswordForm && (
@@ -151,13 +151,13 @@ export default function ProfileForm() {
           </button>
         )}
 
-        {/* Change Password Inline Form */}
+        {/* Change Password */}
         {showPasswordForm && (
-          <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-            <h2 className="text-lg font-semibold text-gray-700">Change Password</h2>
+          <div className="space-y-4 border border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-gray-50 dark:bg-slate-800">
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-slate-200">Change Password</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">
                 Current Password
               </label>
               <input
@@ -165,12 +165,12 @@ export default function ProfileForm() {
                 name="currentPassword"
                 value={formData.currentPassword}
                 onChange={handleChange}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200"
+                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200 bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">
                 New Password
               </label>
               <input
@@ -178,16 +178,16 @@ export default function ProfileForm() {
                 name="newPassword"
                 value={formData.newPassword}
                 onChange={handleChange}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200"
+                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200 bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-200"
               />
               {passwordStrength && (
                 <p
                   className={`text-sm mt-1 ${
                     passwordStrength === 'Weak'
-                      ? 'text-red-500'
+                      ? 'text-red-500 dark:text-red-400'
                       : passwordStrength === 'Medium'
-                      ? 'text-yellow-600'
-                      : 'text-green-600'
+                      ? 'text-yellow-600 dark:text-yellow-400'
+                      : 'text-green-600 dark:text-green-400'
                   }`}
                 >
                   Password Strength: {passwordStrength}
@@ -196,7 +196,7 @@ export default function ProfileForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">
                 Confirm New Password
               </label>
               <input
@@ -204,7 +204,7 @@ export default function ProfileForm() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200"
+                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200 bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-200"
               />
             </div>
 
@@ -229,7 +229,7 @@ export default function ProfileForm() {
                     confirmPassword: '',
                   }));
                 }}
-                className="flex-1 bg-gray-300 text-gray-800 py-2 rounded hover:bg-gray-400 transition"
+                className="flex-1 bg-gray-300 dark:bg-slate-600 text-gray-800 dark:text-slate-200 py-2 rounded hover:bg-gray-400 dark:hover:bg-slate-500 transition"
               >
                 Cancel
               </button>

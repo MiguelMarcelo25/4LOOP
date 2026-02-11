@@ -1,11 +1,20 @@
 'use client';
 
-import PermitApprovalForm from '../../../components/officers/PermitApprovalForm';
+import Sidebar from '@/app/components/Sidebar';
+import WorkbenchList from '@/app/components/officers/WorkbenchList';
 
 export default function PermitApprovalPage() {
   return (
-    <main className="p-6 space-y-8 bg-gray-50 min-h-screen">
-      <PermitApprovalForm />
-    </main>
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <main className="flex-1 p-6 relative">
+        <section className="mt-6">
+          <WorkbenchList 
+            title="Permit Approval" 
+            filterStatus="pending3" 
+          />
+        </section>
+      </main>
+    </div>
   );
 }

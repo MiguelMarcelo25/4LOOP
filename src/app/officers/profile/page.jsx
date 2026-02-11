@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../../components/officers/sidebar';
+import Sidebar from '@/app/components/Sidebar';
 import ProfileSettingsForm from '../../components/officers/ProfileForm';
 
 export default function ProfileSettingsPage() {

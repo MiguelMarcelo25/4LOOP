@@ -86,8 +86,8 @@ export default function CompletedRequestForm() {
   });
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom><b>Completed Business Requests</b></Typography>
+    <Paper elevation={2} sx={{ p: 3 }} className="dark:bg-slate-800 dark:text-slate-200">
+      <Typography variant="h6" gutterBottom className="dark:text-slate-100"><b>Completed Business Requests</b></Typography>
 
       {/* Search Controls */}
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -97,9 +97,13 @@ export default function CompletedRequestForm() {
           value={searchField}
           onChange={(e) => setSearchField(e.target.value)}
           sx={{ minWidth: 200 }}
+          className="dark:bg-slate-700 dark:text-slate-200 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
+          SelectProps={{ MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } } }}
         >
           {fields.map(({ label, field }) => (
-            <MenuItem key={field} value={field}>
+            <MenuItem key={field} value={field} className="dark:hover:bg-slate-700 dark:focus:bg-slate-700">
               {label}
             </MenuItem>
           ))}
@@ -111,6 +115,9 @@ export default function CompletedRequestForm() {
           variant="outlined"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="dark:bg-slate-700 dark:text-slate-200 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
         />
       </Box>
 
@@ -124,6 +131,7 @@ export default function CompletedRequestForm() {
                   key={field}
                   onClick={() => handleSort(field)}
                   sx={{ cursor: 'pointer', fontWeight: 'bold' }}
+                  className="dark:bg-slate-800 dark:text-slate-200 border-b dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 >
                   {label}
                   {sortField === field && (sortDirection === 'asc' ? ' 🔼' : ' 🔽')}
@@ -135,9 +143,9 @@ export default function CompletedRequestForm() {
           <TableBody>
             {sortedRequests.length > 0 ? (
               sortedRequests.map((req) => (
-                <TableRow key={req._id}>
+                <TableRow key={req._id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                   {fields.map(({ field }) => (
-                    <TableCell key={field}>
+                    <TableCell key={field} className="dark:text-slate-300 dark:border-slate-700 border-b">
                       {field === 'createdAt'
                         ? new Date(req[field]).toLocaleString('en-PH')
                         : req[field]}
@@ -147,7 +155,7 @@ export default function CompletedRequestForm() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={fields.length} align="center">
+                <TableCell colSpan={fields.length} align="center" className="dark:text-slate-400 dark:border-slate-700 border-b">
                   No completed businesses found.
                 </TableCell>
               </TableRow>

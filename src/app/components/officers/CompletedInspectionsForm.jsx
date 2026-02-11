@@ -78,15 +78,15 @@ export default function CreateTicketInspectionForm() {
 
   return (
     <Box position="relative" p={4}>
-      <Button variant="outlined" onClick={handleBack} sx={{ mb: 2 }}>
+      <Button variant="outlined" onClick={handleBack} sx={{ mb: 2 }} className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-800">
         ← Back
       </Button>
 
-      <Typography variant="h6" fontWeight="bold" mb={4}>
+      <Typography variant="h6" fontWeight="bold" mb={4} className="dark:text-slate-200">
         🧾 Create Inspection Ticket
       </Typography>
 
-      <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto' }}>
+      <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto' }} className="dark:bg-slate-800 dark:text-slate-200">
         <Stack spacing={2}>
           <TextField
             label="Business ID"
@@ -94,6 +94,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newBidNumber}
             onChange={handleChange('newBidNumber')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Business Name"
@@ -101,6 +104,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newBusinessName}
             onChange={handleChange('newBusinessName')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Business Type"
@@ -108,6 +114,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newBusinessType}
             onChange={handleChange('newBusinessType')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Request Type"
@@ -115,6 +124,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newRequestType}
             onChange={handleChange('newRequestType')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Requirements Checklist"
@@ -124,6 +136,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newRequirements}
             onChange={handleChange('newRequirements')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Contact Person"
@@ -131,6 +146,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newContactPerson}
             onChange={handleChange('newContactPerson')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Contact Number"
@@ -138,6 +156,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newContactNumber}
             onChange={handleChange('newContactNumber')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Landmark"
@@ -145,6 +166,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newLandmark}
             onChange={handleChange('newLandmark')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Remarks"
@@ -154,6 +178,9 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newRemarks}
             onChange={handleChange('newRemarks')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
           <TextField
             label="Inspection Type"
@@ -161,9 +188,13 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newInspectionType}
             onChange={handleChange('newInspectionType')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
+            SelectProps={{ MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } } }}
           >
             {['routine', 'follow-up', 'complaint-based', 'reinspection'].map((type) => (
-              <MenuItem key={type} value={type}>{type}</MenuItem>
+              <MenuItem key={type} value={type} className="dark:hover:bg-slate-700">{type}</MenuItem>
             ))}
           </TextField>
           <TextField
@@ -172,9 +203,13 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newInspectionStage}
             onChange={handleChange('newInspectionStage')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
+            SelectProps={{ MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } } }}
           >
             {['inform', 'pending', 'completed'].map((stage) => (
-              <MenuItem key={stage} value={stage}>{stage}</MenuItem>
+              <MenuItem key={stage} value={stage} className="dark:hover:bg-slate-700">{stage}</MenuItem>
             ))}
           </TextField>
           <TextField
@@ -183,9 +218,13 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newViolationType}
             onChange={handleChange('newViolationType')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
+            SelectProps={{ MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } } }}
           >
             {['sanitation', 'waste disposal', 'pest control', 'structural', 'other'].map((type) => (
-              <MenuItem key={type} value={type}>{type}</MenuItem>
+              <MenuItem key={type} value={type} className="dark:hover:bg-slate-700">{type}</MenuItem>
             ))}
           </TextField>
           <TextField
@@ -196,16 +235,19 @@ export default function CreateTicketInspectionForm() {
             fullWidth
             value={formData.newViolation}
             onChange={handleChange('newViolation')}
+            className="dark:bg-slate-700 rounded"
+            InputLabelProps={{ className: "dark:text-slate-300" }}
+            InputProps={{ className: "dark:text-slate-200" }}
           />
 
           <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
-            <Button variant="outlined" color="inherit" onClick={handleClear}>
+            <Button variant="outlined" color="inherit" onClick={handleClear} className="dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700">
               Clear
             </Button>
-            <Button variant="contained" color="secondary" onClick={handleSaveDraft}>
+            <Button variant="contained" color="secondary" onClick={handleSaveDraft} className="dark:bg-purple-700 dark:hover:bg-purple-800">
               Save as Draft
             </Button>
-            <Button variant="contained" color="primary" onClick={handleSaveAndProceed}>
+            <Button variant="contained" color="primary" onClick={handleSaveAndProceed} className="dark:bg-blue-600 dark:hover:bg-blue-700">
               Save and Proceed
             </Button>
           </Stack>

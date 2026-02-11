@@ -121,62 +121,18 @@ setOfficers((prev) =>
   )
 );
 
-
-
     } catch (err) {
       alert(`❌ Error: ${err.message}`);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-8 p-6 border rounded shadow">
+    <div className="w-96 mx-auto mt-8 p-6 border rounded-4xl shadow ">
       {/* Officers List */}
-      <h2 className="text-xl font-semibold mb-4">Officers List</h2>
-      {officers.length === 0 ? (
-        <p className="text-gray-500">No officers found.</p>
-      ) : (
-        <ul className="divide-y border rounded mb-8">
-          {officers.map((officer) => (
-            <li key={officer._id} className="p-3 flex justify-between items-center">
-              <div>
-                <p className="font-medium">{officer.fullName}</p>
-                <p className="text-sm text-gray-600">{officer.email}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-xs px-2 py-1 rounded ${
-                    officer.accountDisabled
-                      ? 'bg-gray-300 text-gray-700'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}
-                >
-                  {officer.status === 'disabled' ? 'Disabled' : 'Active'}
-                </span>
-
-                {officer.status === 'disabled' ? (
-                  <button
-                    onClick={() => handleStatusChange(officer._id, officer.fullName, 'enable')}
-                    className="text-xs text-white bg-green-600 hover:bg-green-700 px-3 py-1 rounded"
-                  >
-                    Re-enable
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleStatusChange(officer._id, officer.fullName, 'disable')}
-                    className="text-xs text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
-                  >
-                    Disable
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+     
 
       {/* Create Officer Form */}
-      <h1 className="text-2xl font-semibold mb-4">Create Officer Account</h1>
+      <h1 className="text-2xl font-semibold mb-4 text-center">Create Officer Account</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 mb-6">
         <input
           type="text"

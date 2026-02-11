@@ -65,64 +65,82 @@ export default function ChangePasswordForm() {
   if (!user) return <CircularProgress />;
 
   return (
-    <Box className="w-full flex items-center justify-center min-h-screen p-4">
-      <Box className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
-        <Typography variant="h5" className="text-center font-semibold mb-6">
+    <div className="w-full max-w-md mx-auto">
+      <div className="bg-white dark:bg-slate-800 shadow-xl rounded-2xl border border-gray-100 dark:border-slate-700 p-8">
+        <Typography variant="h5" className="text-center font-bold text-gray-800 dark:text-slate-200 mb-6">
           Change Password
         </Typography>
 
-        <TextField
-          label="Email"
-          value={user.email}
-          fullWidth
-          disabled
-          margin="normal"
-        />
+        <form onSubmit={handleSubmit}>
+          <TextField
+            label="Email"
+            value={user.email}
+            fullWidth
+            disabled
+            margin="normal"
+            variant="outlined"
+            className="bg-gray-50 dark:bg-slate-700 rounded-md"
+            InputProps={{ className: "dark:text-slate-300" }}
+            InputLabelProps={{ className: "dark:text-slate-400" }}
+          />
 
-        <TextField
-          label="Old Password"
-          type="password"
-          value={oldPass}
-          onChange={(e) => setOldPass(e.target.value)}
-          fullWidth
-          margin="normal"
-        />
+          <TextField
+            label="Old Password"
+            type="password"
+            value={oldPass}
+            onChange={(e) => setOldPass(e.target.value)}
+            fullWidth
+            margin="normal"
+            variant="outlined"
+            InputLabelProps={{ className: "dark:text-slate-400" }}
+            InputProps={{ className: "dark:text-slate-200" }}
+          />
 
-        <TextField
-          label="New Password"
-          type="password"
-          placeholder="Must include uppercase, lowercase, number & symbol."
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          fullWidth
-          margin="normal"
-        />
+          <TextField
+            label="New Password"
+            type="password"
+            placeholder="Must include uppercase, lowercase, number & symbol."
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+            margin="normal"
+            variant="outlined"
+            helperText="Strong passwords include mixed case, numbers & symbols."
+            InputLabelProps={{ className: "dark:text-slate-400" }}
+            InputProps={{ className: "dark:text-slate-200" }}
+            FormHelperTextProps={{ className: "dark:text-slate-400" }}
+          />
 
-        <TextField
-          label="Confirm Password"
-          type="password"
-          value={confirmPass}
-          onChange={(e) => setConfirmPass(e.target.value)}
-          fullWidth
-          margin="normal"
-        />
+          <TextField
+            label="Confirm Password"
+            type="password"
+            value={confirmPass}
+            onChange={(e) => setConfirmPass(e.target.value)}
+            fullWidth
+            margin="normal"
+            variant="outlined"
+            InputLabelProps={{ className: "dark:text-slate-400" }}
+            InputProps={{ className: "dark:text-slate-200" }}
+          />
 
-        {error && (
-          <Typography color="error" variant="caption" className="mt-2 block">
-            {error}
-          </Typography>
-        )}
+          {error && (
+            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400 text-sm">
+              ⚠️ {error}
+            </div>
+          )}
 
-        <Button
-          variant="contained"
-          fullWidth
-          disabled={isPending}
-          onClick={handleSubmit}
-          className="mt-4"
-        >
-          {isPending ? "Updating..." : "Update Password"}
-        </Button>
-      </Box>
-    </Box>
+          <Button
+            variant="contained"
+            fullWidth
+            disabled={isPending}
+            type="submit"
+            className="mt-6 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold shadow-md transition-all"
+            sx={{ textTransform: 'none', fontSize: '1rem' }}
+          >
+            {isPending ? "Updating..." : "Update Password"}
+          </Button>
+        </form>
+      </div>
+    </div>
   );
 }

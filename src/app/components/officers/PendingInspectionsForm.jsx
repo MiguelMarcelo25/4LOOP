@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
   Typography,
   Box,
@@ -13,6 +14,11 @@ import {
   TableBody,
   TableContainer,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -20,6 +26,9 @@ import axios from 'axios';
 export default function PendingInspectionsForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [ticketToDelete, setTicketToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // ✅ Use placeholderData for instant UI feedback + refetch background
   const { data: pendingData, isLoading, isFetching } = useQuery({
@@ -37,14 +46,29 @@ export default function PendingInspectionsForm() {
     router.push('/officers/inspections');
   };
 
-  const handleCancelInspection = async (ticketId) => {
+  const handleOpenDeleteDialog = (ticket) => {
+    setTicketToDelete(ticket);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setTicketToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ticketToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await axios.put(`/api/ticket/${ticketId}`, {
-        inspectionStatus: 'none',
-      });
+      await axios.delete(`/api/ticket/${ticketToDelete._id}`);
       queryClient.invalidateQueries(['pending-inspections']);
+      handleCloseDeleteDialog();
     } catch (err) {
-      console.error('Error cancelling inspection:', err);
+      console.error('Error deleting inspection:', err);
+      alert('Failed to delete inspection.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -100,9 +124,9 @@ export default function PendingInspectionsForm() {
                         variant="outlined"
                         color="error"
                         size="small"
-                        onClick={() => handleCancelInspection(ticket._id)}
+                        onClick={() => handleOpenDeleteDialog(ticket)}
                       >
-                        Cancel
+                        Delete
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -122,6 +146,78 @@ export default function PendingInspectionsForm() {
           Updating list...
         </Typography>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.95)' : '#fff',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          fontWeight: 'bold', 
+          fontSize: '1.25rem',
+          color: (theme) => theme.palette.mode === 'dark' ? '#fff' : 'text.primary'
+        }}>
+          ⚠️ Delete Inspection Ticket
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ 
+            color: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'text.secondary',
+            mb: 2
+          }}>
+            Are you sure you want to delete this inspection ticket? This action cannot be undone.
+          </DialogContentText>
+          {ticketToDelete && (
+            <Box sx={{ 
+              p: 2, 
+              borderRadius: 2, 
+              backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+              border: '1px solid',
+              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+            }}>
+              <Typography variant="body2" className="font-semibold dark:text-slate-200">
+                Ticket #{ticketToDelete.ticketNumber}
+              </Typography>
+              <Typography variant="body2" className="dark:text-slate-300">
+                Business: {ticketToDelete.business?.businessName}
+              </Typography>
+              <Typography variant="body2" className="dark:text-slate-300">
+                Type: {ticketToDelete.inspectionType}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button 
+            onClick={handleCloseDeleteDialog} 
+            disabled={isDeleting}
+            sx={{
+              color: (theme) => theme.palette.mode === 'dark' ? '#fff' : 'text.primary',
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            variant="contained" 
+            color="error"
+            disabled={isDeleting}
+            sx={{
+              fontWeight: 'bold',
+              px: 3,
+            }}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

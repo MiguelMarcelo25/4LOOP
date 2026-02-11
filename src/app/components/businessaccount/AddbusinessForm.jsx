@@ -76,26 +76,14 @@ export default function AddbusinessForm() {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-6 mb-8 max-w-4xl">
-        <div
-          onClick={() => router.push('/businessaccount/businesses/businesslist')}
-          className="bg-white rounded shadow p-6 hover:shadow-md cursor-pointer transition"
-        >
-          <h2 className="text-lg font-medium mb-2">📋 Business Lists</h2>
-          <p className="text-sm text-gray-600">View and manage registered businesses.</p>
-        </div>
-        <div className="bg-white rounded shadow p-6 hover:shadow-md cursor-pointer">
-          <h2 className="text-lg font-medium mb-2">➕ Add a Business</h2>
-          <p className="text-sm text-gray-600">Register a new business to your list.</p>
-        </div>
-      </div>
+      
 
-      <h1 className="text-2xl font-semibold mb-6">Add a New Business</h1>
+      <h1 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-slate-100">Add a New Business</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-3xl">
         {/* === BUSINESS DETAILS SECTION === */}
         <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-gray-700">🏢 Business Details</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-slate-300">🏢 Business Details</h2>
 
           <Controller
             name="bidNumber"
@@ -110,6 +98,29 @@ export default function AddbusinessForm() {
                 inputProps={{
                   maxLength: 14,
                   style: { textTransform: 'uppercase' },
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'var(--background)',
+                    '& fieldset': {
+                      borderColor: 'rgba(148, 163, 184, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(148, 163, 184, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3b82f6',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: 'var(--foreground)',
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'var(--foreground)',
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: errors.bidNumber ? '#ef4444' : 'rgba(148, 163, 184, 0.8)',
+                  },
                 }}
                 onInput={(e) => {
                   let value = e.target.value.toUpperCase();
@@ -168,6 +179,50 @@ export default function AddbusinessForm() {
                 margin="normal"
                 error={!!errors.businessType}
                 helperText={errors?.businessType?.message}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'var(--background)',
+                    '& fieldset': {
+                      borderColor: 'rgba(148, 163, 184, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(148, 163, 184, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3b82f6',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: 'var(--foreground)',
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'var(--foreground)',
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: errors.businessType ? '#ef4444' : 'rgba(148, 163, 184, 0.8)',
+                  },
+                }}
+                SelectProps={{
+                  MenuProps: {
+                    PaperProps: {
+                      sx: {
+                        backgroundColor: 'var(--background)',
+                        '& .MuiMenuItem-root': {
+                          color: 'var(--foreground)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          },
+                          '&.Mui-selected': {
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            '&:hover': {
+                              backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                }}
               >
                 <MenuItem value="">Select Line of Business</MenuItem>
                 <MenuItem value="Food">Food</MenuItem>
@@ -199,7 +254,7 @@ export default function AddbusinessForm() {
 
         {/* === CONTACT INFORMATION SECTION === */}
         <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-gray-700">📞 Contact Information</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-slate-300">📞 Contact Information</h2>
 
           <RHFTextField
             control={control}
@@ -224,6 +279,29 @@ export default function AddbusinessForm() {
                   maxLength: 11,
                   inputMode: 'numeric',
                   pattern: '[0-9]*',
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'var(--background)',
+                    '& fieldset': {
+                      borderColor: 'rgba(148, 163, 184, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(148, 163, 184, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3b82f6',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: 'var(--foreground)',
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'var(--foreground)',
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: errors.contactNumber ? '#ef4444' : 'rgba(148, 163, 184, 0.8)',
+                  },
                 }}
                 onInput={(e) => {
                   e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);

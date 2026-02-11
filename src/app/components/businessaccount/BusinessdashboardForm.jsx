@@ -148,7 +148,7 @@ export default function DashboardForm() {
   return (
     <div className="relative">
       <div className="flex justify-between items-center mb-6 px-4">
-        <h1 className="text-2xl font-semibold">Welcome to Your Dashboard</h1>
+        <h1 className="text-2xl font-semibold dark:text-white">Welcome to Your Dashboard</h1>
 
         <div className="relative mr-4">
           <IconButton
@@ -158,6 +158,7 @@ export default function DashboardForm() {
               transform: 'scale(1.3)',
               '& .MuiBadge-badge': { top: 6, right: 6 },
             }}
+            className="dark:text-blue-400"
           >
             <Badge badgeContent={notifications.length} color="error">
               <HiBell size={34} />
@@ -170,6 +171,7 @@ export default function DashboardForm() {
             open={open}
             onClose={handleMenuClose}
             PaperProps={{
+              className: "dark:bg-slate-800 dark:text-slate-200",
               style: {
                 width: 360,
                 maxHeight: 420,
@@ -178,11 +180,11 @@ export default function DashboardForm() {
             }}
           >
             {loading ? (
-              <MenuItem>
+              <MenuItem className="dark:text-slate-200">
                 <CircularProgress size={20} sx={{ mr: 2 }} /> Loading...
               </MenuItem>
             ) : notifications.length === 0 ? (
-              <MenuItem>No new notifications</MenuItem>
+              <MenuItem className="dark:text-slate-200">No new notifications</MenuItem>
             ) : (
               notifications.map((notif, i) => (
                 <MenuItem
@@ -196,26 +198,27 @@ export default function DashboardForm() {
                     justifyContent: 'space-between',
                     alignItems: 'flex-start',
                   }}
+                  className="hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   <div
                     className="flex-1 cursor-pointer"
                     onClick={() => handleNotificationClick(notif)}
                   >
-                    <div className="mb-1 text-sm text-gray-500">
+                    <div className="mb-1 text-sm text-gray-500 dark:text-gray-400">
                      {notif.business?.businessName && (
-  <div className="text-sm text-gray-500">
-    {notif.business.businessName}
-  </div>
-)}
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {notif.business.businessName}
+                      </div>
+                    )}
 
 
                     </div>
 
-                    <strong className="block mb-1 text-gray-800">
+                    <strong className="block mb-1 text-gray-800 dark:text-gray-200">
                       {statusLabels[notif.status] || 'Notification'}
                     </strong>
 
-                    <span className="text-gray-700">
+                    <span className="text-gray-700 dark:text-gray-300">
                       {notif.message || 'New update available'}
                     </span>
                   </div>
@@ -224,6 +227,7 @@ export default function DashboardForm() {
                     size="small"
                     onClick={() => handleDeleteNotification(notif._id)}
                     sx={{ ml: 1 }}
+                    className="dark:text-gray-400 dark:hover:text-white"
                   >
                     <CloseIcon fontSize="small" />
                   </IconButton>

@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Typography, Button } from '@mui/material';
+import Sidebar from '@/app/components/Sidebar';
 import BusinessesForm from '../../components/admin/BusinessesForm';
 
 export default function BusinessesPage() {
   const router = useRouter();
   const [selectedOwner, setSelectedOwner] = useState(null);
 
-  const handleBackToOfficers = () => {
+  const handleBackToDashboard = () => {
     router.push('/admin');
   };
 
@@ -18,24 +19,34 @@ export default function BusinessesPage() {
   };
 
   return (
-    <Box p={4} sx={{ position: 'relative' }}>
- 
-      {/* 🔙 Back to Officers Dashboard — only show when not viewing details */}
-      {!selectedOwner && (
-        <Button variant="outlined" onClick={handleBackToOfficers} sx={{ mb: 2 }}>
-          ← Back to Officers Dashboard
-        </Button>
-      )}
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-200">
+      <Sidebar />
+      <main className="flex-grow relative">
+        <Box p={4} sx={{ position: 'relative' }}>
+     
+          {/* 🔙 Back to Dashboard — only show when not viewing details */}
+          {!selectedOwner && (
+            <Button 
+              variant="outlined" 
+              onClick={handleBackToDashboard} 
+              sx={{ mb: 2 }}
+              className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
+            >
+              ← Back to Admin Dashboard
+            </Button>
+          )}
 
-      <Typography variant="h6" fontWeight="medium" mb={2}>
-        Registered Business Owners
-      </Typography>
+          <Typography variant="h6" fontWeight="medium" mb={2} className="dark:text-slate-200">
+            Registered Business Owners
+          </Typography>
 
-      <BusinessesForm
-        selectedOwner={selectedOwner}
-        onSelectOwner={setSelectedOwner}
-        onBack={handleBackToList}
-      />
-    </Box>
+          <BusinessesForm
+            selectedOwner={selectedOwner}
+            onSelectOwner={setSelectedOwner}
+            onBack={handleBackToList}
+          />
+        </Box>
+      </main>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../../components/admin/sidebar';
+import Sidebar from '@/app/components/Sidebar';
 import HelpForm from '../../components/admin/HelpForm';
 
 export default function HelpPage() {

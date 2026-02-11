@@ -14,6 +14,20 @@ const RHFCheckbox = ({
   onChange,
   ...rest
 }) => {
+  const darkModeSx = {
+    color: 'var(--foreground)',
+    '& .MuiTypography-root': {
+      color: 'var(--foreground)',
+    },
+    '& .MuiCheckbox-root': {
+      color: 'rgba(148, 163, 184, 0.5)',
+      '&.Mui-checked': {
+        color: '#3b82f6',
+      },
+    },
+    ...sx
+  };
+
   return control ? (
     <Controller
       name={name}
@@ -22,7 +36,7 @@ const RHFCheckbox = ({
       render={({ field }) => (
         <FormControlLabel
           className={className}
-          sx={sx}
+          sx={darkModeSx}
           control={
             <Checkbox
               {...field}
@@ -38,7 +52,7 @@ const RHFCheckbox = ({
   ) : (
     <FormControlLabel
       className={className}
-      sx={sx}
+      sx={darkModeSx}
       control={
         <Checkbox
           checked={!!value}

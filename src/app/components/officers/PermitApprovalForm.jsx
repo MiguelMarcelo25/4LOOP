@@ -151,7 +151,7 @@ export default function PermitApprovalForm() {
         ← Back to Workbench
       </Button>
 
-      <Typography variant="h6" fontWeight="bold" mb={3}>
+      <Typography variant="h6" fontWeight="bold" mb={3} className="dark:text-white">
         🧾 Requests Awaiting Permit Approval
       </Typography>
 
@@ -166,6 +166,14 @@ export default function PermitApprovalForm() {
             setPage(1);
           }}
           sx={{ width: 220 }}
+          className="dark:bg-slate-800 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
+          SelectProps={{
+            MenuProps: {
+              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
+            }
+          }}
         >
           {searchFields.map((f) => (
             <MenuItem key={f.value} value={f.value}>
@@ -185,6 +193,9 @@ export default function PermitApprovalForm() {
             setPage(1);
           }}
           fullWidth
+          className="dark:bg-slate-800 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
         />
 
         <TextField
@@ -196,6 +207,14 @@ export default function PermitApprovalForm() {
             setPage(1);
           }}
           sx={{ width: 160 }}
+          className="dark:bg-slate-800 rounded"
+          InputLabelProps={{ className: "dark:text-slate-300" }}
+          InputProps={{ className: "dark:text-slate-200" }}
+          SelectProps={{
+            MenuProps: {
+              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
+            }
+          }}
         >
           {[10, 20, 30, 50].map((num) => (
             <MenuItem key={num} value={num}>
@@ -228,51 +247,57 @@ export default function PermitApprovalForm() {
               <TableHead>
                 <TableRow>
                   {columns.map((col) => (
-                    <TableCell
-                      key={col.key}
-                      sx={{
-                        fontWeight: 'bold',
-                        cursor: col.key === 'actions' ? 'default' : 'pointer',
-                      }}
-                      onClick={
-                        col.key === 'actions'
-                          ? undefined
-                          : () => handleSort(col.key)
-                      }
-                    >
-                      {col.key !== 'actions' ? (
-                        <TableSortLabel
-                          active={sortConfig.key === col.key}
-                          direction={
-                            sortConfig.key === col.key
-                              ? sortConfig.direction
-                              : 'asc'
-                          }
-                        >
-                          {col.label}
-                        </TableSortLabel>
-                      ) : (
-                        col.label
-                      )}
-                    </TableCell>
-                  ))}
+                  <TableCell
+                    key={col.key}
+                    sx={{
+                      fontWeight: 'bold',
+                      cursor: col.key === 'actions' ? 'default' : 'pointer',
+                    }}
+                    onClick={
+                      col.key === 'actions'
+                        ? undefined
+                        : () => handleSort(col.key)
+                    }
+                    className="dark:bg-slate-800 dark:text-slate-200 border-b dark:border-slate-700"
+                  >
+                    {col.key !== 'actions' ? (
+                      <TableSortLabel
+                        active={sortConfig.key === col.key}
+                        direction={
+                          sortConfig.key === col.key
+                            ? sortConfig.direction
+                            : 'asc'
+                        }
+                        className="dark:text-slate-200 dark:hover:text-slate-100"
+                        sx={{
+                          '&.Mui-active': { color: 'inherit' },
+                          '& .MuiTableSortLabel-icon': { color: 'inherit !important' },
+                        }}
+                      >
+                        {col.label}
+                      </TableSortLabel>
+                    ) : (
+                      col.label
+                    )}
+                  </TableCell>
+                ))}
                 </TableRow>
               </TableHead>
 
               <TableBody>
                 {paginatedRequests.length > 0 ? (
                   paginatedRequests.map((req) => (
-                    <TableRow key={req._id} hover>
-                      <TableCell>{req.requestType}</TableCell>
-                      <TableCell>{req.bidNumber}</TableCell>
-                      <TableCell>{req.businessName}</TableCell>
-                      <TableCell>{req.businessNickname}</TableCell>
-                      <TableCell>{req.businessType}</TableCell>
-                      <TableCell>{req.businessAddress}</TableCell>
-                      <TableCell>
+                    <TableRow key={req._id} hover className="dark:hover:bg-slate-700">
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.requestType}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.bidNumber}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessName}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessNickname}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessType}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessAddress}</TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
                         {new Date(req.createdAt).toLocaleString('en-PH')}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="dark:border-slate-700">
                         <Button
                           variant="contained"
                           color="primary"
@@ -286,7 +311,7 @@ export default function PermitApprovalForm() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} align="center">
+                    <TableCell colSpan={columns.length} align="center" className="dark:text-slate-400 dark:border-slate-700">
                       No pending requests awaiting permit approval.
                     </TableCell>
                   </TableRow>

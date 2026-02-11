@@ -58,10 +58,10 @@ export default function VerifyYourEmail() {
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-blue-900/90"></div>
 
       {/* Card */}
-      <div className="relative bg-white p-8 rounded-lg shadow-lg w-full max-w-md z-10 text-center">
-        <h1 className="text-2xl font-semibold mb-2 text-gray-800">Verify Your Email</h1>
-        <p className="text-sm text-gray-600 mb-4">
-          We’ve sent a 6-digit verification code to{" "}
+      <div className="relative bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg w-full max-w-md z-10 text-center">
+        <h1 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-slate-100">Verify Your Email</h1>
+        <p className="text-sm text-gray-600 dark:text-slate-300 mb-4">
+          We've sent a 6-digit verification code to{" "}
           <span className="font-semibold">{email}</span>.
           <br />Please check your inbox or spam folder.
         </p>
@@ -72,14 +72,14 @@ export default function VerifyYourEmail() {
             placeholder="Enter verification code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-sm text-center"
+            className="border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm text-center text-black dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             maxLength={6}
           />
           <button
             type="submit"
             disabled={loading}
-            className={`bg-blue-900 text-white py-2 rounded-md transition ${
-              loading ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-800"
+            className={`bg-blue-900 dark:bg-blue-700 text-white py-2 rounded-md transition ${
+              loading ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-800 dark:hover:bg-blue-600"
             }`}
           >
             {loading ? "Verifying..." : "Verify Email"}
@@ -89,7 +89,7 @@ export default function VerifyYourEmail() {
         {message && (
           <p
             className={`text-sm mt-3 ${
-              message.startsWith("✅") ? "text-green-700" : "text-red-600"
+              message.startsWith("✅") ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"
             }`}
           >
             {message}
@@ -99,19 +99,19 @@ export default function VerifyYourEmail() {
         <button
           onClick={handleResend}
           disabled={resending}
-          className={`text-blue-700 text-sm mt-4 underline ${
-            resending ? "opacity-70 cursor-not-allowed" : "hover:text-blue-900"
+          className={`text-blue-700 dark:text-blue-400 text-sm mt-4 underline ${
+            resending ? "opacity-70 cursor-not-allowed" : "hover:text-blue-900 dark:hover:text-blue-300"
           }`}
         >
           {resending ? "Resending..." : "Resend Verification Code"}
         </button>
 
-        {resendMsg && <p className="text-xs text-gray-600 mt-1">{resendMsg}</p>}
+        {resendMsg && <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">{resendMsg}</p>}
       </div>
 
       {/* Footer */}
       <footer className="text-white text-xs mt-10 z-10">
-        © 2025 CITY GOVERNMENT OF PASIG
+        © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
       </footer>
     </div>
   );

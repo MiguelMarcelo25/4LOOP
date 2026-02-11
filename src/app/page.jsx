@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+    <div className="min-h-screen h-full w-full grid grid-cols-1 md:grid-cols-2">
       {/* LEFT SECTION */}
       <div
         className="relative flex flex-col justify-center items-start p-20 bg-cover bg-center text-white"
@@ -26,29 +26,29 @@ export default function Home() {
       </div>
 
       {/* RIGHT SECTION */}
-      <div className="flex flex-col justify-center bg-white p-10 md:px-20">
+      <div className="flex flex-col justify-center bg-white dark:bg-slate-900 p-10 md:px-20">
         <div className="max-w-md w-full mx-auto space-y-8 text-center">
          
 
           <div className="flex flex-col gap-4">
             <Link
               href="/login"
-              className="w-full bg-blue-900 text-white py-3 rounded-md hover:bg-blue-800 transition"
+              className="w-full bg-blue-900 dark:bg-blue-700 text-white py-3 rounded-md hover:bg-blue-800 dark:hover:bg-blue-600 transition"
             >
               SIGN IN
             </Link>
 
             <Link
               href="/registration"
-              className="w-full border border-blue-900 text-blue-900 py-3 rounded-md hover:bg-blue-50 transition"
+              className="w-full border border-blue-900 dark:border-blue-700 text-blue-900 dark:text-blue-400 py-3 rounded-md hover:bg-blue-50 dark:hover:bg-slate-800 transition"
             >
               SIGN UP
             </Link>
           </div>
         </div>
 
-        <footer className="mt-10 text-center text-xs text-gray-400">
-          © 2025 CITY GOVERNMENT OF PASIG
+        <footer className="mt-10 text-center text-xs text-gray-400 dark:text-slate-500">
+          © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
         </footer>
       </div>
     </div>

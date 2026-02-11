@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '@/app/components/businessaccount/sidebar';
+import Sidebar from '@/app/components/Sidebar';
 import BusinessRequestForm from '../../components/businessaccount/RequestForm';
 
 export default function BusinessRequestPage() {

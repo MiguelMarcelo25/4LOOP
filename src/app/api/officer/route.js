@@ -5,7 +5,7 @@ import Business from "@/models/Business";
 export async function GET(request, { params }) {
   await connectMongoDB();
 
-  const onlineRequest = await Business.find({});
+  const onlineRequest = await Business.find({}).populate('officerInCharge', 'fullName');
   if (!onlineRequest) {
     return NextResponse.json({ error: "Business not found" }, { status: 404 });
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../../components/businessaccount/sidebar';
+import Sidebar from '@/app/components/Sidebar';
 import LogoutForm from '../../components/businessaccount/LogoutForm';
 
 export default function LogoutPage() {

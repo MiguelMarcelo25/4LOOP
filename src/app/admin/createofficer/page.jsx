@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../../components/admin/sidebar';
+import Sidebar from '@/app/components/Sidebar';
 import CreateOfficerForm from '@/app/components/admin/CreateOfficerform';
 
 export default function ProfileSettingsPage() {

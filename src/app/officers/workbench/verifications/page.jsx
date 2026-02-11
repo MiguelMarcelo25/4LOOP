@@ -3,15 +3,15 @@
 import Sidebar from '@/app/components/Sidebar';
 import WorkbenchList from '@/app/components/officers/WorkbenchList';
 
-export default function CompliancePage() {
+export default function VerificationsPage() {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 p-6 relative">
         <section className="mt-6">
           <WorkbenchList 
-            title="Compliance" 
-            filterStatus="pending2" 
+            title="Verifications" 
+            filterStatus="pending" // Filter by status 'pending'
           />
         </section>
       </main>

@@ -19,7 +19,7 @@ const RHFSelect = ({
   const labelId = `${name}-label`;
   return (
     <FormControl {...props} error={error} size={size}>
-      <InputLabel id={labelId}>{label}</InputLabel>
+      <InputLabel id={labelId} sx={{ color: 'var(--foreground)' }}>{label}</InputLabel>
       <Controller
         name={name}
         control={control}
@@ -30,13 +30,49 @@ const RHFSelect = ({
                 defaultValue={defaultValue}
                 labelId={labelId}
                 label={label}
-                sx={sx}
+                sx={{
+                  backgroundColor: 'var(--background)',
+                  color: 'var(--foreground)',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(148, 163, 184, 0.3)',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(148, 163, 184, 0.5)',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#3b82f6',
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: 'var(--foreground)',
+                  },
+                  ...sx
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: 'var(--background)',
+                      color: 'var(--foreground)',
+                      '& .MuiMenuItem-root': {
+                        color: 'var(--foreground)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                          },
+                        },
+                      },
+                    },
+                  },
+                }}
                 >
                     {children}
                 </Select>
         }}
       />
-      {error ? <FormHelperText>{error?.message}</FormHelperText> : ""}
+      {error ? <FormHelperText sx={{ color: '#ef4444' }}>{error?.message}</FormHelperText> : ""}
     </FormControl>
   );
 };
