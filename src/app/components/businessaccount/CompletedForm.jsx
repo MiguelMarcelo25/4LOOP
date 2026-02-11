@@ -117,15 +117,7 @@ export default function CompletedRequestForm() {
           <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">Completed Requests</h1>
           <p className="text-gray-500 dark:text-slate-400 mt-1">View your approved and finalized sanitation permits.</p>
         </div>
-        <Button
-          variant="outlined"
-          startIcon={<HiChevronDown className="rotate-90" />}
-          onClick={() => router.push('/businessaccount/businesses/')}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          sx={{ textTransform: 'none' }}
-        >
-          Back to Lists
-        </Button>
+      
       </div>
 
       {/* 🔍 Search & Filter Bar */}

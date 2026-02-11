@@ -38,7 +38,7 @@ const schema = yup.object().shape({
 
   // ✅ Health certificate fields (optional but validated if filled)
   orDateHealthCert: yup.date().nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid date'),
-  orNumberHealthCert: yup.string().matches(/^\d*$/, 'O.R. Number must contain digits only').nullable().transform((v, o) => (o === '' ? null : v)),
+  orNumberHealthCert: yup.string().nullable().transform((v, o) => (o === '' ? null : v)),
   healthCertSanitaryFee: yup.number().min(0, 'Must be 0 or greater').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
   healthCertFee: yup.number().min(0, 'Must be 0 or greater').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
   declaredPersonnel: yup.number().required('Total personnel is required').min(0, 'Must be 0 or greater').nullable().transform((v, o) => (o === '' ? null : v)).typeError('Please enter a valid number'),
@@ -108,9 +108,21 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   const [isRequestTypeLocked, setIsRequestTypeLocked] = useState(false);
   const [canSubmit, setCanSubmit] = useState(true);
   const [isPersonnelCountLocked, setIsPersonnelCountLocked] = useState(false);
-  
+  const [submitReady, setSubmitReady] = useState(false);
+
   // Multi-step wizard state
   const [activeStep, setActiveStep] = useState(0);
+
+  // ✅ Prevent auto-submission when entering Review step
+  useEffect(() => {
+    if (activeStep === 4) { // Review & Submit Step
+      setSubmitReady(false);
+      const timer = setTimeout(() => setSubmitReady(true), 1000); // 1s delay
+      return () => clearTimeout(timer);
+    } else {
+      setSubmitReady(false);
+    }
+  }, [activeStep]);
   const steps = [
     'Business Information',
     'Permits & Certificates',
@@ -144,6 +156,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       remarks: '',
 
     },
+    shouldUnregister: false, // ✅ Keep values when fields are unmounted (stepper)
     resolver: yupResolver(schema),
   });
   const requestType = watch('requestType') || initialData?.requestType;
@@ -427,6 +440,11 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     if (activeStep !== steps.length - 1) {
       return;
     }
+
+    if (!submitReady) {
+      console.warn("🚫 Submission blocked: Form not ready yet.");
+      return;
+    }
     const hasActive = await checkBusinessStatus(data.bidNumber);
     if (hasActive) {
       setWarningMessage('🚫 There is already an ongoing sanitation request for this business.');
@@ -466,7 +484,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   };
 
   const onError = (errors) => {
-    console.error("Form Validation Errors:", errors);
+    console.error("Form Validation Errors (Detailed):", JSON.stringify(errors, null, 2));
+    console.error("Current Form Values:", getValues());
     setWarningMessage("Cannot submit: Please check the form for missing or invalid fields.");
   };
 
@@ -721,8 +740,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   const handleNext = async () => {
     // Validate current step before proceeding
     let isValid = true;
-    
-    switch(activeStep) {
+
+    switch (activeStep) {
       case 0: // Business Information
         isValid = await trigger(['bidNumber', 'businessName', 'businessAddress', 'requestType']);
         break;
@@ -730,7 +749,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         // Ensure at least one sanitary permit and one health certificate type is selected
         const sanitarySelected = sanitaryPermitChecklistState.length > 0;
         const healthSelected = !!healthCertificateChecklistState;
-        
+
         if (!sanitarySelected || !healthSelected) {
           setWarningMessage('Please select at least one Sanitary Permit and one Health Certificate requirement.');
           isValid = false;
@@ -760,7 +779,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       default:
         isValid = true;
     }
-    
+
     if (isValid) {
       setActiveStep((prev) => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -773,12 +792,12 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   };
 
   return (
-    <>
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       {warningMessage && (
         <Collapse in={!!warningMessage}>
           <Alert
             severity="error"
-            sx={{ mb: 2 }}
+            sx={{ mb: 4, borderRadius: 2 }}
             action={
               <IconButton
                 aria-label="close"
@@ -795,639 +814,567 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         </Collapse>
       )}
 
-      <div className="w-full max-w-6xl mx-auto px-4 mt-5">
-        <div className="grid grid-cols-2 items-center mb-4">
-          {/* Left Column: Back Button + Heading */}
-          <div className="flex items-center gap-x-4 justify-start">
-            {/* <Button
-              variant="outlined"
-              color="primary"
-              onClick={() => router.back('/businessaccount/request')}
-              className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
-            >
-              ← Back
-            </Button> */}
-            <h3 className="text-2xl font-bold text-gray-600 dark:text-slate-200">
-              New Sanitation Permit Request
-            </h3>
-          </div>
-
-          {/* Right Column: Empty or future content */}
-          <div></div>
+      <div className="max-w-5xl mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700">
+        {/* Modern Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-6">
+          <h1 className="text-2xl font-bold text-white">
+            New Sanitation Permit Request
+          </h1>
+          <p className="text-blue-100 text-sm mt-1">
+            Complete the steps below to submit your application
+          </p>
         </div>
-      </div>
 
-      {/* Stepper */}
-      <Box sx={{ width: '100%', maxWidth: '6xl', mx: 'auto', px: 2, mb: 4 }}>
-        <Stepper activeStep={activeStep} alternativeLabel>
-          {steps.map((label, index) => (
-            <Step key={label}>
-              <StepLabel
-                sx={{
-                  '& .MuiStepLabel-label': {
-                    color: 'var(--foreground)',
-                    '&.Mui-active': {
-                      color: '#3b82f6',
-                      fontWeight: 600,
+        {/* Stepper Section */}
+        <div className="px-8 pt-8 pb-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {steps.map((label, index) => (
+              <Step key={label}>
+                <StepLabel
+                  sx={{
+                    '& .MuiStepLabel-label': {
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: 'inherit',
+                      '&.Mui-active': {
+                        color: '#3b82f6',
+                        fontWeight: 700,
+                      },
+                      '&.Mui-completed': {
+                        color: '#10b981',
+                      },
                     },
-                    '&.Mui-completed': {
-                      color: '#10b981',
+                    '& .MuiStepIcon-root': {
+                      width: 28,
+                      height: 28,
+                      color: '#cbd5e1', // slate-300
+                      '&.Mui-active': {
+                        color: '#3b82f6',
+                      },
+                      '&.Mui-completed': {
+                        color: '#10b981',
+                      },
+                      '& text': {
+                        fill: '#fff',
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                      },
                     },
-                  },
-                  '& .MuiStepIcon-root': {
-                    color: 'rgba(148, 163, 184, 0.3)',
-                    '&.Mui-active': {
-                      color: '#3b82f6',
-                    },
-                    '&.Mui-completed': {
-                      color: '#10b981',
-                    },
-                  },
-                }}
-              >
-                {label}
-              </StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-      </Box>
+                  }}
+                >
+                  {label}
+                </StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit, onError)}
-        onKeyDown={(e) => {
-          // Prevent Enter key from submitting the form unless on the Send button
-          if (e.key === 'Enter' && e.target.type !== 'submit') {
-            e.preventDefault();
-          }
-        }}
-        className="space-y-6 w-full bg-white dark:bg-slate-800 dark:text-slate-200 shadow p-4 rounded px-6">
-        
+        <div className="p-8">
+          <form
+            onSubmit={handleSubmit(onSubmit, onError)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.type !== 'submit') {
+                e.preventDefault();
+              }
+            }}
+            className="space-y-8"
+          >
+
         {/* STEP 1: Business Information */}
         {activeStep === 0 && (
-          <>
-        {/* BID NUMBER */}
-
-        <div className="w-full max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-2 items-center mb-2">
-            {/* Left Column: BID NUMBER */}
-            <div className="flex items-center gap-2 justify-start">
-              <span className="text-sm font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
-                BID NUMBER:
-              </span>
-              <Controller
-                name="bidNumber"
-                control={control}
-                render={({ field }) => (
-                  <FormControl
-                    variant="standard"
-                    error={!!errors.bidNumber}
-                    className="w-full max-w-[220px]"
-                  >
-                    <InputLabel id="bidNumber-label" className="dark:text-slate-300">Select Business</InputLabel>
-                    <Select
-                      labelId="bidNumber-label"
-                      {...field}
-                      value={field.value || ""}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      className="dark:text-slate-200 dark:before:border-slate-500 dark:after:border-slate-400"
-                      MenuProps={{ PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } }}
-                    >
-                      <MenuItem value="">-- Select Business --</MenuItem>
-
-                      {loadingBusinesses ? (
-                        <MenuItem disabled>Loading...</MenuItem>
-                      ) : userBusinesses.length === 0 ? (
-                        <MenuItem disabled>No businesses found</MenuItem>
-                      ) : (
-                        userBusinesses.map((biz) => (
-                          <MenuItem key={biz.bidNumber} value={biz.bidNumber}>
-                            {biz.bidNumber} — {biz.businessName}
+          <div className="max-w-4xl mx-auto space-y-8">
+            {/* Section 1: Business Identification */}
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <label className="md:col-span-3 text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                  Select Business
+                </label>
+                <div className="md:col-span-9">
+                  <Controller
+                    name="bidNumber"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth size="small" error={!!errors.bidNumber}>
+                        <Select
+                          {...field}
+                          value={field.value || ""}
+                          displayEmpty
+                          onChange={(e) => field.onChange(e.target.value)}
+                          className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                          MenuProps={{ PaperProps: { className: "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700" } }}
+                        >
+                          <MenuItem value="" disabled className="text-slate-400">
+                            -- Select Business ID --
                           </MenuItem>
-                        ))
-                      )}
-                    </Select>
-
-                    {errors?.bidNumber && (
-                      <p className="text-red-600 text-xs mt-1">
-                        {errors.bidNumber.message}
-                      </p>
+                          {loadingBusinesses ? (
+                            <MenuItem disabled>Loading...</MenuItem>
+                          ) : userBusinesses.length === 0 ? (
+                            <MenuItem disabled>No businesses found</MenuItem>
+                          ) : (
+                            userBusinesses.map((biz) => (
+                              <MenuItem key={biz.bidNumber} value={biz.bidNumber}>
+                                <span className="font-mono font-bold mr-2">{biz.bidNumber}</span> 
+                                <span className="text-slate-500 dark:text-slate-400">— {biz.businessName}</span>
+                              </MenuItem>
+                            ))
+                          )}
+                        </Select>
+                        {errors?.bidNumber && (
+                          <p className="text-red-600 text-xs mt-1 ml-1">
+                            {errors.bidNumber.message}
+                          </p>
+                        )}
+                      </FormControl>
                     )}
-                  </FormControl>
-                )}
-              />
-
-
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Right Column: Empty or future content */}
-            <div></div>
-          </div>
-        </div>
-
-        <div className="w-full max-w-screen-lg mx-auto">
-          {/* BUSINESS NAME */}
-          <div className="flex flex-col mb-4">
-            <RHFTextField
-              control={control}
-              name="businessName"
-              variant="standard"
-              label=""
-              error={!!errors.businessName}
-              helperText={errors?.businessName?.message}
-              fullWidth
-              className="w-full"
-              InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-            />
-            <span className="text-sm font-medium text-gray-700 dark:text-slate-300 mt-1 text-center">
-              BUSINESS NAME
-            </span>
-          </div>
-
-          {/* BUSINESS ADDRESS */}
-          <div className="flex flex-col mb-4">
-            <RHFTextField
-              control={control}
-              name="businessAddress"
-              variant="standard"
-              label=""
-              error={!!errors.businessAddress}
-              helperText={errors?.businessAddress?.message}
-              fullWidth
-              className="w-full"
-              InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-            />
-            <span className="text-sm font-medium text-gray-700 dark:text-slate-300 mt-1 text-center">
-              BUSINESS ADDRESS
-            </span>
-          </div>
-        </div>
-
-        <div className="w-full max-w-5xl mx-auto">
-          <div className="grid grid-cols-2">
-
-            {/* Column 1: Establishment Input with constrained width */}
-            <div className="flex flex-col w-[380px] items-center">
-              <RHFTextField
-                control={control}
-                name="businessEstablishment"
-                variant="standard"
-                label=""
-                fullWidth
-                InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-              />
-              <span className="text-sm font-medium text-gray-700 dark:text-slate-300 mt-1 text-center">
-                SAME EMPLOYEE / NAME OF ESTABLISHMENT
-              </span>
-            </div>
-
-            <div className="flex flex-col justify-center">
-              <div className="flex items-center gap-x-7 flex-nowrap">
-                <span className="text-base font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
-                  <b>BUSINESS STATUS:</b>
-                </span>
-
-                <label className="flex items-center gap-2 whitespace-nowrap dark:text-slate-300">
-                  <input
-                    type="radio"
-                    value="New"
-                    {...register('requestType')}
-                    disabled={isRequestTypeLocked} // 🔒 lock if existing records
-                  />
-                  NEW
-                </label>
-
-                <label className="flex items-center gap-2 whitespace-nowrap dark:text-slate-300">
-                  <input
-                    type="radio"
-                    value="Renewal"
-                    {...register('requestType')}
-                    disabled={isRequestTypeLocked} // 🔒 same logic
-                  />
-                  RENEWAL
-                </label>
+            {/* Section 2: Business Details */}
+            <div className="space-y-6">
+              <div className="group">
+                <RHFTextField
+                  control={control}
+                  name="businessName"
+                  variant="outlined"
+                  label="Business Name"
+                  fullWidth
+                />
               </div>
 
-              {errors.requestType && (
-                <p className="text-red-600 text-sm mt-1">
-                  {errors.requestType.message}
-                </p>
-              )}
+              <div className="group">
+                <RHFTextField
+                  control={control}
+                  name="businessAddress"
+                  variant="outlined"
+                  label="Business Address"
+                  fullWidth
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="group">
+                   <RHFTextField
+                    control={control}
+                    name="businessEstablishment"
+                    variant="outlined"
+                    label="Establishment Name / Employee"
+                    fullWidth
+                  />
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700 flex flex-col justify-center">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase">
+                      Status:
+                    </span>
+                    <div className="flex items-center gap-6">
+                      <label className={`flex items-center gap-2 cursor-pointer transition-colors ${isRequestTypeLocked ? 'opacity-50 cursor-not-allowed' : 'hover:text-blue-600'}`}>
+                        <input
+                          type="radio"
+                          value="New"
+                          {...register('requestType')}
+                          disabled={isRequestTypeLocked}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">New</span>
+                      </label>
+
+                      <label className={`flex items-center gap-2 cursor-pointer transition-colors ${isRequestTypeLocked ? 'opacity-50 cursor-not-allowed' : 'hover:text-blue-600'}`}>
+                        <input
+                          type="radio"
+                          value="Renewal"
+                          {...register('requestType')}
+                          disabled={isRequestTypeLocked}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">Renewal</span>
+                      </label>
+                    </div>
+                  </div>
+                   {errors.requestType && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {errors.requestType.message}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-
-
           </div>
-        </div>
-        </>
         )}
 
         {/* STEP 2: Permits & Certificates */}
         {activeStep === 1 && (
-          <>
-
-        <div className="w-full max-w-6xl mx-auto px-4 mb-6">
-          <div className="grid grid-cols-[2fr_1fr] gap-6">
-            {/* Left column */}
-            <div className="flex flex-col w-[450px]">
-              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2 dark:bg-blue-900/30 dark:border-blue-400">
-                <h2 className="text-lg font-bold uppercase text-blue-900 dark:text-blue-200">
-                  A. ISSUANCE OF SANITARY PERMIT
+          <div className="space-y-8 max-w-5xl mx-auto">
+            
+            {/* A. Sanitary Permit */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-100 dark:border-blue-800 flex items-center gap-3">
+                <div className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">A</div>
+                <h2 className="text-lg font-bold text-blue-900 dark:text-blue-200">
+                  ISSUANCE OF SANITARY PERMIT
                 </h2>
               </div>
+              
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Checklist */}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-wider">
+                    Requirements
+                  </h3>
+                  <div className="space-y-3">
+                    {sanitaryPermitChecklist.map((item) => (
+                      <label
+                        key={item.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          sanitaryPermitChecklistState.includes(item.id)
+                            ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                            : 'bg-slate-50 border-transparent hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          value={item.id}
+                          checked={sanitaryPermitChecklistState.includes(item.id)}
+                          onChange={handleSanitaryChange}
+                          className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          autoComplete="off"
+                          name={`sanitary-${item.id}`}
+                        />
+                        <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                          {item.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="flex flex-col gap-2 text-sm dark:text-slate-300">
-                {sanitaryPermitChecklist.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      value={item.id}
-                      checked={sanitaryPermitChecklistState.includes(item.id)}
-                      onChange={handleSanitaryChange}
-                      className="transform scale-125 accent-blue-600"
-                      autoComplete="off" // ✅ prevents browser autofill
-                      name={`sanitary-${item.id}`} // ✅ unique names also prevent autofill
-                    />
-                    {item.label}
-                  </label>
-                ))}
+                {/* Info Panel */}
+                <div className="bg-slate-50 dark:bg-slate-700/30 p-5 rounded-lg border border-slate-100 dark:border-slate-700">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
+                    IF NO OPERATION
+                  </h3>
+                  <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Present Latest BIR Quarterly Income Tax Return</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>For bulk personnel & no appearance securing health certificate IDs</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
-
             </div>
 
-            {/* Right column */}
-            <div className="flex flex-col w-[450px]">
-              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2 dark:bg-blue-900/30 dark:border-blue-400">
-                <h2 className="text-lg font-bold uppercase text-blue-900 dark:text-blue-200">
-                  IF NO OPERATION
+            {/* B. Health Certificate */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-100 dark:border-blue-800 flex items-center gap-3">
+                <div className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">B</div>
+                <h2 className="text-lg font-bold text-blue-900 dark:text-blue-200">
+                  ISSUANCE OF HEALTH CERTIFICATE
                 </h2>
               </div>
 
-              <div className="flex flex-col gap-2 text-sm dark:text-slate-300">
-                <h1>Present Latest BIR Quarterly Income Tax Return</h1>
-                <h1>
-                  For bulk personnel & no appearance securing health certificate IDs
-                </h1>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
+                {/* Left: Requirements Checklist */}
+                <div className="md:col-span-7 space-y-6">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                      Present Original COPY to Validation Office:
+                    </h3>
+                    <div className="space-y-2">
+                      {healthCertificateChecklist.map((item) => (
+                        <label
+                          key={item.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                            healthCertificateChecklistState === item.id
+                              ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                              : 'bg-slate-50 border-transparent hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="healthExam"
+                            value={item.id}
+                            checked={healthCertificateChecklistState === item.id}
+                            onChange={handleHealthChange}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                            {item.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                      Present to Environmental Sanitation Office:
+                    </h3>
+                    <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400 pl-4 border-l-2 border-slate-200 dark:border-slate-700 ml-1">
+                      <li>A. Validated Medical Summary</li>
+                      <li>B. Official Receipt</li>
+                      <li className="pl-4 text-xs italic opacity-80">- Validation fee/person (if not at Pasig OSS Clinic)</li>
+                      <li className="pl-4 text-xs italic opacity-80">- Health Certificate Fee</li>
+                    </ul>
+                  </div>
+
+                  {/* Payment Details Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <RHFTextField
+                      control={control}
+                      name="orDateHealthCert"
+                      type="date"
+                      variant="outlined"
+                      label="O.R. Date"
+                      fullWidth
+                      size="small"
+                      InputLabelProps={{ shrink: true, className: "dark:text-slate-300" }}
+                      InputProps={{ className: "dark:text-slate-200 dark:bg-slate-700/50" }}
+                    />
+                    
+                    <RHFTextField
+                      control={control}
+                      name="orNumberHealthCert"
+                      variant="outlined"
+                      label="O.R. Number"
+                      placeholder="Enter O.R. Number"
+                      fullWidth
+                      size="small"
+                      InputLabelProps={{ className: "dark:text-slate-300" }}
+                      InputProps={{ className: "dark:text-slate-200 dark:bg-slate-700/50" }}
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, '');
+                        setValue('orNumberHealthCert', digitsOnly, { shouldValidate: true, shouldDirty: true });
+                      }}
+                    />
+
+                    <RHFTextField
+                      control={control}
+                      name="healthCertSanitaryFee"
+                      type="number"
+                      variant="outlined"
+                      label="Sanitary Fee"
+                      placeholder="0.00"
+                      fullWidth
+                      size="small"
+                      InputLabelProps={{ className: "dark:text-slate-300" }}
+                      InputProps={{ className: "dark:text-slate-200 dark:bg-slate-700/50" }}
+                      onBlur={(e) => {
+                         const val = parseFloat(e.target.value);
+                         if(!isNaN(val)) setValue('healthCertSanitaryFee', val, { shouldValidate: true });
+                      }}
+                    />
+
+                    <RHFTextField
+                      control={control}
+                      name="healthCertFee"
+                      type="number"
+                      variant="outlined"
+                      label="Health Cert Fee"
+                      placeholder="0.00"
+                      fullWidth
+                      size="small"
+                      InputLabelProps={{ className: "dark:text-slate-300" }}
+                      InputProps={{ className: "dark:text-slate-200 dark:bg-slate-700/50" }}
+                      onBlur={(e) => {
+                         const val = parseFloat(e.target.value);
+                         if(!isNaN(val)) setValue('healthCertFee', val, { shouldValidate: true });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Right: Bulk Instructions */}
+                <div className="md:col-span-5 bg-amber-50 dark:bg-amber-900/10 p-5 rounded-lg border border-amber-100 dark:border-amber-800/30">
+                  <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-4">
+                    BULK PERSONNEL & NO APPEARANCE INSTRUCTIONS
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase mb-1">Food Business</h4>
+                      <ul className="text-xs text-amber-900/80 dark:text-amber-100/70 space-y-1 list-disc pl-4">
+                        <li>Bring 1x1 or 2x2 latest colored photo (not scanned)</li>
+                        <li>Indicate (Surname, First Name, Middle Name) with signature</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase mb-1">Non-Food Business</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">1-10 Personnel:</p>
+                          <ul className="text-xs text-amber-900/80 dark:text-amber-100/70 space-y-1 list-disc pl-4">
+                            <li>Bring 1x1 or 2x2 actual colored photo</li>
+                            <li>Indicate full name with signature</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">11+ Personnel:</p>
+                          <p className="text-xs text-amber-900/80 dark:text-amber-100/70 pl-2">
+                            Certificate of Compliance will be issued upon complying requirements instead of individual Health Certificate I.D.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="w-full max-w-6xl mx-auto px-4 mb-6">
-          <div className="grid grid-cols-[2fr_1fr] gap-6">
-            {/* Left column: B. ISSUANCE OF HEALTH CERTIFICATE */}
-            <div className="flex flex-col w-[450px]">
-              <div className="bg-blue-100 border-2 border-blue-900 px-2 py-1 text-center mb-2 dark:bg-blue-900/30 dark:border-blue-400">
-                <h2 className="text-lg font-bold uppercase text-blue-900 dark:text-blue-200">
-                  B. ISSUANCE OF HEALTH CERTIFICATE
-                </h2>
-              </div>
-
-              <h1 className="text-base font-semibold mb-3 dark:text-slate-200">
-                Present Original COPY of the following to Validation Office
-              </h1>
-
-              {/* Checklist items */}
-              <div className="flex flex-col gap-2 mb-2 dark:text-slate-300">
-                {healthCertificateChecklist.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex items-center gap-2 text-sm cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name="healthExam" // same name groups them together
-                      value={item.id}
-                      checked={healthCertificateChecklistState === item.id}
-                      onChange={handleHealthChange}
-                      className="transform scale-110 accent-blue-600"
-                    />
-                    {item.label}
-                  </label>
-                ))}
-              </div>
-
-              <h1 className="font-bold ml-6 mt-3 dark:text-slate-200">
-                Present the following to Environmental Sanitation Office
-              </h1>
-
-              <div className="dark:text-slate-300">
-                <h1 className="ml-9">A. Validated Medical Summary</h1>
-                <h1 className="ml-9">B. Official Receipt</h1>
-                <h1 className="ml-12">
-                  - Validation fee/person if medical examination was not conducted by the
-                  Pasig One Stop Shop Clinic (5th flr.)
-                </h1>
-                <h1 className="ml-12 mb-4">- Health Certificate Fee</h1>
-              </div>
-
-              {/* Input fields */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* ✅ O.R. Date (optional but validates format) */}
-                <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
-                    O.R. Date:
-                  </label>
-                  <RHFTextField
-                    control={control}
-                    name="orDateHealthCert"
-                    type="date"
-                    variant="standard"
-                    fullWidth
-                    InputLabelProps={{ shrink: true, className: "dark:text-slate-300" }}
-                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-                  />
-                </div>
-
-                {/* ✅ O.R. Number (optional but must be digits) */}
-                <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
-                    O.R. Number:
-                  </label>
-                  <RHFTextField
-                    control={control}
-                    name="orNumberHealthCert"
-                    type="text"
-                    variant="standard"
-                    placeholder="Enter O.R. Number"
-                    fullWidth
-                    inputProps={{
-                      inputMode: 'numeric',
-                      maxLength: 20,
-                      className: "dark:text-slate-200"
-                    }}
-                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-                    onChange={(e) => {
-                      const digitsOnly = e.target.value.replace(/\D/g, '');
-                      setValue('orNumberHealthCert', digitsOnly, {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      });
-                    }}
-                  />
-                </div>
-
-                {/* ✅ Sanitary Fee (optional, validates number ≥ 0) */}
-                <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
-                    Sanitary Fee:
-                  </label>
-                  <RHFTextField
-                    control={control}
-                    name="healthCertSanitaryFee"
-                    type="number"
-                    variant="standard"
-                    placeholder="Enter amount"
-                    fullWidth
-                    inputProps={{ step: '0.01', min: 0, className: "dark:text-slate-200" }}
-                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-                    onBlur={(e) => {
-                      const value = parseFloat(e.target.value);
-                      if (!isNaN(value)) {
-                        setValue('healthCertSanitaryFee', value, {
-                          shouldValidate: true,
-                          shouldDirty: true,
-                        });
-                      }
-                    }}
-                  />
-                </div>
-
-                {/* ✅ Health Certificate Fee (optional, validates number ≥ 0) */}
-
-                {/* ✅ Health Certificate Fee (optional, validates number ≥ 0) */}
-                <div className="flex items-center gap-2">
-                  <label className="w-[120px] text-sm font-medium text-gray-700 dark:text-slate-300">
-                    Health Cert Fee:
-                  </label>
-                  <RHFTextField
-                    control={control}
-                    name="healthCertFee"
-                    type="number"
-                    variant="standard"
-                    placeholder="Enter amount"
-                    fullWidth
-                    inputProps={{ step: '0.01', min: 0, className: "dark:text-slate-200" }}
-                    InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-                    onBlur={(e) => {
-                      const value = parseFloat(e.target.value);
-                      if (!isNaN(value)) {
-                        setValue('healthCertFee', value, {
-                          shouldValidate: true,
-                          shouldDirty: true,
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Right column: Bulk Personnel Instructions */}
-            <div className="flex flex-col w-[450px] gap-2 text-sm dark:text-slate-300">
-              <h1 className="font-bold">
-                FOR BULK PERSONNEL & NO APPEARANCE SECURING HEALTH CERTIFICATE ID'S
-              </h1>
-
-              <h1 className="font-bold">FOOD BUSINESS</h1>
-              <h1>a. Bring 1x1 or 2x2 latest colored photo (not scanned photo)</h1>
-              <h1>b. Indicate (Surname, First Name, Middle Name) with signature</h1>
-
-              <h1 className="font-bold">NON-FOOD BUSINESS</h1>
-
-              <h1 className="font-bold">- Companies with 1-10 personnel</h1>
-              <h1>a. Bring 1x1 or 2x2 actual colored photo (not scanned photo)</h1>
-              <h1>b. Indicate (Surname, First Name, Middle Name) with signature</h1>
-
-              <h1 className="font-bold">- Companies with 11 and above personnel</h1>
-              <h1>
-                A Certificate of Compliance will be issued upon complying the
-                requirements instead of individual Health Certificate I.D.
-              </h1>
-              <h1>(Option instead of the Health Certificate I.D.)</h1>
-            </div>
-          </div>
-        </div>
-        </>
         )}
 
         {/* STEP 3: Personnel & Health Certificates */}
         {activeStep === 2 && (
-          <>
-        <div className="w-full max-w-screen-lg mx-auto flex justify-center">
-          {/* Form Container */}
-          <div className="w-full max-w-4xl border border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-md p-8 space-y-6">
-
-            {/* Row 1: Declared Personnel + Due Date to Comply */}
-            <div className="grid [grid-template-columns:1.5fr_1fr] gap-6 mt-2">
-              {/* Column 1: Declared Personnel */}
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor="declaredPersonnel"
-                  className="text-sm font-medium text-gray-700 dark:text-slate-300 min-w-[160px]"
-                >
-                  TOTAL NUMBER OF DECLARED PERSONNEL
-                </label>
-                <input
-                  id="declaredPersonnel"
-                  type="number"
-                  {...register('declaredPersonnel')}
-                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[160px] mt-5 dark:bg-slate-700 dark:text-slate-200"
-                  placeholder="Enter total"
-                />
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-6 border-b border-slate-100 dark:border-slate-700">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                  Personnel Declaration
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Please declare total personnel and health certificate compliance
+                </p>
               </div>
 
-              {/* Column 2: Due Date to Comply */}
-              <div className="flex flex-col gap-1 ml-10">
-                <label
-                  htmlFor="declaredPersonnelDueDate"
-                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
-                >
-                  DUE DATE TO COMPLY
-                </label>
-                <input
-                  id="declaredPersonnelDueDate"
-                  type="date"
-                  {...register('declaredPersonnelDueDate')}
-                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[130px] bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200"
-                />
-              </div>
+              <div className="p-8 space-y-8">
+                {/* Section 1: Declared Personnel */}
+                <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-6 border border-blue-100 dark:border-blue-800/30">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                        Total Declared Personnel
+                      </label>
+                      <input
+                        type="number"
+                        {...register('declaredPersonnel')}
+                        className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                        Due Date to Comply
+                      </label>
+                      <input
+                        type="date"
+                        {...register('declaredPersonnelDueDate')}
+                        className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            </div>
+                <div className="border-t border-slate-100 dark:border-slate-700 my-4"></div>
 
-            {/* Row 2: Health Certificates + Balance to Comply + Due Date */}
-            <div className="grid grid-cols-3 gap-6 mt-15">
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="healthCertificates"
-                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
-                >
-                  TOTAL NUMBER WITH HEALTH CERTIFICATES
-                </label>
-                <input
-                  id="healthCertificates"
-                  type="number"
-                  {...register('healthCertificates')}
-                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[160px] dark:bg-slate-700 dark:text-slate-200"
-                  placeholder="Enter total"
-                />
-              </div>
+                {/* Section 2: Health Certificates */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase h-8 flex items-end">
+                      Total with Health Certs
+                    </label>
+                    <input
+                      type="number"
+                      {...register('healthCertificates')}
+                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0"
+                    />
+                  </div>
 
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="healthCertBalanceToComply"
-                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
-                >
-                  BALANCE TO COMPLY
-                </label>
-                <input
-                  id="healthCertBalanceToComply"
-                  type="text"
-                  {...register('healthCertBalanceToComply')}
-                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[160px] mt-10 dark:bg-slate-700 dark:text-slate-200"
-                  placeholder="Enter balance"
-                  onBlur={(e) => {
-                    const formatToTwoDecimals = (value) => {
-                      const num = parseFloat(value);
-                      return isNaN(num) ? '' : num.toFixed(2);
-                    };
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase h-8 flex items-end">
+                      Balance to Comply
+                    </label>
+                    <input
+                      type="text"
+                      {...register('healthCertBalanceToComply')}
+                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0.00"
+                      onBlur={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if(!isNaN(val)) setValue('healthCertBalanceToComply', val.toFixed(2), { shouldValidate: true });
+                      }}
+                    />
+                  </div>
 
-                    const formatted = formatToTwoDecimals(e.target.value);
-                    setValue('healthCertBalanceToComply', formatted, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    });
-                  }}
-                />
-              </div>
-
-
-
-              <div className="flex flex-col gap-1 mt-4">
-                <label
-                  htmlFor="healthCertDueDate"
-                  className="text-sm font-medium text-gray-700 dark:text-slate-300"
-                >
-                  HEALTH CERTIFICATE DUE DATE
-                </label>
-                <input
-                  id="healthCertDueDate"
-                  type="date"
-                  {...register('healthCertDueDate')}
-                  className="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-full max-w-[130px] bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200"
-                />
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase h-8 flex items-end">
+                      Due Date
+                    </label>
+                    <input
+                      type="date"
+                      {...register('healthCertDueDate')}
+                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        </>
         )}
 
         {/* STEP 4: Inspection & Penalty Records */}
         {activeStep === 3 && (
-          <>
-          {/* Inspection Record */}
-          <fieldset>
-            <div className="w-full max-w-6xl mx-auto px-4 mb-6">
-              <h3 className="text-lg font-bold text-gray-700 dark:text-slate-200 mb-2">Inspection Record</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-auto border-separate border-spacing-y-4">
-                  <thead className="bg-transparent">
-                    <tr>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center"></th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center">Date</th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center">
-                        Actual No. of Personnel Upon Inspection
-                      </th>
-                      <th className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 text-center">Inspected By</th>
+          <div className="space-y-8 max-w-5xl mx-auto">
+            {/* Inspection Record */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                  Inspection Record
+                </h3>
+              </div>
+              <div className="p-0 overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">
+                      <th className="px-6 py-4 font-semibold border-b border-slate-200 dark:border-slate-700 w-24 text-center">Batch</th>
+                      <th className="px-6 py-4 font-semibold border-b border-slate-200 dark:border-slate-700">Inspection Date</th>
+                      <th className="px-6 py-4 font-semibold border-b border-slate-200 dark:border-slate-700">Personnel Count</th>
+                      <th className="px-6 py-4 font-semibold border-b border-slate-200 dark:border-slate-700">Inspected By</th>
                     </tr>
                   </thead>
-
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                     {["1st", "2nd"].map((label, index) => {
                       const inspectionRecords = watch("inspectionRecords") || [];
                       const inspectionRecord = inspectionRecords[index] || {};
-
-                      const inspectionDate = inspectionRecord.date || "";
-                      const personnelCount = inspectionRecord.personnelCount || "";
-
+                      
                       return (
-                        <tr key={label} className="bg-white dark:bg-slate-800 shadow-sm rounded-md">
-                          {/* Label */}
-                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-slate-300 text-center font-medium">
+                        <tr key={label} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                          <td className="px-6 py-4 text-center font-bold text-slate-500 dark:text-slate-400">
                             {label}
                           </td>
-
-                          {/* Date */}
-                          <td className="px-4 py-2">
+                          <td className="px-6 py-4">
                             <RHFTextField
                               control={control}
                               name={`inspectionRecords.${index}.date`}
-                              variant="standard"
                               type="date"
+                              variant="outlined"
+                              size="small"
                               fullWidth
+                              InputProps={{ className: "bg-white dark:bg-slate-700 dark:text-slate-200" }}
                             />
                           </td>
-
-                          {/* Actual Personnel Count */}
-                          <td className="px-4 py-2">
+                          <td className="px-6 py-4">
                             <RHFTextField
                               control={control}
                               name={`inspectionRecords.${index}.personnelCount`}
-                              variant="standard"
                               type="number"
+                              variant="outlined"
+                              size="small"
                               fullWidth
                               InputProps={{
-                                readOnly:
-                                  !!inspectionRecord.personnelCount ||
-                                  (Array.isArray(businessData?.inspectionRecords) &&
-                                    businessData.inspectionRecords.length > 0),
+                                className: "bg-white dark:bg-slate-700 dark:text-slate-200",
+                                readOnly: !!inspectionRecord.personnelCount || (Array.isArray(businessData?.inspectionRecords) && businessData.inspectionRecords.length > 0),
                               }}
                             />
                           </td>
-
-                          {/* Inspected By */}
-                          <td className="px-4 py-2">
+                          <td className="px-6 py-4">
                             <Controller
                               name={`inspectionRecords.${index}.inspectedBy`}
                               control={control}
@@ -1435,25 +1382,18 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                               render={({ field }) => (
                                 <TextField
                                   {...field}
-
-                                  variant="standard"
-                                  fullWidth={false} // disable fullWidth so width can be controlled manually
+                                  variant="outlined"
+                                  size="small"
+                                  fullWidth
                                   value={field.value ?? ""}
-                                  sx={{
-                                    minWidth: 120, // 🔹 increase this to make it longer (e.g. 250 or 300)
-                                    ...(!noRecords && isLocked
-                                      ? { backgroundColor: "#f5f5f5", color: "#555" }
-                                      : {}
-                                    ),
-                                  }}
                                   InputProps={{
+                                    className: `bg-white dark:bg-slate-700 dark:text-slate-200 ${!noRecords && isLocked ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : ''}`,
                                     readOnly: !noRecords && isLocked,
                                   }}
                                 />
                               )}
                             />
                           </td>
-
                         </tr>
                       );
                     })}
@@ -1461,53 +1401,49 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                 </table>
               </div>
             </div>
-          </fieldset>
 
-
-        {/* Penalty Record Section */}
-        <fieldset>
-          <div className="w-full max-w-6xl mx-auto px-4 mb-6">
-            <div className="grid grid-cols-[2fr_1fr] gap-6">
-              <div>
-                <h3 className="text-lg font-bold text-gray-700 dark:text-slate-200 mb-2">Penalty Record</h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full table-auto border-separate border-spacing-y-4">
+            {/* Penalty Record */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                  Penalty Record
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_250px]">
+                <div className="overflow-x-auto border-r border-slate-200 dark:border-slate-700">
+                  <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-transparent text-sm text-gray-700 dark:text-slate-300 text-center">
-                        <th className="px-2 py-1">Checklist</th>
-                        <th className="px-2 py-1">Offense</th>
-                        <th className="px-2 py-1">Year (Inspection)</th>
-                        <th className="px-2 py-1">O.R. Date</th>
-                        <th className="px-2 py-1">O.R. Number</th>
-                        <th className="px-2 py-1">Amount</th>
+                      <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">
+                        <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700">Checklist</th>
+                        <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700 w-24">Offense</th>
+                        <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700 w-24">Year</th>
+                        <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700 w-32">O.R. Date</th>
+                        <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700 w-32">O.R. No.</th>
+                        <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700 w-32">Amount</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {(watch("penaltyRecords")?.length
-                        ? watch("penaltyRecords")
-                        : [
-                          { label: "Sanitary Permit" },
-                          { label: "Health Certificate" },
-                          { label: "Water Potability" },
-                          { label: "MSR" },
-                        ]
-                      ).map((row, index) => (
-                        <tr key={index} className="bg-white dark:bg-slate-800 shadow-sm rounded-md">
-                          {/* Checklist */}
-                          <td className="px-2 py-1 text-sm text-gray-700 dark:text-slate-300">
-                            <label className="flex items-center gap-2">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {(watch("penaltyRecords")?.length ? watch("penaltyRecords") : [
+                        { label: "Sanitary Permit" },
+                        { label: "Health Certificate" },
+                        { label: "Water Potability" },
+                        { label: "MSR" },
+                      ]).map((row, index) => (
+                        <tr key={index} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <label className="flex items-center gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
-                                className="form-checkbox text-blue-600"
+                                className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
                                 {...register(`penaltyRecords.${index}.isChecked`)}
                               />
-                              {row.label ||
-                                ["Sanitary Permit", "Health Certificate", "Water Potability", "MSR"][index]}
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {row.label || ["Sanitary Permit", "Health Certificate", "Water Potability", "MSR"][index]}
+                              </span>
                             </label>
                           </td>
-
-                          {/* Offense */}
-                          <td className="px-2 py-1">
+                          <td className="px-4 py-3">
                             <Controller
                               name={`penaltyRecords.${index}.offense`}
                               control={control}
@@ -1518,12 +1454,11 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                                   select
                                   variant="standard"
                                   fullWidth
-                                  InputProps={{
-                                    readOnly: !noRecords && isLocked,
-                                    style:
-                                      !noRecords && isLocked
-                                        ? { backgroundColor: "#f5f5f5", color: "#555" }
-                                        : {},
+                                  size="small"
+                                  InputProps={{ 
+                                    disableUnderline: true,
+                                    className: "text-sm",
+                                    readOnly: !noRecords && isLocked 
                                   }}
                                 >
                                   <MenuItem value="1st">1st</MenuItem>
@@ -1533,241 +1468,235 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                               )}
                             />
                           </td>
-
-                          {/* Year */}
-                          <td className="px-2 py-1">
-                            <Controller
-                              name={`penaltyRecords.${index}.year`}
-                              control={control}
-                              defaultValue={row.year || ""}
-                              render={({ field: { onChange, value, ...rest } }) => (
-                                <TextField
-                                  {...rest}
-                                  value={value || ""}
-                                  onChange={(e) =>
-                                    onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))
-                                  }
-                                  variant="standard"
-                                  fullWidth
-                                  placeholder="YYYY"
-                                  inputProps={{
-                                    inputMode: "numeric",
-                                    pattern: "[0-9]*",
-                                    maxLength: 4,
-                                  }}
-                                  InputProps={{
-                                    readOnly: !noRecords && isLocked,
-                                    style:
-                                      !noRecords && isLocked
-                                        ? { backgroundColor: "#f5f5f5", color: "#555" }
-                                        : {},
-                                  }}
-                                />
-                              )}
-                            />
+                          <td className="px-4 py-3">
+                             <Controller
+                                name={`penaltyRecords.${index}.year`}
+                                control={control}
+                                defaultValue={row.year || ""}
+                                render={({ field: { onChange, value } }) => (
+                                  <input
+                                    value={value || ""}
+                                    onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                                    placeholder="YYYY"
+                                    className="w-full bg-transparent text-sm focus:outline-none border-b border-transparent focus:border-blue-500 transition-colors py-1"
+                                    readOnly={!noRecords && isLocked}
+                                  />
+                                )}
+                              />
                           </td>
-
-                          {/* O.R. Date */}
-                          <td className="px-2 py-1">
-                            <Controller
-                              name={`penaltyRecords.${index}.orDate`}
-                              control={control}
-                              defaultValue={row.orDate || ""}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  type="date"
-                                  variant="standard"
-                                  fullWidth
-                                  InputProps={{
-                                    readOnly: !noRecords && isLocked,
-                                    style:
-                                      !noRecords && isLocked
-                                        ? { backgroundColor: "#f5f5f5", color: "#555" }
-                                        : {},
-                                  }}
-                                />
-                              )}
-                            />
+                          <td className="px-4 py-3">
+                             <Controller
+                                name={`penaltyRecords.${index}.orDate`}
+                                control={control}
+                                defaultValue={row.orDate || ""}
+                                render={({ field }) => (
+                                  <input
+                                    {...field}
+                                    type="date"
+                                    className="w-full bg-transparent text-sm focus:outline-none border-b border-transparent focus:border-blue-500 transition-colors py-1"
+                                    readOnly={!noRecords && isLocked}
+                                  />
+                                )}
+                              />
                           </td>
-
-                          {/* O.R. Number */}
-                          <td className="px-2 py-1">
-                            <Controller
-                              name={`penaltyRecords.${index}.orNumber`}
-                              control={control}
-                              defaultValue={row.orNumber || ""}
-                              render={({ field: { onChange, value, ...rest } }) => (
-                                <TextField
-                                  {...rest}
-                                  value={value || ""}
-                                  onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
-                                  variant="standard"
-                                  fullWidth
-                                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                                  InputProps={{
-                                    readOnly: !noRecords && isLocked,
-                                    style:
-                                      !noRecords && isLocked
-                                        ? { backgroundColor: "#f5f5f5", color: "#555" }
-                                        : {},
-                                  }}
-                                />
-                              )}
-                            />
+                          <td className="px-4 py-3">
+                             <Controller
+                                name={`penaltyRecords.${index}.orNumber`}
+                                control={control}
+                                defaultValue={row.orNumber || ""}
+                                render={({ field: { onChange, value } }) => (
+                                  <input
+                                    value={value || ""}
+                                    onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+                                    placeholder="No."
+                                    className="w-full bg-transparent text-sm focus:outline-none border-b border-transparent focus:border-blue-500 transition-colors py-1"
+                                    readOnly={!noRecords && isLocked}
+                                  />
+                                )}
+                              />
                           </td>
-
-                          {/* Amount */}
-                          <td className="px-2 py-1 text-center font-semibold text-green-700 dark:text-green-400">
-                            <Controller
-                              name={`penaltyRecords.${index}.amount`}
-                              control={control}
-                              defaultValue={row.amount || ""}
-                              render={({ field: { onChange, value, ...rest } }) => (
-                                <TextField
-                                  {...rest}
-                                  value={value || ""}
-                                  onChange={(e) => {
-                                    const sanitized = e.target.value.replace(/[^0-9.]/g, "");
-                                    onChange(sanitized);
-                                  }}
-                                  variant="standard"
-                                  fullWidth
-                                  inputProps={{ inputMode: "decimal", pattern: "[0-9.]*" }}
-                                  InputProps={{
-                                    readOnly: !noRecords && isLocked,
-                                    style:
-                                      !noRecords && isLocked
-                                        ? { backgroundColor: "#f5f5f5", color: "#555" }
-                                        : {},
-                                  }}
-                                />
-                              )}
-                            />
+                          <td className="px-4 py-3">
+                             <Controller
+                                name={`penaltyRecords.${index}.amount`}
+                                control={control}
+                                defaultValue={row.amount || ""}
+                                render={({ field: { onChange, value } }) => (
+                                  <input
+                                    value={value || ""}
+                                    onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
+                                    placeholder="0.00"
+                                    className="w-full bg-transparent text-sm font-semibold text-green-600 dark:text-green-400 focus:outline-none border-b border-transparent focus:border-blue-500 transition-colors py-1 text-right"
+                                    readOnly={!noRecords && isLocked}
+                                  />
+                                )}
+                              />
                           </td>
-
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
 
-              {/* Right Column: Verification */}
-              <div className="flex flex-col justify-center text-sm text-gray-700 dark:text-slate-300">
-                <p className="font-semibold uppercase mb-4">Payments Verified and Checked:</p>
-                <p className="font-bold text-lg dark:text-slate-200">ELEONOR M. JUNDARINO</p>
-                <p className="uppercase">Revenue Unit Supervisor</p>
+                {/* Right Column: Verification */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-6 flex flex-col justify-center items-center text-center border-l border-slate-200 dark:border-slate-700">
+                   <div className="mb-4 p-3 bg-white dark:bg-slate-700 rounded-full shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                   </div>
+                   <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                     Verified By
+                   </p>
+                   <p className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
+                     ELEONOR M. JUNDARINO
+                   </p>
+                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                     Revenue Unit Supervisor
+                   </p>
+                </div>
               </div>
             </div>
           </div>
-        </fieldset>
-        </>
         )}
 
         {/* STEP 5: Review & Submit */}
         {activeStep === 4 && (
-          <>
-        {/* Remark Field - Inline Label and Input */}
-        <div className="w-full max-w-6xl mx-auto px-4 mb-6">
-          <div className="flex items-center gap-4">
-            <label htmlFor="remarks" className="text-sm font-medium text-gray-700 dark:text-slate-300 whitespace-nowrap">
-              Remarks
-            </label>
-            <RHFTextField
-              control={control}
-              name="remarks"
-              type="text"
-              variant="standard"
-              placeholder="Enter remarks"
-              error={!!errors?.remarks}
-              helperText={errors?.remarks?.message}
-              className="flex-1"
-              multiline
-              rows={3}
-              InputProps={{ className: "dark:text-slate-200 dark:before:border-slate-500" }}
-            />
+          <div className="max-w-4xl mx-auto space-y-8">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">
+               <div className="text-center mb-8">
+                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                   </svg>
+                 </div>
+                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Review & Submit</h2>
+                 <p className="text-slate-500 dark:text-slate-400 mt-2">Please review your information and add any final remarks</p>
+               </div>
+
+               <div className="space-y-6">
+                 <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                      Additional Remarks
+                    </label>
+                    <RHFTextField
+                      control={control}
+                      name="remarks"
+                      variant="outlined"
+                      placeholder="Enter any additional notes or remarks here..."
+                      multiline
+                      rows={4}
+                      fullWidth
+                      InputProps={{ className: "bg-slate-50 dark:bg-slate-700/50 dark:text-slate-200" }}
+                    />
+                 </div>
+
+                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-100 dark:border-blue-800/30">
+                   <div className="flex gap-4">
+                     <div className="flex-shrink-0">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                       </svg>
+                     </div>
+                     <div>
+                       <h4 className="font-bold text-blue-900 dark:text-blue-200 mb-2">Important Notice</h4>
+                       <p className="text-sm text-blue-800/80 dark:text-blue-200/70 leading-relaxed">
+                         Please keep a digital copy of this form for your records. Stay alert for updates via the app or email regarding Minimum Sanitary Requirements (MSR) and Health Certificate Status.
+                         <span className="block mt-2 font-bold text-red-600 dark:text-red-400">
+                           ALWAYS HAVE THE REQUIRED CERTIFICATIONS READY DURING INSPECTION OR RENEWAL WHEN REQUESTED BY THE SANITATION OFFICE.
+                         </span>
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+            </div>
           </div>
-        </div>
-
-        <h1 className="text-blue-700 dark:text-blue-400 text-lg font-bold text-center mx-auto max-w-4xl">
-          PLEASE KEEP A DIGITAL COPY OF THIS FORM FOR YOUR RECORDS. STAY ALERT FOR UPDATES VIA THE APP OR EMAIL REGARDING MINIMUM SANITARY REQUIREMENTS (MSR) AND HEALTH CERTIFICATE STATUS.
-          <span className="text-red-600 dark:text-red-400">
-            ALWAYS HAVE THE REQUIRED CERTIFICATIONS READY DURING INSPECTION OR RENEWAL WHEN REQUESTED BY THE SANITATION OFFICE.
-          </span>
-        </h1>
-
-        </>
         )}
 
         {/* Navigation Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, px: 2 }}>
-          <Button
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <button
             type="button"
-            variant="outlined"
             onClick={handleBack}
             disabled={activeStep === 0}
-            sx={{
-              color: 'var(--foreground)',
-              borderColor: 'var(--foreground)',
-              '&:hover': {
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              },
-              '&.Mui-disabled': {
-                color: 'rgba(148, 163, 184, 0.5)',
-                borderColor: 'rgba(148, 163, 184, 0.3)',
-              },
-            }}
+            className={`
+              px-6 py-2.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-2
+              ${activeStep === 0
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-600'
+                : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700'
+              }
+            `}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
             Back
-          </Button>
+          </button>
 
-          <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div className="flex flex-col items-end gap-4 mt-4 sm:mt-0">
             {!canSubmit && (
-              <p className="text-red-500 text-sm font-medium">
-                Submission disabled: Active request already exists.
-              </p>
+              <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium rounded-lg border border-red-100 dark:border-red-800/30">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Active request already exists. Submission disabled.
+              </div>
             )}
-            <Box sx={{ display: 'flex', gap: 2 }}>
-            {activeStep === steps.length - 1 ? (
-              // Final step: Show submit buttons
-              <>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  disabled={!canSubmit}
+            
+            <div className="flex flex-wrap justify-end gap-3">
+              {activeStep === steps.length - 1 ? (
+                // Final step: Show submit buttons
+                <>
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="px-6 py-2.5 rounded-lg font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors dark:text-slate-400 dark:hover:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    Clear Form
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    className="px-6 py-2.5 rounded-lg font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-all dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
+                  >
+                    Save as Draft
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!canSubmit || !submitReady}
+                    className={`
+                      px-8 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/30 flex items-center gap-2
+                      ${(!canSubmit || !submitReady)
+                        ? 'bg-slate-400 cursor-not-allowed shadow-none'
+                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5 transition-all'
+                      }
+                    `}
+                  >
+                    Submit Application
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </button>
+                </>
+              ) : (
+                // Other steps: Show Next button
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="px-8 py-2.5 rounded-lg font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
                 >
-                  Send
-                </Button>
-                <Button type="button" variant="outlined" color="secondary" onClick={handleSaveDraft}>
-                  Save as Draft
-                </Button>
-                <Button type="button" variant="text" color="error" onClick={handleClear}>
-                  Clear
-                </Button>
-              </>
-            ) : (
-              // Other steps: Show Next button
-              <Button
-                type="button"
-                variant="contained"
-                onClick={handleNext}
-                sx={{
-                  backgroundColor: '#3b82f6',
-                  '&:hover': {
-                    backgroundColor: '#2563eb',
-                  },
-                }}
-              >
-                Next
-              </Button>
-            )}
-          </Box>
-        </Box>
-        </Box>
-      </form>
-    </>
+                  Next Step
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        </form>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -29,7 +29,6 @@ const RHFTextField = ({
           sx={{ 
             width: '100%',
             '& .MuiOutlinedInput-root': {
-              backgroundColor: 'var(--background)',
               '& fieldset': {
                 borderColor: 'rgba(148, 163, 184, 0.3)',
               },
@@ -40,16 +39,18 @@ const RHFTextField = ({
                 borderColor: '#3b82f6',
               },
             },
-            '& .MuiInputLabel-root': {
-              color: 'var(--foreground)',
-            },
-            '& .MuiInputBase-input': {
-              color: 'var(--foreground)',
-            },
             '& .MuiFormHelperText-root': {
               color: error ? '#ef4444' : 'rgba(148, 163, 184, 0.8)',
             },
             ...other.sx 
+          }}
+          InputProps={{
+            className: "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100",
+            ...other.InputProps
+          }}
+          InputLabelProps={{
+            className: "text-slate-500 dark:text-slate-400",
+            ...other.InputLabelProps
           }}
           helperText={helperText}
           size={size}

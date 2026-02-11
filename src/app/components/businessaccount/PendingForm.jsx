@@ -120,15 +120,7 @@ export default function PendingRequestForm() {
           <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">Pending Requests</h1>
           <p className="text-gray-500 dark:text-slate-400 mt-1">Track the status of your sanitation permit applications.</p>
         </div>
-        <Button
-          variant="outlined"
-          startIcon={<HiChevronDown className="rotate-90" />}
-          onClick={() => router.push('/businessaccount/businesses/')}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          sx={{ textTransform: 'none' }}
-        >
-          Back to Lists
-        </Button>
+       
       </div>
 
       {/* 🔍 Search & Filter Bar */}
