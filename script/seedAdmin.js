@@ -6,13 +6,15 @@ import dotenv from "dotenv";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ✅ Load .env.local BEFORE any other imports
+// ✅ Load .env.local or .env BEFORE any other imports
 dotenv.config({ path: resolve(__dirname, "../.env.local") });
+dotenv.config({ path: resolve(__dirname, "../.env") });
 
 console.log("Loaded MONGODB_URI:", process.env.MONGODB_URI); // debug
 
 // ✅ Now import after env is ready
-const { default: connectMongoDB } = await import("../src/lib/ConnectMongodb.js");
+const { default: connectMongoDB } =
+  await import("../src/lib/ConnectMongodb.js");
 const { default: User } = await import("../src/models/User.js");
 import bcrypt from "bcryptjs";
 
@@ -25,7 +27,7 @@ async function seedAdmin() {
     process.exit(0);
   }
 
-  const hashedPassword = await bcrypt.hash("123123123123", 10);
+  const hashedPassword = await bcrypt.hash("rawr1234", 10);
 
   await User.create({
     email: "admin@admin.com",

@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import * as yup from "yup";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import RHFTextField from "@/app/components/ReactHookFormElements/RHFTextField";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+
+// Import reusable UI components
+import FormInput from "@/app/components/ui/FormInput";
+import FormButton from "@/app/components/ui/FormButton";
+import StatusModal from "@/app/components/ui/StatusModal";
 
 // === Validation Schemas ===
 const loginSchema = yup.object().shape({
@@ -40,11 +44,25 @@ const resetPasswordSchema = yup.object().shape({
 
 export default function LoginForm() {
   const router = useRouter();
-  const [loginError, setLoginError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [showForgot, setShowForgot] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Status Modal state
+  const [modal, setModal] = useState({
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+  });
+
+  const closeModal = useCallback(() => {
+    setModal((prev) => ({ ...prev, open: false }));
+  }, []);
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
 
   const {
     control,
@@ -66,8 +84,6 @@ export default function LoginForm() {
 
   // === LOGIN HANDLER ===
   const onSubmitLogin = async ({ email, password }) => {
-    setLoginError("");
-    setSuccessMessage("");
     setIsSubmitting(true);
 
     try {
@@ -85,43 +101,40 @@ export default function LoginForm() {
           router.push(`/registration/verifyemail?email=${encodeURIComponent(email)}`);
           return;
         }
-        setLoginError(data.error || "Login failed.");
+        showModal('error', 'Login Failed', data.error || "Unable to sign in. Please check your credentials.");
         return;
       }
 
       const { user } = data;
 
       if (!user?._id || !user?.role) {
-        setLoginError("Invalid user data received.");
+        showModal('error', 'Error', "Invalid user data received from server.");
         return;
       }
 
       if (user.role === "officer" && user.accountDisabled === true) {
-        setLoginError("Your account has been locked by the admin.");
+        showModal('error', 'Account Locked', "Your account has been locked by the admin.");
         return;
       }
 
+      // Store basic session info
       sessionStorage.setItem("userId", user._id);
       sessionStorage.setItem("userRole", user.role);
       localStorage.setItem("loggedUserId", user._id);
       localStorage.setItem("loggedUserRole", user.role);
 
-      switch (user.role.toLowerCase()) {
-        case "admin":
-          router.push("/admin");
-          break;
-        case "business":
-          router.push("/businessaccount");
-          break;
-        case "officer":
-          router.push("/officers");
-          break;
-        default:
-          router.push("/login");
-      }
+      // Redirect based on role
+      const redirectMap = {
+        admin: "/admin",
+        business: "/businessaccount",
+        officer: "/officers",
+      };
+      
+      router.push(redirectMap[user.role.toLowerCase()] || "/login");
+      
     } catch (error) {
       console.error("Login error:", error);
-      setLoginError("Something went wrong during login.");
+      showModal('error', 'Network Error', "Something went wrong during login. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -129,8 +142,6 @@ export default function LoginForm() {
 
   // === SEND RESET CODE HANDLER ===
   const onSubmitForgot = async ({ email }) => {
-    setLoginError("");
-    setSuccessMessage("");
     setIsSubmitting(true);
 
     try {
@@ -143,16 +154,16 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setLoginError(data.error || "Failed to send reset code.");
+        showModal('error', 'Action Failed', data.error || "Failed to send reset code.");
         return;
       }
 
-      setSuccessMessage("Reset code sent to your email. Please check your inbox.");
+      showModal('success', 'Code Sent', "A reset code has been sent to your email. Please check your inbox.");
       setShowForgot(false);
       setShowReset(true);
     } catch (error) {
       console.error("Forgot password error:", error);
-      setLoginError("Something went wrong. Please try again.");
+      showModal('error', 'Error', "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -160,8 +171,6 @@ export default function LoginForm() {
 
   // === VERIFY CODE AND RESET PASSWORD HANDLER ===
   const onSubmitReset = async ({ email, resetCode, newPassword, confirmPassword }) => {
-    setLoginError("");
-    setSuccessMessage("");
     setIsSubmitting(true);
 
     try {
@@ -175,7 +184,7 @@ export default function LoginForm() {
       const verifyData = await verifyRes.json();
 
       if (!verifyRes.ok) {
-        setLoginError(verifyData.error || "Invalid or expired verification code.");
+        showModal('error', 'Invalid Code', verifyData.error || "The verification code is invalid or expired.");
         return;
       }
 
@@ -194,20 +203,19 @@ export default function LoginForm() {
       const resetData = await resetRes.json();
 
       if (!resetRes.ok) {
-        setLoginError(resetData.error || "Password reset failed.");
+        showModal('error', 'Reset Failed', resetData.error || "Password reset failed.");
         return;
       }
 
-      setSuccessMessage("✅ Password reset successful! You can now log in.");
+      showModal('success', 'Password Reset', "Your password has been reset successfully! You can now log in.");
       reset();
 
       setTimeout(() => {
         setShowReset(false);
-        setSuccessMessage("");
       }, 3000);
     } catch (error) {
       console.error("Reset password error:", error);
-      setLoginError("Something went wrong. Please try again.");
+      showModal('error', 'Error', "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -218,71 +226,112 @@ export default function LoginForm() {
     reset();
     setShowForgot(false);
     setShowReset(false);
-    setLoginError("");
-    setSuccessMessage("");
   };
 
   return (
     <div
-      className="relative min-h-screen bg-cover bg-center flex items-center justify-center"
+      className="relative min-h-screen bg-cover bg-center flex items-center justify-center p-4"
       style={{ backgroundImage: "url('/home.png')" }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-blue-900/90"></div>
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
 
-      <div className="absolute inset-0 z-0 flex flex-col justify-center px-10 text-white mt-12">
+      {/* ✅ Processing overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-xs text-center">
+            <div className="mx-auto w-14 h-14 flex items-center justify-center mb-4">
+              <svg className="animate-spin w-10 h-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">
+              {showReset ? "Resetting Password" : showForgot ? "Sending Reset Code" : "Signing In"}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Please wait...</p>
+          </div>
+        </div>
+      )}
+
+      <div className="absolute inset-0 bg-linear-to-r from-black/60 to-blue-900/90"></div>
+
+      <div className="absolute inset-0 z-0 hidden lg:flex flex-col justify-center px-20 text-white">
         <div>
-          <h1 className="text-5xl font-semibold leading-tight">PASIG CITY</h1>
-          <h2 className="text-4xl font-light leading-tight mt-2">SANITATION</h2>
-          <h2 className="text-4xl font-light leading-tight">ONLINE SERVICE</h2>
+          <h1 className="text-6xl font-bold tracking-tight">PASIG CITY</h1>
+          <h2 className="text-5xl font-light mt-2">SANITATION</h2>
+          <h2 className="text-5xl font-light">ONLINE SERVICE</h2>
         </div>
       </div>
 
-      <div className="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg w-full max-w-md mt-20">
-        <h1 className="text-2xl font-semibold text-center text-gray-800 dark:text-slate-100 mb-6">
+      <div className="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md lg:ml-auto lg:mr-20">
+        <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-slate-100 mb-2">
           {showReset
             ? "Reset Your Password"
             : showForgot
               ? "Forgot Password"
-              : "Login to Your Account"}
+              : "Welcome Back"}
         </h1>
+        <p className="text-center text-gray-500 dark:text-slate-400 text-sm mb-8">
+          {showReset 
+            ? "Provide the code and choose a new password" 
+            : showForgot 
+              ? "Enter your email to receive a reset code" 
+              : "Login to your sanitation service account"}
+        </p>
 
         <form
           onSubmit={handleSubmit(
             showReset ? onSubmitReset : showForgot ? onSubmitForgot : onSubmitLogin
           )}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
         >
-          <RHFTextField
-            control={control}
+          <Controller
             name="email"
-            label="Email"
-            type="email"
-            error={!!errors.email}
-            helperText={errors?.email?.message}
+            control={control}
+            render={({ field }) => (
+              <FormInput
+                {...field}
+                label="Email Address"
+                type="email"
+                placeholder="juan.delacruz@example.com"
+                required
+                error={errors?.email?.message}
+              />
+            )}
           />
 
           {/* === LOGIN FIELDS === */}
           {!showForgot && !showReset && (
             <>
-              <RHFTextField
-                control={control}
+              <Controller
                 name="password"
-                label="Password"
-                type="password"
-                error={!!errors.password}
-                helperText={errors?.password?.message}
+                control={control}
+                render={({ field }) => (
+                  <FormInput
+                    {...field}
+                    label="Password"
+                    type="password"
+                    placeholder="Enter your password"
+                    required
+                    error={errors?.password?.message}
+                  />
+                )}
               />
 
-              <div className="text-right mt-1">
+              <div className="text-right">
                 <button
                   type="button"
                   onClick={() => {
                     setShowForgot(true);
-                    setLoginError("");
-                    setSuccessMessage("");
                     reset();
                   }}
-                  className="text-sm text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                 >
                   Forgot Password?
                 </button>
@@ -292,11 +341,11 @@ export default function LoginForm() {
 
           {/* === FORGOT PASSWORD (EMAIL ONLY) === */}
           {showForgot && !showReset && (
-            <div className="text-right mt-1">
+            <div className="text-right">
               <button
                 type="button"
                 onClick={switchToLogin}
-                className="text-sm text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-semibold"
               >
                 ← Back to Login
               </button>
@@ -306,37 +355,52 @@ export default function LoginForm() {
           {/* === RESET PASSWORD FIELDS === */}
           {showReset && (
             <>
-              <RHFTextField
-                control={control}
+              <Controller
                 name="resetCode"
-                label="Verification Code*"
-                placeholder="Enter the code from your email"
-                error={!!errors.resetCode}
-                helperText={errors?.resetCode?.message}
-              />
-              <RHFTextField
                 control={control}
+                render={({ field }) => (
+                  <FormInput
+                    {...field}
+                    label="Verification Code"
+                    placeholder="Enter the 6-digit code"
+                    required
+                    error={errors?.resetCode?.message}
+                  />
+                )}
+              />
+              <Controller
                 name="newPassword"
-                label="New Password*"
-                placeholder="New password (8+ chars, A-Z, a-z, #)"
-                type="password"
-                error={!!errors.newPassword}
-                helperText={errors?.newPassword?.message}
-              />
-              <RHFTextField
                 control={control}
-                name="confirmPassword"
-                label="Confirm New Password*"
-                placeholder="Re-enter new password"
-                type="password"
-                error={!!errors.confirmPassword}
-                helperText={errors?.confirmPassword?.message}
+                render={({ field }) => (
+                  <FormInput
+                    {...field}
+                    label="New Password"
+                    type="password"
+                    placeholder="8+ chars, uppercase, symbol"
+                    required
+                    error={errors?.newPassword?.message}
+                  />
+                )}
               />
-              <div className="text-right mt-1">
+              <Controller
+                name="confirmPassword"
+                control={control}
+                render={({ field }) => (
+                  <FormInput
+                    {...field}
+                    label="Confirm New Password"
+                    type="password"
+                    placeholder="Re-enter your new password"
+                    required
+                    error={errors?.confirmPassword?.message}
+                  />
+                )}
+              />
+              <div className="text-right">
                 <button
                   type="button"
                   onClick={switchToLogin}
-                  className="text-sm text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                 >
                   ← Back to Login
                 </button>
@@ -344,53 +408,39 @@ export default function LoginForm() {
             </>
           )}
 
-          {/* === STATUS MESSAGES === */}
-          {loginError && (
-            <p className="text-red-600 dark:text-red-400 text-sm text-center">{loginError}</p>
-          )}
-          {successMessage && (
-            <p className="text-green-600 dark:text-green-400 text-sm text-center">{successMessage}</p>
-          )}
-
           {/* === ACTION BUTTONS === */}
-          <div className="flex gap-4 justify-center mt-4">
-            <button
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <FormButton
               type="submit"
-              disabled={isSubmitting}
-              className={`px-6 py-2 rounded-md transition ${isSubmitting
-                  ? "bg-gray-400 dark:bg-slate-600 cursor-not-allowed"
-                  : "bg-blue-900 dark:bg-blue-700 hover:bg-blue-800 dark:hover:bg-blue-600 text-white"
-                }`}
+              variant="primary"
+              loading={isSubmitting}
+              fullWidth
             >
-              {isSubmitting
-                ? "Please wait..."
-                : showReset
-                  ? "Reset Password"
-                  : showForgot
-                    ? "Send Reset Code"
-                    : "Login"}
-            </button>
+              {showReset
+                ? "Update Password"
+                : showForgot
+                  ? "Send Reset Code"
+                  : "Sign In"}
+            </FormButton>
 
             {!showForgot && !showReset && (
-              <Link href="/registration">
-                <button
-                  type="button"
-                  className="border border-blue-900 dark:border-blue-700 text-blue-900 dark:text-blue-400 px-6 py-2 rounded-md hover:bg-blue-50 dark:hover:bg-slate-700 transition"
-                >
-                  Register
-                </button>
+              <Link href="/registration" className="w-full">
+                <FormButton variant="secondary" fullWidth>
+                  Create Account
+                </FormButton>
               </Link>
             )}
           </div>
         </form>
 
-        <footer className="mt-10 text-center text-xs text-gray-400 dark:text-slate-500">
-          © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
+        <footer className="mt-12 text-center">
+          <p className="text-xs text-gray-400 dark:text-slate-500 mb-4 tracking-widest uppercase font-semibold">
+            © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
+          </p>
+          <p className="text-xs text-red-500/80 dark:text-red-400/80 font-medium italic">
+            ⚠️ This platform is currently in development and not yet officially authorized.
+          </p>
         </footer>
-
-        <p className="mt-2 text-center text-xs text-red-500 dark:text-red-400 font-medium">
-          ⚠️ This website is currently under development and not yet officially authorized by the City Government of Pasig.
-        </p>
       </div>
     </div>
   );

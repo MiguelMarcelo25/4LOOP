@@ -1,21 +1,27 @@
 'use client';
 
 import { useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useRouter } from "next/navigation";
 import * as yup from "yup";
-import RHFTextField from "@/app/components/ReactHookFormElements/RHFTextField";
 import { signUpWithCompleteInfo } from "@/app/services/UserService";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
+import axios from "axios";
 
-// ✅ Password rules (same as ProfileForm)
+// Import reusable UI components
+import FormInput from "@/app/components/ui/FormInput";
+import FormButton from "@/app/components/ui/FormButton";
+import StatusModal from "@/app/components/ui/StatusModal";
+
+// ✅ Password rules (at least 8 chars, uppercase, lowercase, number, and special character)
 const passwordRules =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 
 // ✅ Validation schema
 const schema = yup.object().shape({
+  fullName: yup.string().required("Full name is required"),
   email: yup.string().email("Provide a valid email").required("Email is required"),
   password: yup
     .string()
@@ -32,8 +38,30 @@ const schema = yup.object().shape({
 
 export default function RegistrationForm() {
   const router = useRouter();
-  const [emailError, setEmailError] = useState("");
   const [passwordStrength, setPasswordStrength] = useState("");
+
+  // Status Modal state
+  const [modal, setModal] = useState({
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+  });
+
+  // ✅ Confirm modal state for unverified email
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    email: '',
+  });
+  const [resending, setResending] = useState(false);
+
+  const closeModal = useCallback(() => {
+    setModal((prev) => ({ ...prev, open: false }));
+  }, []);
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
 
   const {
     control,
@@ -42,14 +70,13 @@ export default function RegistrationForm() {
     formState: { errors },
   } = useForm({
     defaultValues: {
+      fullName: "",
       email: "",
       password: "",
       confirmPassword: "",
     },
     resolver: yupResolver(schema),
   });
-
-  const passwordValue = watch("password");
 
   // ✅ Check password strength dynamically
   const checkPasswordStrength = (password) => {
@@ -70,133 +97,258 @@ export default function RegistrationForm() {
   // Watch password input for strength checking
   watch((values) => checkPasswordStrength(values.password || ""));
 
+  // ✅ Handle resend verification code and redirect
+  const handleResendAndRedirect = async () => {
+    setResending(true);
+    try {
+      await axios.post("/api/resend-code", { email: confirmModal.email });
+      setConfirmModal({ open: false, email: '' });
+      router.push(`/registration/verifyemail?email=${confirmModal.email}`);
+    } catch {
+      setConfirmModal({ open: false, email: '' });
+      showModal('error', 'Resend Failed', 'Failed to resend verification code. Please try again later.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   // ✅ Mutation handler
   const { mutate, isLoading } = useMutation({
     mutationFn: signUpWithCompleteInfo,
     onSuccess: (data) => {
-      const { email, verified } = data?.data || {};
-      console.log("Registration successful:", data?.data);
-
+      const { email, verified } = data?.data?.data || {};
+      
       if (!verified && email) {
         router.push(`/registration/verifyemail?email=${email}`);
       } else {
-        router.push("/login");
+        showModal('success', 'Registration Successful', 'Your account has been created. Redirecting to login...');
+        setTimeout(() => router.push("/login"), 2000);
       }
     },
     onError: (err) => {
       const status = err?.response?.status;
       const errorData = err?.response?.data;
 
-      if (status === 409 || errorData?.error === "Email already registered") {
-        setEmailError("This email is already registered. Please use a different one.");
+      if (status === 409 && errorData?.unverified) {
+        // ✅ Email exists but is NOT verified — prompt user to resend code
+        setConfirmModal({ open: true, email: errorData.email });
+      } else if (status === 409 || errorData?.error === "Email already registered") {
+        showModal('error', 'Registration Failed', "This email is already registered. Please use a different one or try logging in.");
       } else {
-        setEmailError("Registration failed. Please try again.");
+        showModal('error', 'Registration Failed', errorData?.error || "Registration failed. Please try again later.");
       }
     },
   });
 
-  const onSubmit = ({ email, password }) => {
-    setEmailError("");
-    mutate({ role: "business", email, password });
+  const onSubmit = ({ fullName, email, password }) => {
+    mutate({ role: "business", fullName, email, password });
   };
 
   return (
     <div
-      className="relative min-h-screen bg-cover bg-center flex items-center justify-center"
+      className="relative min-h-screen bg-cover bg-center flex items-center justify-center p-4"
       style={{ backgroundImage: "url('/home.png')" }}
     >
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
+      {/* ✅ Processing overlay while creating account */}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-xs text-center">
+            <div className="mx-auto w-14 h-14 flex items-center justify-center mb-4">
+              <svg className="animate-spin w-10 h-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">Creating Your Account</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Please wait while we set everything up...</p>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Confirmation Modal for unverified email */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center">
+            <div className="mb-4">
+              <div className="mx-auto w-14 h-14 flex items-center justify-center bg-yellow-100 dark:bg-yellow-900/30 rounded-full mb-3">
+                <svg className="w-7 h-7 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">Email Not Verified</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-slate-300 mb-6">
+              The email <span className="font-semibold">{confirmModal.email}</span> is already registered but not yet verified. Would you like to resend the verification code?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmModal({ open: false, email: '' })}
+                disabled={resending}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
+              >
+                No
+              </button>
+              <button
+                onClick={handleResendAndRedirect}
+                disabled={resending}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-70"
+              >
+                {resending ? "Sending..." : "Yes, Resend Code"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Background Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-blue-900/90"></div>
+      <div className="absolute inset-0 bg-linear-to-r from-black/60 to-blue-900/90"></div>
+
+      {/* Hero Section (Visible on Large Screens) */}
+      <div className="absolute inset-0 z-0 hidden lg:flex flex-col justify-center px-20 text-white">
+        <div>
+          <h1 className="text-6xl font-bold tracking-tight uppercase">Pasig City</h1>
+          <h2 className="text-5xl font-light mt-2 uppercase">Sanitation</h2>
+          <h2 className="text-5xl font-light uppercase">Online Service</h2>
+        </div>
+      </div>
 
       {/* Registration Form Container */}
-      <div className="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-center text-gray-800 dark:text-slate-100 mb-6">
+      <div className="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md lg:ml-auto lg:mr-20">
+        <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-slate-100 mb-2">
           Create Your Account
         </h1>
+        <p className="text-center text-gray-500 dark:text-slate-400 text-sm mb-8">
+          Join the Pasig City Sanitation Service today
+        </p>
 
         {/* Registration Form */}
-        <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className="flex flex-col gap-4">
-          {/* Hidden fields to prevent autofill */}
-          <input type="text" name="fakeuser" autoComplete="off" style={{ display: "none" }} />
-          <input type="password" name="fakepassword" autoComplete="off" style={{ display: "none" }} />
-
-          {/* Email */}
-          <RHFTextField
+        <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className="flex flex-col gap-5">
+          {/* Full Name */}
+          <Controller
+            name="fullName"
             control={control}
-            name="email"
-            label="Email"
-            type="email"
-            autoComplete="off"
-            error={!!errors.email || !!emailError}
-            helperText={errors?.email?.message || emailError}
+            render={({ field }) => (
+              <FormInput
+                {...field}
+                label="Full Name"
+                placeholder="Juan Dela Cruz"
+                required
+                error={errors?.fullName?.message}
+              />
+            )}
           />
 
-          {/* Password (with format hint in placeholder) */}
+          {/* Email */}
+          <Controller
+            name="email"
+            control={control}
+            render={({ field }) => (
+              <FormInput
+                {...field}
+                label="Email Address"
+                type="email"
+                placeholder="juan.delacruz@example.com"
+                required
+                error={errors?.email?.message}
+              />
+            )}
+          />
+
+          {/* Password */}
           <div>
-            <RHFTextField
-              control={control}
+            <Controller
               name="password"
-              label="Password"
-              placeholder="Password (min 8 chars, A-Z, a-z, 0-9, symbol)"
-              type="password"
-              autoComplete="new-password"
-              error={!!errors.password}
-              helperText={errors?.password?.message}
+              control={control}
+              render={({ field }) => (
+                <FormInput
+                  {...field}
+                  label="Password"
+                  type="password"
+                  placeholder="Create a strong password"
+                  required
+                  error={errors?.password?.message}
+                />
+              )}
             />
             {passwordStrength && (
               <p
-                className={`text-sm mt-1 ${
+                className={`text-[10px] font-bold uppercase tracking-wider mt-1.5 ${
                   passwordStrength === "Weak"
-                    ? "text-red-500 dark:text-red-400"
+                    ? "text-red-500"
                     : passwordStrength === "Medium"
                     ? "text-yellow-600 dark:text-yellow-500"
-                    : "text-green-600 dark:text-green-400"
+                    : "text-green-600 dark:text-green-500"
                 }`}
               >
-                Password Strength: {passwordStrength}
+                Strength: {passwordStrength}
               </p>
             )}
           </div>
 
           {/* Confirm Password */}
-          <RHFTextField
-            control={control}
+          <Controller
             name="confirmPassword"
-            label="Confirm Password*"
-            placeholder="Re-enter your password"
-            type="password"
-            autoComplete="new-password"
-            error={!!errors.confirmPassword}
-            helperText={errors?.confirmPassword?.message}
+            control={control}
+            render={({ field }) => (
+              <FormInput
+                {...field}
+                label="Confirm Password"
+                type="password"
+                placeholder="Repeat your password"
+                required
+                error={errors?.confirmPassword?.message}
+              />
+            )}
           />
 
           {/* Register Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full bg-blue-900 dark:bg-blue-700 text-white py-3 rounded-md hover:bg-blue-800 dark:hover:bg-blue-600 transition ${
-              isLoading ? "opacity-70 cursor-not-allowed" : ""
-            }`}
-          >
-            {isLoading ? "Registering..." : "Register"}
-          </button>
+          <div className="mt-2">
+            <FormButton
+              type="submit"
+              variant="primary"
+              loading={isLoading}
+              fullWidth
+            >
+              {isLoading ? "Creating Account..." : "Create Account"}
+            </FormButton>
+          </div>
         </form>
 
         {/* Footer Links */}
-        <div className="text-center mt-6">
-          <hr className="border-t border-gray-300 dark:border-slate-600 mb-4" />
-          <p className="text-sm text-gray-700 dark:text-slate-300 mb-2">
-            <Link href="/login">  
-            Already have an account? <span className="font-semibold">Login Now!</span>
+        <div className="text-center mt-8">
+          <div className="relative flex items-center mb-6">
+            <div className="grow border-t border-gray-200 dark:border-slate-700"></div>
+            <span className="shrink mx-4 text-xs text-gray-400 uppercase font-bold tracking-widest">or</span>
+            <div className="grow border-t border-gray-200 dark:border-slate-700"></div>
+          </div>
+          
+          <p className="text-sm text-gray-600 dark:text-slate-400 font-medium">
+            Already have an account?{" "}
+            <Link href="/login" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
+              Sign In
             </Link>
           </p>
         </div>
 
         {/* Footer */}
-        <footer className="mt-10 text-center text-xs text-gray-400 dark:text-slate-500">
-          © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
+        <footer className="mt-12 text-center">
+          <p className="text-xs text-gray-400 dark:text-slate-500 mb-4 tracking-widest uppercase font-semibold">
+            © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
+          </p>
+          <p className="text-xs text-red-500/80 dark:text-red-400/80 font-medium italic">
+            ⚠️ This platform is currently in development and not yet officially authorized.
+          </p>
         </footer>
       </div>
     </div>
   );
 }
+

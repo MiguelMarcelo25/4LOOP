@@ -1,12 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Typography, Button, Stack, Box } from '@mui/material';
+import { Typography, Button, Stack, Box, Backdrop, CircularProgress } from '@mui/material';
 
 export default function LogoutForm() {
   const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    setLoggingOut(true);
     try {
       // 🔒 Call backend to clear session cookie
       await fetch("/api/logout", {
@@ -23,12 +26,21 @@ export default function LogoutForm() {
       router.push("/login");
     } catch (err) {
       console.error("Logout failed:", err);
-      // Optionally show error to user
+      setLoggingOut(false);
     }
   };
 
   return (
     <Box textAlign="center">
+      {/* ✅ Processing overlay */}
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1, flexDirection: 'column', gap: 2 }}
+        open={loggingOut}
+      >
+        <CircularProgress color="inherit" />
+        <Typography variant="body1" fontWeight="bold">Logging out...</Typography>
+      </Backdrop>
+
       <Typography variant="h4" fontWeight="bold" mb={2}>
         Log Out
       </Typography>
@@ -38,13 +50,14 @@ export default function LogoutForm() {
       </Typography>
 
       <Stack direction="row" spacing={2} justifyContent="center">
-        <Button variant="contained" color="error" onClick={handleLogout}>
+        <Button variant="contained" color="error" onClick={handleLogout} disabled={loggingOut}>
           Yes, Log Out
         </Button>
         <Button
           variant="contained"
           color="inherit"
           onClick={() => router.push('/businessaccount')}
+          disabled={loggingOut}
         >
           Cancel
         </Button>

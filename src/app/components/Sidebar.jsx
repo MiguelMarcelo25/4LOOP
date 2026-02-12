@@ -3,7 +3,7 @@
 import useSWR, { mutate } from 'swr';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   MdDashboard,
   MdBusiness,
@@ -36,6 +36,8 @@ const fetcher = (url) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json());
 
 export default function Sidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [userId, setUserId] = useState(null);
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -45,8 +47,6 @@ export default function Sidebar() {
   const [isHovered, setIsHovered] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState(null);
   
-  const pathname = usePathname();
-
   useEffect(() => {
     const storedId = localStorage.getItem('loggedUserId');
     if (storedId) setUserId(storedId);
@@ -126,6 +126,24 @@ export default function Sidebar() {
     setMessage('Upload canceled.');
   };
 
+  // 🚀 Direct Logout Helper
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+      
+      // Clear all local storage auth data
+      localStorage.removeItem('loggedUserId');
+      localStorage.removeItem('loggedUserRole');
+      localStorage.removeItem('profilePicture');
+
+      // Full reload and redirect
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      alert('Logout failed. Please try again.');
+    }
+  };
+
   // 🔹 Determine User Role & Display Name
   const role = user?.role; 
   let displayName = 'User';
@@ -142,111 +160,129 @@ export default function Sidebar() {
     displayRole = 'Administrator';
   }
 
-  // 🔹 Define Navigation Items based on Role
-  let navItems = [];
+  // 🔹 Define Navigation Config (Minimized Redundancy)
+  const roleConfigs = {
+    admin: {
+      base: '/admin',
+      items: [
+        { label: 'Dashboard', path: '' }, // default to base
+        { 
+          label: 'Officers', 
+          path: '/createofficer',
+          submenu: [
+            { label: 'Officers List', path: '/officers', icon: 'list' },
+            { label: 'Create Officer Account', path: '/createofficer', icon: 'createofficer' }
+          ]
+        },
+        { label: 'Businesses', path: '/businesses' },
+        { label: 'Inspections', path: '/inspections' },
+        { label: 'Pending Request', path: '/pending' },
+        { label: 'Completed Request', path: '/completed' }
+      ]
+    },
+    officer: {
+      base: '/officers',
+      items: [
+        { label: 'Dashboard', path: '' },
+        { 
+          label: 'Workbench', 
+          path: '/workbench',
+          submenu: [
+            { label: 'Online Request', path: '/workbench/onlinerequest', icon: 'list' },
+            { label: 'Verifications', path: '/workbench/verifications', icon: 'verification' },
+            { label: 'Compliance', path: '/workbench/compliance', icon: 'compliance' },
+            { label: 'Permit Approval', path: '/workbench/permitapproval', icon: 'approval' },
+            { label: 'Release', path: '/workbench/release', icon: 'release' }
+          ]
+        },
+        { 
+          label: 'Inspections', 
+          path: '/inspections',
+          submenu: [
+            { label: 'Inspect Business', path: '/inspections/createticketinspection', icon: 'add' },
+            { label: 'Pending Inspection', path: '/inspections/pendinginspections', icon: 'list' }
+          ]
+        },
+        { label: 'Businesses', path: '/businesses' },
+        { label: 'Profile Settings', path: '/profile' }
+      ]
+    },
+    business: {
+      base: '/businessaccount',
+      items: [
+        { label: 'Dashboard', path: '' },
+        { 
+          label: 'Businesses', 
+          path: '/businesses',
+          submenu: [
+            { label: 'My Business List', path: '/businesses/businesslist', icon: 'list' },
+            { label: 'Add a Business', path: '/businesses/addbusiness', icon: 'add' }
+          ]
+        },
+        { 
+          label: 'Make a Request', 
+          path: '/request',
+          submenu: [
+            { label: 'New Sanitation Permit Request', path: '/request/newbusiness', icon: 'newrequest' },
+            { label: 'Check Your Request', path: '/request/requestsent', icon: 'checkrequest' }
+          ]
+        },
+        { label: 'Pending Request', path: '/pending' },
+        { label: 'Completed Request', path: '/completed' },
+        { label: 'Change Password', path: '/changepassword' }
+      ]
+    }
+  };
 
-  if (role === 'admin') {
-    navItems = [
-      { label: 'Dashboard', path: '/admin' },
-      { 
-        label: 'Officers', 
-        path: '/admin/createofficer',
-        submenu: [
-          { label: 'Officers List', path: '/admin/officers', icon: 'list' },
-          { label: 'Create Officer Account', path: '/admin/createofficer', icon: 'createofficer' }
-        ]
-      },
-      { label: 'Businesses', path: '/admin/businesses' },
-      { label: 'Inspections', path: '/admin/inspections' },
-      { label: 'Pending Request', path: '/admin/pending' },
-      { label: 'Completed Request', path: '/admin/completed' },
-      { label: 'Help', path: '/admin/help' },
-      { label: 'Logout', path: '/admin/logout' },
-    ];
-  } else if (role === 'officer') {
-    navItems = [
-      { label: 'Dashboard', path: '/officers' },
-      { 
-        label: 'Workbench', 
-        path: '/officers/workbench',
-        submenu: [
-          { label: 'Online Request', path: '/officers/workbench/onlinerequest', icon: 'list' },
-          { label: 'Verifications', path: '/officers/workbench/verifications', icon: 'verification' },
-          { label: 'Compliance', path: '/officers/workbench/compliance', icon: 'compliance' },
-          { label: 'Permit Approval', path: '/officers/workbench/permitapproval', icon: 'approval' },
-          { label: 'Release', path: '/officers/workbench/release', icon: 'release' }
-        ]
-      },
-      { 
-        label: 'Inspections', 
-        path: '/officers/inspections',
-        submenu: [
-          { label: 'Inspect Business', path: '/officers/inspections/createticketinspection', icon: 'add' },
-          { label: 'Pending Inspection', path: '/officers/inspections/pendinginspections', icon: 'list' }
-        ]
-      },
-      { label: 'Businesses', path: '/officers/businesses' },
-      { label: 'Profile Settings', path: '/officers/profile' },
-      { label: 'Help', path: '/officers/help' },
-      { label: 'Logout', path: '/officers/logout' },
-    ];
-  } else if (role === 'business') {
-    navItems = [
-      { label: 'Dashboard', path: '/businessaccount' },
-      { 
-        label: 'Businesses', 
-        path: '/businessaccount/businesses',
-        submenu: [
-          { label: 'My Business List', path: '/businessaccount/businesses/businesslist', icon: 'list' },
-          { label: 'Add a Business', path: '/businessaccount/businesses/addbusiness', icon: 'add' }
-        ]
-      },
-      { 
-        label: 'Make a Request', 
-        path: '/businessaccount/request',
-        submenu: [
-          { label: 'New Sanitation Permit Request', path: '/businessaccount/request/newbusiness', icon: 'newrequest' },
-          { label: 'Check Your Request', path: '/businessaccount/request/requestsent', icon: 'checkrequest' }
-        ]
-      },
-      { label: 'Pending Request', path: '/businessaccount/pending' },
-      { label: 'Completed Request', path: '/businessaccount/completed' },
-      { label: 'Change Password', path: '/businessaccount/changepassword' },
-      { label: 'Help', path: '/businessaccount/help' },
-      { label: 'Logout', path: '/businessaccount/logout' },
-    ];
+  // Construct final navigation list
+  const navItems = [];
+  if (role && roleConfigs[role]) {
+    const config = roleConfigs[role];
+    // Map main items
+    config.items.forEach(item => {
+      navItems.push({
+        ...item,
+        path: config.base + item.path,
+        submenu: item.submenu?.map(sub => ({ ...sub, path: config.base + sub.path }))
+      });
+    });
+    // Append standard footers
+    navItems.push({ label: 'Help', path: `${config.base}/help` });
+    navItems.push({ label: 'Logout', action: 'logout' });
   }
 
-  // Helper to get icons
+  // 🔹 Icon Mapper
   const getIcon = (label, iconType) => {
-    // Handle submenu icons
-    if (iconType === 'list') return <MdList size={20} />;
-    if (iconType === 'add') return <MdAdd size={20} />;
-    if (iconType === 'newrequest') return <MdDescription size={20} />;
-    if (iconType === 'checkrequest') return <MdSearch size={20} />;
+    // Priority 1: Submenu Icons
+    const subIcons = {
+      list: <MdList size={20} />,
+      add: <MdAdd size={20} />,
+      newrequest: <MdDescription size={20} />,
+      checkrequest: <MdSearch size={20} />,
+      createofficer: <MdPersonAdd size={20} />,
+      verification: <MdFactCheck size={20} />,
+      compliance: <MdRule size={20} />,
+      approval: <MdCheckCircle size={20} />,
+      release: <MdSend size={20} />
+    };
+    if (subIcons[iconType]) return subIcons[iconType];
 
-    if (iconType === 'createofficer') return <MdPersonAdd size={20} />;
-    if (iconType === 'verification') return <MdFactCheck size={20} />;
-    if (iconType === 'compliance') return <MdRule size={20} />;
-    if (iconType === 'approval') return <MdCheckCircle size={20} />;
-    if (iconType === 'release') return <MdSend size={20} />;
-    
-    // Handle main menu icons
-    switch(label) {
-      case 'Dashboard': return <MdDashboard size={24} />;
-      case 'Officers': return <MdBadge size={24} />;
-      case 'Businesses': return <MdBusiness size={24} />;
-      case 'Inspections': return <MdAssignment size={24} />;
-      case 'Pending Request': return <MdPendingActions size={24} />;
-      case 'Completed Request': return <MdCheckCircle size={24} />;
-      case 'Help': return <MdHelp size={24} />;
-      case 'Logout': return <MdLogout size={24} />;
-      case 'Make a Request': return <MdAddCircle size={24} />;
-      case 'Change Password': return <MdLock size={24} />;
-      case 'Profile Settings': return <MdPerson size={24} />;
-      case 'Workbench': return <MdWork size={24} />;
-      default: return <MdDashboard size={24} />;
-    }
+    // Priority 2: Main Menu Labels
+    const mainIcons = {
+      'Dashboard': <MdDashboard size={24} />,
+      'Officers': <MdBadge size={24} />,
+      'Businesses': <MdBusiness size={24} />,
+      'Inspections': <MdAssignment size={24} />,
+      'Pending Request': <MdPendingActions size={24} />,
+      'Completed Request': <MdCheckCircle size={24} />,
+      'Help': <MdHelp size={24} />,
+      'Logout': <MdLogout size={24} />,
+      'Make a Request': <MdAddCircle size={24} />,
+      'Change Password': <MdLock size={24} />,
+      'Profile Settings': <MdPerson size={24} />,
+      'Workbench': <MdWork size={24} />
+    };
+    return mainIcons[label] || <MdDashboard size={24} />;
   };
 
   const toggleSubmenu = (label) => {
@@ -303,7 +339,6 @@ export default function Sidebar() {
             </div>
           )}
           
-          {/* Hidden file input always available */}
           <input
             type="file"
             accept="image/*"
@@ -312,7 +347,6 @@ export default function Sidebar() {
             className="hidden"
           />
           
-          {/* Upload Overlay Icon (only when expanded) */}
           {isExpanded && !uploading && (
              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                 <MdCloudUpload className="text-white drop-shadow-md" size={24} />
@@ -320,7 +354,6 @@ export default function Sidebar() {
           )}
         </label>
 
-        {/* 📤 Confirm/Cancel Buttons */}
         {isUploadingNewImage && isExpanded && (
           <div className="flex gap-2 mt-3 animate-fade-in">
             <button
@@ -345,12 +378,10 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* 📣 Message */}
         {message && isExpanded && (
           <p className="text-xs mt-2 text-center text-red-500 dark:text-red-400 animate-pulse">{message}</p>
         )}
 
-        {/* 👤 Name, Email, and Role */}
         <div className={`mt-4 text-center transition-all duration-300 overflow-hidden whitespace-nowrap ${!isExpanded ? 'opacity-0 h-0' : 'opacity-100'}`}>
             <p className="font-bold text-gray-800 dark:text-slate-100 text-lg">{displayName}</p>
             <p className="text-xs text-gray-500 dark:text-slate-400">{user.email}</p>
@@ -367,72 +398,69 @@ export default function Sidebar() {
            const hasSubmenu = item.submenu && item.submenu.length > 0;
            const isSubmenuOpen = openSubmenu === item.label;
            
+           // Common class for menu items
+           const itemClass = `
+            w-full group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
+            ${isActive 
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none' 
+              : 'text-gray-600 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400'}
+            ${!isExpanded ? 'justify-center' : ''}
+           `;
+
+           // Content inside the button/link
+           const itemContent = (
+             <>
+               <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                  {getIcon(item.label)}
+               </span>
+               <span className={`
+                 font-medium whitespace-nowrap transition-all duration-300 origin-left flex-1 text-left
+                 ${!isExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}
+               `}>
+                 {item.label}
+               </span>
+               {hasSubmenu && isExpanded && (
+                 <span className="transition-transform duration-200">
+                   {isSubmenuOpen ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
+                 </span>
+               )}
+               {!isExpanded && isActive && (
+                  <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full"></div>
+               )}
+             </>
+           );
+
            return (
             <div key={item.label}>
-              {/* Main Menu Item */}
-              {hasSubmenu ? (
-                <button
-                  onClick={() => toggleSubmenu(item.label)}
+              {/* Logic to choose between Action Button, Submenu Toggle, or Link */}
+              {item.action === 'logout' ? (
+                <button 
+                  onClick={handleLogout} 
                   className={`
-                    w-full group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
-                    ${isActive 
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none' 
-                      : 'text-gray-600 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400'}
+                    w-full group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 mt-4
+                    text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 
+                    hover:shadow-md border border-transparent hover:border-red-100 dark:hover:border-red-900
                     ${!isExpanded ? 'justify-center' : ''}
                   `}
                 >
-                  <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                   <span className="transition-transform duration-300 group-hover:rotate-[-20deg] group-hover:scale-110">
                       {getIcon(item.label)}
-                  </span>
-                  
-                  <span className={`
-                    font-medium whitespace-nowrap transition-all duration-300 origin-left flex-1 text-left
-                    ${!isExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}
-                  `}>
-                    {item.label}
-                  </span>
-                  
-                  {/* Expand/Collapse Icon */}
-                  {isExpanded && (
-                    <span className="transition-transform duration-200">
-                      {isSubmenuOpen ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
-                    </span>
-                  )}
-                  
-                  {/* Active Indicator Dot (only when collapsed) */}
-                  {!isExpanded && isActive && (
-                      <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full"></div>
-                  )}
+                   </span>
+                   <span className={`
+                     font-bold whitespace-nowrap transition-all duration-300 origin-left flex-1 text-left
+                     ${!isExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}
+                   `}>
+                     {item.label}
+                   </span>
+                </button>
+              ) : hasSubmenu ? (
+                <button onClick={() => toggleSubmenu(item.label)} className={itemClass}>
+                  {itemContent}
                 </button>
               ) : (
-            <Link
-              key={item.label}
-              href={item.path}
-              title={!isExpanded ? item.label : ''}
-              className={`
-                group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
-                ${isActive 
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none' 
-                  : 'text-gray-600 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400'}
-                ${!isExpanded ? 'justify-center' : ''}
-              `}
-            >
-              <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
-                  {getIcon(item.label)}
-              </span>
-              
-              <span className={`
-                font-medium whitespace-nowrap transition-all duration-300 origin-left
-                ${!isExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}
-              `}>
-                {item.label}
-              </span>
-              
-              {/* Active Indicator Dot (only when collapsed) */}
-              {!isExpanded && isActive && (
-                  <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full"></div>
-              )}
-            </Link>
+                <Link href={item.path} className={itemClass} title={!isExpanded ? item.label : ''}>
+                  {itemContent}
+                </Link>
               )}
               
               {/* Submenu Items */}
@@ -461,11 +489,10 @@ export default function Sidebar() {
                 </div>
               )}
             </div>
-          );
+           );
         })}
       </nav>
       
-      {/* Footer / Copyright (Optional) */}
       {isExpanded && (
           <div className="p-4 text-center text-[10px] text-gray-400 dark:text-slate-600 border-t dark:border-slate-800">
               © {new Date().getFullYear()} Pasig Sanitation
