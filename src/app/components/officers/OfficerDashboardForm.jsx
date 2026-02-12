@@ -101,13 +101,13 @@ export default function OfficerDashboardForm() {
     <Box className="animate-in fade-in duration-700">
       {/* Header Section */}
       <Box mb={6}>
-        <Typography variant="h3" className="font-black tracking-tight text-slate-800 dark:text-white mb-2">
+        <div className="font-black tracking-tight text-2xl text-slate-800 dark:text-white mb-2">
           Dashboard
-        </Typography>
-        <Typography variant="h6" className="text-slate-500 dark:text-slate-400 font-medium">
+        </div>
+        <div className="text-slate-500 text-2xl dark:text-slate-400 font-medium">
           Welcome back, <span className="text-blue-600 dark:text-blue-400 font-bold">{loggedUser?.fullName || 'Officer'}</span>. 
           Here's what's happening today.
-        </Typography>
+        </div>
       </Box>
 
       {/* Hero Stats Summary */}
