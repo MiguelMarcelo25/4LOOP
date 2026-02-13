@@ -67,6 +67,14 @@ export default function RegistrationForm() {
     setModal({ open: true, type, title, message });
   };
 
+  const showLoading = (title = 'Processing', message = 'Please wait...') => {
+    setModal({ open: true, type: 'loading', title, message });
+  };
+
+  const hideLoading = () => {
+    setModal((prev) => (prev.type === 'loading' ? { ...prev, open: false } : prev));
+  };
+
   const {
     control,
     handleSubmit,
@@ -123,14 +131,16 @@ export default function RegistrationForm() {
   };
 
   // ✅ Mutation handler
-  const { mutate, isLoading } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: signUpWithCompleteInfo,
     onSuccess: (data) => {
       const { email, verified } = data?.data?.data || {};
 
+      // Keep loading spinner visible during redirect
       if (!verified && email) {
         router.push(`/registration/verifyemail?email=${email}`);
       } else {
+        hideLoading();
         showModal(
           "success",
           "Registration Successful",
@@ -140,6 +150,7 @@ export default function RegistrationForm() {
       }
     },
     onError: (err) => {
+      hideLoading();
       const status = err?.response?.status;
       const errorData = err?.response?.data;
 
@@ -166,6 +177,7 @@ export default function RegistrationForm() {
   });
 
   const onSubmit = ({ fullName, email, password }) => {
+    showLoading('Creating Your Account', 'Please wait while we set everything up...');
     mutate({ role: "business", fullName, email, password });
   };
 
@@ -350,10 +362,10 @@ export default function RegistrationForm() {
             <FormButton
               type="submit"
               variant="primary"
-              loading={isLoading}
+              loading={isPending}
               fullWidth
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isPending ? "Creating Account..." : "Create Account"}
             </FormButton>
           </div>
         </form>

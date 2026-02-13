@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pandas as pd
 import numpy as np
@@ -30,16 +30,17 @@ stop_event = Event()
 
 
 # === Helpers ===
-def load_dataset():
-    """Load dataset into memory once."""
+def load_dataset(force=False):
+    """Load dataset into memory. reload if force=True."""
     global DATAFRAME_CACHE
-    if DATAFRAME_CACHE is None:
+    if DATAFRAME_CACHE is None or force:
         try:
             DATAFRAME_CACHE = pd.read_csv(file_path, encoding="utf-8", on_bad_lines="skip")
-            print(f"[{datetime.utcnow().isoformat()}] ✅ Dataset loaded into memory.")
+            print(f"[{datetime.utcnow().isoformat()}] ✅ Dataset {'re-loaded' if force else 'loaded'} into memory.")
         except Exception as e:
             print("❌ Failed to load dataset:", e)
-            DATAFRAME_CACHE = pd.DataFrame()
+            if DATAFRAME_CACHE is None:
+                DATAFRAME_CACHE = pd.DataFrame()
     return DATAFRAME_CACHE
 
 
@@ -121,9 +122,9 @@ def compute_comparison_df(renewals_df, new_business_df):
 
 
 # === Compute everything and cache it ===
-def compute_all_predictions():
+def compute_all_predictions(force_reload=False):
     """Compute all predictions and store in cache."""
-    df = load_dataset()
+    df = load_dataset(force=force_reload)
     if df.empty:
         print("⚠️ Dataset empty or missing.")
         return
@@ -165,7 +166,7 @@ def start_background_tasks():
     def refresher():
         while not stop_event.is_set():
             try:
-                compute_all_predictions()
+                compute_all_predictions(force_reload=True)
             except Exception as e:
                 print("❌ Error during background cache refresh:", e)
             for _ in range(int(CACHE_REFRESH_SECONDS)):
@@ -182,8 +183,11 @@ def start_background_tasks():
 @app.route('/')
 def home():
     return jsonify({
-        "message": "✅ Flask ML API is online and predictions are cached.",
-        "cached_at": cache.get('last_updated')
+        "status": "online",
+        "dataset_loaded": DATAFRAME_CACHE is not None and not DATAFRAME_CACHE.empty,
+        "predictions_ready": cache.get('last_updated') is not None,
+        "cached_at": cache.get('last_updated'),
+        "message": "✅ Flask ML API is online."
     })
 
 
@@ -208,14 +212,25 @@ def cached_comparison():
 
 
 # === Run App ===
+
+# 🔥 Load dataset immediately
+load_dataset()
+
+# Helper to trigger initial work once
+initialized = False
+
+@app.before_request
+def initialize_app():
+    global initialized
+    if not initialized:
+        # Run computation in a background thread so we don't block the first request
+        Thread(target=compute_all_predictions, daemon=True).start()
+        start_background_tasks()
+        initialized = True
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     print(f"🚀 Flask ML API starting on port {port}")
-
-    # 🔥 Load dataset & build ML predictions immediately
-    load_dataset()
-    compute_all_predictions()
-    start_background_tasks()
 
     try:
         app.run(host='0.0.0.0', port=port, debug=True)

@@ -74,6 +74,14 @@ export default function LoginForm() {
     setModal({ open: true, type, title, message });
   };
 
+  const showLoading = (title = 'Processing', message = 'Please wait...') => {
+    setModal({ open: true, type: 'loading', title, message });
+  };
+
+  const hideLoading = () => {
+    setModal((prev) => (prev.type === 'loading' ? { ...prev, open: false } : prev));
+  };
+
   const {
     control,
     handleSubmit,
@@ -99,6 +107,10 @@ export default function LoginForm() {
   // === LOGIN HANDLER ===
   const onSubmitLogin = async ({ email, password }) => {
     setIsSubmitting(true);
+    showLoading(
+      showReset ? 'Resetting Password' : showForgot ? 'Sending Reset Code' : 'Signing In',
+      'Please wait...'
+    );
 
     try {
       const res = await fetch("/api/login", {
@@ -111,6 +123,8 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
+        hideLoading();
+        setIsSubmitting(false);
         if (res.status === 403 && data.error?.includes("not verified")) {
           router.push(
             `/registration/verifyemail?email=${encodeURIComponent(email)}`,
@@ -128,11 +142,15 @@ export default function LoginForm() {
       const { user } = data;
 
       if (!user?._id || !user?.role) {
+        hideLoading();
+        setIsSubmitting(false);
         showModal("error", "Error", "Invalid user data received from server.");
         return;
       }
 
       if (user.role === "officer" && user.accountDisabled === true) {
+        hideLoading();
+        setIsSubmitting(false);
         showModal(
           "error",
           "Account Locked",
@@ -147,7 +165,7 @@ export default function LoginForm() {
       localStorage.setItem("loggedUserId", user._id);
       localStorage.setItem("loggedUserRole", user.role);
 
-      // Redirect based on role
+      // Redirect based on role — keep loading spinner visible until page transitions
       const redirectMap = {
         admin: "/admin",
         business: "/businessaccount",
@@ -155,21 +173,23 @@ export default function LoginForm() {
       };
 
       router.push(redirectMap[user.role.toLowerCase()] || "/login");
+      // NOTE: Do NOT setIsSubmitting(false) here — let the spinner persist until navigation completes
     } catch (error) {
       console.error("Login error:", error);
+      hideLoading();
+      setIsSubmitting(false);
       showModal(
         "error",
         "Network Error",
         "Something went wrong during login. Please try again.",
       );
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   // === SEND RESET CODE HANDLER ===
   const onSubmitForgot = async ({ email }) => {
     setIsSubmitting(true);
+    showLoading('Sending Reset Code', 'Please wait...');
 
     try {
       const res = await fetch("/api/forgotpassword/sendcode", {
@@ -180,7 +200,9 @@ export default function LoginForm() {
 
       const data = await res.json();
 
+      hideLoading();
       if (!res.ok) {
+        setIsSubmitting(false);
         showModal(
           "error",
           "Action Failed",
@@ -189,6 +211,7 @@ export default function LoginForm() {
         return;
       }
 
+      setIsSubmitting(false);
       showModal(
         "success",
         "Code Sent",
@@ -198,9 +221,9 @@ export default function LoginForm() {
       setShowReset(true);
     } catch (error) {
       console.error("Forgot password error:", error);
-      showModal("error", "Error", "Something went wrong. Please try again.");
-    } finally {
+      hideLoading();
       setIsSubmitting(false);
+      showModal("error", "Error", "Something went wrong. Please try again.");
     }
   };
 
@@ -212,6 +235,7 @@ export default function LoginForm() {
     confirmPassword,
   }) => {
     setIsSubmitting(true);
+    showLoading('Resetting Password', 'Please wait...');
 
     try {
       // Step 1: Verify the code
@@ -224,6 +248,8 @@ export default function LoginForm() {
       const verifyData = await verifyRes.json();
 
       if (!verifyRes.ok) {
+        hideLoading();
+        setIsSubmitting(false);
         showModal(
           "error",
           "Invalid Code",
@@ -246,6 +272,9 @@ export default function LoginForm() {
 
       const resetData = await resetRes.json();
 
+      hideLoading();
+      setIsSubmitting(false);
+
       if (!resetRes.ok) {
         showModal(
           "error",
@@ -267,9 +296,9 @@ export default function LoginForm() {
       }, 3000);
     } catch (error) {
       console.error("Reset password error:", error);
-      showModal("error", "Error", "Something went wrong. Please try again.");
-    } finally {
+      hideLoading();
       setIsSubmitting(false);
+      showModal("error", "Error", "Something went wrong. Please try again.");
     }
   };
 
