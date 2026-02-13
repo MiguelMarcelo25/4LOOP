@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import * as yup from "yup";
@@ -11,10 +11,14 @@ import { useState, useCallback } from "react";
 import FormInput from "@/app/components/ui/FormInput";
 import FormButton from "@/app/components/ui/FormButton";
 import StatusModal from "@/app/components/ui/StatusModal";
+import LoadingOverlay from "@/app/components/ui/LoadingOverlay";
 
 // === Validation Schemas ===
 const loginSchema = yup.object().shape({
-  email: yup.string().email("Provide valid email").required("Email is required"),
+  email: yup
+    .string()
+    .email("Provide valid email")
+    .required("Email is required"),
   password: yup
     .string()
     .required("Password is required")
@@ -22,11 +26,17 @@ const loginSchema = yup.object().shape({
 });
 
 const forgotPasswordSchema = yup.object().shape({
-  email: yup.string().email("Provide valid email").required("Email is required"),
+  email: yup
+    .string()
+    .email("Provide valid email")
+    .required("Email is required"),
 });
 
 const resetPasswordSchema = yup.object().shape({
-  email: yup.string().email("Provide valid email").required("Email is required"),
+  email: yup
+    .string()
+    .email("Provide valid email")
+    .required("Email is required"),
   resetCode: yup.string().required("Verification code is required"),
   newPassword: yup
     .string()
@@ -34,7 +44,7 @@ const resetPasswordSchema = yup.object().shape({
     .min(8, "Password must be at least 8 characters")
     .matches(
       /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/,
-      "Must include uppercase, lowercase, number & special character"
+      "Must include uppercase, lowercase, number & special character",
     ),
   confirmPassword: yup
     .string()
@@ -51,9 +61,9 @@ export default function LoginForm() {
   // Status Modal state
   const [modal, setModal] = useState({
     open: false,
-    type: 'success',
-    title: '',
-    message: '',
+    type: "success",
+    title: "",
+    message: "",
   });
 
   const closeModal = useCallback(() => {
@@ -71,7 +81,11 @@ export default function LoginForm() {
     formState: { errors },
   } = useForm({
     resolver: yupResolver(
-      showReset ? resetPasswordSchema : showForgot ? forgotPasswordSchema : loginSchema
+      showReset
+        ? resetPasswordSchema
+        : showForgot
+          ? forgotPasswordSchema
+          : loginSchema,
     ),
     defaultValues: {
       email: "",
@@ -98,22 +112,32 @@ export default function LoginForm() {
 
       if (!res.ok) {
         if (res.status === 403 && data.error?.includes("not verified")) {
-          router.push(`/registration/verifyemail?email=${encodeURIComponent(email)}`);
+          router.push(
+            `/registration/verifyemail?email=${encodeURIComponent(email)}`,
+          );
           return;
         }
-        showModal('error', 'Login Failed', data.error || "Unable to sign in. Please check your credentials.");
+        showModal(
+          "error",
+          "Login Failed",
+          data.error || "Unable to sign in. Please check your credentials.",
+        );
         return;
       }
 
       const { user } = data;
 
       if (!user?._id || !user?.role) {
-        showModal('error', 'Error', "Invalid user data received from server.");
+        showModal("error", "Error", "Invalid user data received from server.");
         return;
       }
 
       if (user.role === "officer" && user.accountDisabled === true) {
-        showModal('error', 'Account Locked', "Your account has been locked by the admin.");
+        showModal(
+          "error",
+          "Account Locked",
+          "Your account has been locked by the admin.",
+        );
         return;
       }
 
@@ -129,12 +153,15 @@ export default function LoginForm() {
         business: "/businessaccount",
         officer: "/officers",
       };
-      
+
       router.push(redirectMap[user.role.toLowerCase()] || "/login");
-      
     } catch (error) {
       console.error("Login error:", error);
-      showModal('error', 'Network Error', "Something went wrong during login. Please try again.");
+      showModal(
+        "error",
+        "Network Error",
+        "Something went wrong during login. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -154,23 +181,36 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        showModal('error', 'Action Failed', data.error || "Failed to send reset code.");
+        showModal(
+          "error",
+          "Action Failed",
+          data.error || "Failed to send reset code.",
+        );
         return;
       }
 
-      showModal('success', 'Code Sent', "A reset code has been sent to your email. Please check your inbox.");
+      showModal(
+        "success",
+        "Code Sent",
+        "A reset code has been sent to your email. Please check your inbox.",
+      );
       setShowForgot(false);
       setShowReset(true);
     } catch (error) {
       console.error("Forgot password error:", error);
-      showModal('error', 'Error', "Something went wrong. Please try again.");
+      showModal("error", "Error", "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // === VERIFY CODE AND RESET PASSWORD HANDLER ===
-  const onSubmitReset = async ({ email, resetCode, newPassword, confirmPassword }) => {
+  const onSubmitReset = async ({
+    email,
+    resetCode,
+    newPassword,
+    confirmPassword,
+  }) => {
     setIsSubmitting(true);
 
     try {
@@ -184,7 +224,11 @@ export default function LoginForm() {
       const verifyData = await verifyRes.json();
 
       if (!verifyRes.ok) {
-        showModal('error', 'Invalid Code', verifyData.error || "The verification code is invalid or expired.");
+        showModal(
+          "error",
+          "Invalid Code",
+          verifyData.error || "The verification code is invalid or expired.",
+        );
         return;
       }
 
@@ -203,11 +247,19 @@ export default function LoginForm() {
       const resetData = await resetRes.json();
 
       if (!resetRes.ok) {
-        showModal('error', 'Reset Failed', resetData.error || "Password reset failed.");
+        showModal(
+          "error",
+          "Reset Failed",
+          resetData.error || "Password reset failed.",
+        );
         return;
       }
 
-      showModal('success', 'Password Reset', "Your password has been reset successfully! You can now log in.");
+      showModal(
+        "success",
+        "Password Reset",
+        "Your password has been reset successfully! You can now log in.",
+      );
       reset();
 
       setTimeout(() => {
@@ -215,7 +267,7 @@ export default function LoginForm() {
       }, 3000);
     } catch (error) {
       console.error("Reset password error:", error);
-      showModal('error', 'Error', "Something went wrong. Please try again.");
+      showModal("error", "Error", "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -241,23 +293,17 @@ export default function LoginForm() {
         onClose={closeModal}
       />
 
-      {/* ✅ Processing overlay */}
-      {isSubmitting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-xs text-center">
-            <div className="mx-auto w-14 h-14 flex items-center justify-center mb-4">
-              <svg className="animate-spin w-10 h-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">
-              {showReset ? "Resetting Password" : showForgot ? "Sending Reset Code" : "Signing In"}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400">Please wait...</p>
-          </div>
-        </div>
-      )}
+      <LoadingOverlay
+        isLoading={isSubmitting}
+        message={
+          showReset
+            ? "Resetting Password"
+            : showForgot
+              ? "Sending Reset Code"
+              : "Signing In"
+        }
+        subtitle="Please wait..."
+      />
 
       <div className="absolute inset-0 bg-linear-to-r from-black/60 to-blue-900/90"></div>
 
@@ -278,16 +324,20 @@ export default function LoginForm() {
               : "Welcome Back"}
         </h1>
         <p className="text-center text-gray-500 dark:text-slate-400 text-sm mb-8">
-          {showReset 
-            ? "Provide the code and choose a new password" 
-            : showForgot 
-              ? "Enter your email to receive a reset code" 
+          {showReset
+            ? "Provide the code and choose a new password"
+            : showForgot
+              ? "Enter your email to receive a reset code"
               : "Login to your sanitation service account"}
         </p>
 
         <form
           onSubmit={handleSubmit(
-            showReset ? onSubmitReset : showForgot ? onSubmitForgot : onSubmitLogin
+            showReset
+              ? onSubmitReset
+              : showForgot
+                ? onSubmitForgot
+                : onSubmitLogin,
           )}
           className="flex flex-col gap-5"
         >
@@ -438,7 +488,8 @@ export default function LoginForm() {
             © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
           </p>
           <p className="text-xs text-red-500/80 dark:text-red-400/80 font-medium italic">
-            ⚠️ This platform is currently in development and not yet officially authorized.
+            ⚠️ This platform is currently in development and not yet officially
+            authorized.
           </p>
         </footer>
       </div>

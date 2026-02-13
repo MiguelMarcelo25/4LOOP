@@ -28,7 +28,55 @@ import {
   TableCell,
   TableContainer,
   TableSortLabel,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
 } from "@mui/material";
+import { HiCheckCircle, HiExclamationCircle, HiSave } from "react-icons/hi";
+
+const MSR_OPTIONS = [
+  { id: "health_certificate", label: "Health Certificate" },
+  {
+    id: "pest_control_contract_agreement",
+    label: "Pest Control Contract / Agreement",
+  },
+  {
+    id: "applicable_pest_control_method",
+    label: "Applicable Pest Control Method",
+  },
+  { id: "license_of_embalmer", label: "License of Embalmer" },
+  { id: "fda_license_to_operate", label: "FDA - License to Operate" },
+  {
+    id: "food_safety_compliance_officer",
+    label: "Food Safety Compliance Officer (FSCO)",
+  },
+  { id: "doh_license_or_accreditation", label: "DOH License / Accreditation" },
+  {
+    id: "manufacturers_distributors_importers_of_excreta_sewage",
+    label: "Manufacturers/Distributors of Excreta/Sewage",
+  },
+  {
+    id: "clearance_from_social_hygiene_clinic",
+    label: "Clearance From Social Hygiene Clinic",
+  },
+  { id: "permit_to_operate", label: "Permit to Operate" },
+  {
+    id: "material_information_data_sheet",
+    label: "Material Information Data Sheet",
+  },
+  {
+    id: "random_swab_test_result_of_equipments_and_rooms",
+    label: "Swab Test Result of Equipments & Rooms",
+  },
+  {
+    id: "certificate_of_potability_of_drinking_water",
+    label: "Certificate of Potability of Drinking Water",
+  },
+  { id: "for_water_refilling_station", label: "For Water Refilling Station" },
+  { id: "others", label: "Others" },
+];
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
@@ -52,6 +100,9 @@ export default function WorkbenchList({ title, filterStatus }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [loggedUserId, setLoggedUserId] = useState(null);
+  const [msrEdits, setMsrEdits] = useState([]);
+  const [isSavingMsr, setIsSavingMsr] = useState(false);
+
   const [sortConfig, setSortConfig] = useState({
     key: "createdAt",
     direction: "desc",
@@ -91,6 +142,47 @@ export default function WorkbenchList({ title, filterStatus }) {
     },
     enabled: !!selectedBusinessId,
   });
+
+  // Sync state when business detail loads
+  useEffect(() => {
+    if (businessDetail) {
+      setMsrEdits(businessDetail.msrChecklist || []);
+    }
+  }, [businessDetail]);
+
+  const handleToggleMsr = (option) => {
+    setMsrEdits((prev) => {
+      const exists = prev.find((item) => item.id === option.id);
+      if (exists) {
+        return prev.filter((item) => item.id !== option.id);
+      } else {
+        return [...prev, { id: option.id, label: option.label }];
+      }
+    });
+  };
+
+  const handleSaveMsr = async () => {
+    if (!selectedBusinessId) return;
+    setIsSavingMsr(true);
+    try {
+      // Use the officer route to update
+      const res = await axios.put(`/api/officer/${selectedBusinessId}`, {
+        msrChecklist: msrEdits,
+      });
+
+      if (res.status === 200) {
+        queryClient.invalidateQueries(["business-detail", selectedBusinessId]);
+        queryClient.invalidateQueries(["workbench-list"]);
+        // Optional: Show success feedback via snackbar if available, else alert for now
+        // alert("Requirements updated successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to save MSR:", error);
+      alert("Failed to save changes. Please try again.");
+    } finally {
+      setIsSavingMsr(false);
+    }
+  };
 
   // Filter Logic
   const filteredBusinesses = useMemo(() => {
@@ -694,6 +786,100 @@ export default function WorkbenchList({ title, filterStatus }) {
                       </Typography>
                     </div>
                   </div>
+                </Box>
+
+                {/* Section 3.5: Minimum Sanitary Requirements (MSR) */}
+                <Box>
+                  <Typography
+                    variant="subtitle1"
+                    className="font-bold mb-2 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
+                  >
+                    C. Minimum Sanitary Requirements
+                  </Typography>
+
+                  {/* Use top-level MSR_OPTIONS */}
+                  {(() => {
+                    // Create a map for quick lookup of existing items
+                    const businessMsrMap = (msrEdits || []).reduce(
+                      (acc, item) => {
+                        acc[item.id] = item;
+                        if (item.label) acc[item.label] = item;
+                        return acc;
+                      },
+                      {},
+                    );
+
+                    return (
+                      <div className="space-y-4">
+                        <List
+                          dense
+                          className="grid grid-cols-1 md:grid-cols-2 gap-x-4"
+                        >
+                          {MSR_OPTIONS.map((option) => {
+                            const userItem =
+                              businessMsrMap[option.id] ||
+                              businessMsrMap[option.label];
+                            const isChecked = !!userItem;
+                            const hasDueDate = userItem?.dueDate;
+
+                            return (
+                              <ListItem
+                                key={option.id}
+                                disablePadding
+                                className="mb-1 hover:bg-gray-50 dark:hover:bg-slate-800 rounded transition-colors"
+                              >
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                  <Checkbox
+                                    edge="start"
+                                    checked={isChecked}
+                                    tabIndex={-1}
+                                    disableRipple
+                                    size="small"
+                                    onChange={() => handleToggleMsr(option)}
+                                    color="success"
+                                  />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={
+                                    <span
+                                      className={`text-sm font-medium ${isChecked ? "dark:text-slate-200" : "text-gray-500 dark:text-slate-500"}`}
+                                    >
+                                      {option.label}
+                                    </span>
+                                  }
+                                  secondary={
+                                    hasDueDate ? (
+                                      <span className="text-xs text-red-500 font-semibold flex items-center gap-1">
+                                        <HiExclamationCircle />
+                                        Due:{" "}
+                                        {new Date(
+                                          userItem.dueDate,
+                                        ).toLocaleDateString()}
+                                      </span>
+                                    ) : null
+                                  }
+                                />
+                              </ListItem>
+                            );
+                          })}
+                        </List>
+
+                        <div className="flex justify-end pt-2 border-t dark:border-slate-700">
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="primary"
+                            startIcon={<HiSave />}
+                            onClick={handleSaveMsr}
+                            disabled={isSavingMsr}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            {isSavingMsr ? "Saving..." : "Update Requirements"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </Box>
 
                 {/* Section 4: Inspection & Penalty Records */}

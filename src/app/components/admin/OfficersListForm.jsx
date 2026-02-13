@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Box,
@@ -18,32 +18,40 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
-} from '@mui/material';
-import { HiSearch, HiMail, HiPhone, HiBadgeCheck, HiUserAdd, HiBan, HiCheckCircle } from 'react-icons/hi'; 
+  DialogActions,
+} from "@mui/material";
+import {
+  HiSearch,
+  HiMail,
+  HiPhone,
+  HiBadgeCheck,
+  HiUserAdd,
+  HiBan,
+  HiCheckCircle,
+} from "react-icons/hi";
 
 export default function OfficersListForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [searchType, setSearchType] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  
+  const [searchType, setSearchType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
   // State for confirmation dialog
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
-    title: '',
-    content: '',
-    action: null
+    title: "",
+    content: "",
+    action: null,
   });
 
   // Fetch officers from API
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['officers-list'],
+    queryKey: ["officers-list"],
     queryFn: async () => {
-      const response = await fetch('/api/users?role=officer');
-      if (!response.ok) throw new Error('Failed to fetch officers');
+      const response = await fetch("/api/users?role=officer");
+      if (!response.ok) throw new Error("Failed to fetch officers");
       const result = await response.json();
-      
+
       // Handle the { users: [...] } response structure
       return result.users || [];
     },
@@ -53,20 +61,20 @@ export default function OfficersListForm() {
   // Disable/Enable Mutation
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, action }) => {
-      const endpoint = action === 'disable' ? 'disable' : 'enable';
+      const endpoint = action === "disable" ? "disable" : "enable";
       const response = await fetch(`/api/users/${id}/${endpoint}`, {
-        method: 'PUT',
+        method: "PUT",
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to ${action} officer`);
       }
-      
+
       return response.json();
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries(['officers-list']);
+      queryClient.invalidateQueries(["officers-list"]);
       // Optionally show success toast here
       setConfirmDialog({ ...confirmDialog, open: false });
     },
@@ -74,20 +82,22 @@ export default function OfficersListForm() {
       console.error("Status update failed:", error);
       alert(`Error: ${error.message}`);
       setConfirmDialog({ ...confirmDialog, open: false });
-    }
+    },
   });
 
   const handleStatusClick = (officer) => {
-    const isDisableAction = officer.status !== 'disabled'; // If not disabled, action is to disable
-    const action = isDisableAction ? 'disable' : 'enable';
-    
+    const isDisableAction = officer.status !== "disabled"; // If not disabled, action is to disable
+    const action = isDisableAction ? "disable" : "enable";
+
     setConfirmDialog({
       open: true,
-      title: isDisableAction ? 'Disable Officer Account?' : 'Enable Officer Account?',
-      content: isDisableAction 
+      title: isDisableAction
+        ? "Disable Officer Account?"
+        : "Enable Officer Account?",
+      content: isDisableAction
         ? `Are you sure you want to disable ${officer.fullName}? They will not be able to log in.`
         : `Are you sure you want to enable ${officer.fullName}? They will regain access to the system.`,
-      action: () => toggleStatusMutation.mutate({ id: officer._id, action })
+      action: () => toggleStatusMutation.mutate({ id: officer._id, action }),
     });
   };
 
@@ -95,11 +105,11 @@ export default function OfficersListForm() {
   const filteredOfficers = useMemo(() => {
     if (!data) return [];
     if (!searchQuery.trim()) return data;
-    
+
     const query = searchQuery.toLowerCase();
 
     return data.filter((officer) => {
-      if (searchType === 'all') {
+      if (searchType === "all") {
         return (
           officer.fullName?.toLowerCase().includes(query) ||
           officer.email?.toLowerCase().includes(query) ||
@@ -115,7 +125,9 @@ export default function OfficersListForm() {
       <Box className="w-full bg-white dark:bg-slate-900 shadow rounded-lg p-6">
         <Box mt={4} textAlign="center">
           <CircularProgress />
-          <Typography mt={2} className="dark:text-slate-300">Loading officers...</Typography>
+          <Typography mt={2} className="dark:text-slate-300">
+            Loading officers...
+          </Typography>
         </Box>
       </Box>
     );
@@ -125,7 +137,9 @@ export default function OfficersListForm() {
     return (
       <Box className="w-full bg-white dark:bg-slate-900 shadow rounded-lg p-6">
         <Box mt={4} textAlign="center">
-          <Typography color="error">❌ Failed to load officers: {error?.message}</Typography>
+          <Typography color="error">
+            ❌ Failed to load officers: {error?.message}
+          </Typography>
         </Box>
       </Box>
     );
@@ -138,17 +152,6 @@ export default function OfficersListForm() {
         <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-300 uppercase">
           Officers List
         </h1>
-        <div className="absolute right-0 top-0 hidden md:block">
-          <Button
-            variant="contained"
-            color="primary"
-            size="small"
-            startIcon={<HiUserAdd />}
-            onClick={() => router.push('/admin/createofficer')}
-          >
-            Create Officer
-          </Button>
-        </div>
         <Divider className="my-3 dark:border-slate-700" />
       </div>
 
@@ -163,8 +166,8 @@ export default function OfficersListForm() {
       >
         <Box
           display="flex"
-          flexDirection={{ xs: 'column', sm: 'row' }}
-          alignItems={{ xs: 'stretch', sm: 'center' }}
+          flexDirection={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "stretch", sm: "center" }}
           justifyContent="center"
           gap={2}
           width="100%"
@@ -179,7 +182,11 @@ export default function OfficersListForm() {
             InputLabelProps={{ className: "dark:text-slate-400" }}
             SelectProps={{
               className: "dark:text-slate-200",
-              MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } }
+              MenuProps: {
+                PaperProps: {
+                  className: "dark:bg-slate-800 dark:text-slate-200",
+                },
+              },
             }}
           >
             <MenuItem value="all">All</MenuItem>
@@ -210,8 +217,8 @@ export default function OfficersListForm() {
           variant="body2"
           className="mt-1 text-center text-gray-500 dark:text-slate-400"
         >
-          Showing <strong>{filteredOfficers.length}</strong>{' '}
-          {filteredOfficers.length === 1 ? 'officer' : 'officers'}
+          Showing <strong>{filteredOfficers.length}</strong>{" "}
+          {filteredOfficers.length === 1 ? "officer" : "officers"}
         </Typography>
       </Box>
 
@@ -227,31 +234,45 @@ export default function OfficersListForm() {
               {/* Status Badge */}
               <div className="mb-4 flex justify-between items-start">
                 <Chip
-                  icon={officer.status === 'disabled' ? <HiBan /> : <HiBadgeCheck />}
-                  label={officer.status === 'disabled' ? "Disabled" : "Active"}
+                  icon={
+                    officer.status === "disabled" ? <HiBan /> : <HiBadgeCheck />
+                  }
+                  label={officer.status === "disabled" ? "Disabled" : "Active"}
                   size="small"
-                  color={officer.status === 'disabled' ? "error" : "success"}
-                  className={officer.status === 'disabled' ? "" : "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"}
+                  color={officer.status === "disabled" ? "error" : "success"}
+                  className={
+                    officer.status === "disabled"
+                      ? ""
+                      : "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                  }
                 />
-                
+
                 <Button
                   variant="outlined"
                   size="small"
-                  color={officer.status === 'disabled' ? "success" : "error"}
+                  color={officer.status === "disabled" ? "success" : "error"}
                   onClick={() => handleStatusClick(officer)}
-                  startIcon={officer.status === 'disabled' ? <HiCheckCircle /> : <HiBan />}
-                  sx={{ fontSize: '0.7rem', py: 0.5, minWidth: 'auto' }}
+                  startIcon={
+                    officer.status === "disabled" ? (
+                      <HiCheckCircle />
+                    ) : (
+                      <HiBan />
+                    )
+                  }
+                  sx={{ fontSize: "0.7rem", py: 0.5, minWidth: "auto" }}
                 >
-                  {officer.status === 'disabled' ? "Enable" : "Disable"}
+                  {officer.status === "disabled" ? "Enable" : "Disable"}
                 </Button>
               </div>
 
               {/* Full Name - Prominent */}
               <div className="mb-3">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">
-                  {officer.fullName || '—'}
+                  {officer.fullName || "—"}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Full Name</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Full Name
+                </p>
               </div>
 
               {/* Assigned Area */}
@@ -260,19 +281,29 @@ export default function OfficersListForm() {
                   <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
                     {officer.assignedArea}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Assigned Area</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
+                    Assigned Area
+                  </p>
                 </div>
               )}
 
               {/* Email */}
               <div className="mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
                 <div className="flex items-center gap-2">
-                  <HiMail className="text-gray-500 dark:text-slate-400" size={16} />
-                  <p className="text-sm text-gray-700 dark:text-slate-300 truncate" title={officer.email}>
-                    {officer.email || '—'}
+                  <HiMail
+                    className="text-gray-500 dark:text-slate-400"
+                    size={16}
+                  />
+                  <p
+                    className="text-sm text-gray-700 dark:text-slate-300 truncate"
+                    title={officer.email}
+                  >
+                    {officer.email || "—"}
                   </p>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-slate-400 ml-6">Email</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 ml-6">
+                  Email
+                </p>
               </div>
 
               {/* Created Date */}
@@ -295,7 +326,7 @@ export default function OfficersListForm() {
             variant="contained"
             color="primary"
             startIcon={<HiUserAdd />}
-            onClick={() => router.push('/admin/createofficer')}
+            onClick={() => router.push("/admin/createofficer")}
           >
             Create New Officer
           </Button>
@@ -304,7 +335,7 @@ export default function OfficersListForm() {
       {/* Confirmation Dialog */}
       <Dialog
         open={confirmDialog.open}
-        onClose={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
       >
         <DialogTitle className="dark:text-slate-100 dark:bg-slate-800">
           {confirmDialog.title}
@@ -315,10 +346,20 @@ export default function OfficersListForm() {
           </DialogContentText>
         </DialogContent>
         <DialogActions className="dark:bg-slate-800">
-          <Button onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))} color="inherit">
+          <Button
+            onClick={() =>
+              setConfirmDialog((prev) => ({ ...prev, open: false }))
+            }
+            color="inherit"
+          >
             Cancel
           </Button>
-          <Button onClick={confirmDialog.action} color="primary" variant="contained" autoFocus>
+          <Button
+            onClick={confirmDialog.action}
+            color="primary"
+            variant="contained"
+            autoFocus
+          >
             Confirm
           </Button>
         </DialogActions>

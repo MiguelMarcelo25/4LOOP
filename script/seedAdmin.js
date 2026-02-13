@@ -27,7 +27,7 @@ async function seedAdmin() {
     process.exit(0);
   }
 
-  const hashedPassword = await bcrypt.hash("rawr1234", 10);
+  const hashedPassword = await bcrypt.hash("123123123123", 10);
 
   await User.create({
     email: "admin@admin.com",

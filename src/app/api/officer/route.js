@@ -1,16 +1,43 @@
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import Business from "@/models/Business";
+import { getSession } from "@/lib/Auth";
 
 export async function GET(request, { params }) {
   await connectMongoDB();
 
-  const onlineRequest = await Business.find({}).populate('officerInCharge', 'fullName');
-  if (!onlineRequest) {
-    return NextResponse.json({ error: "Business not found" }, { status: 404 });
-  }
+  try {
+    // Get the current user session
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  return NextResponse.json(onlineRequest);
+    const { role, id: userId } = session.user;
+
+    // Build filter based on user role
+    let filter = {};
+    if (role === "business") {
+      // Business users can only see their own businesses
+      filter = { businessAccount: userId };
+    } else if (role === "officer" || role === "admin") {
+      // Officers and admins can see all businesses
+      filter = {};
+    } else {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    const onlineRequest = await Business.find(filter).populate('officerInCharge', 'fullName');
+    
+    if (!onlineRequest) {
+      return NextResponse.json({ error: "Business not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(onlineRequest);
+  } catch (err) {
+    console.error("❌ Error fetching businesses:", err.message);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
 
 export async function POST(request) {

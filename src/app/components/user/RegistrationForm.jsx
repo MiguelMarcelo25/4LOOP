@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useMutation } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -14,6 +14,7 @@ import axios from "axios";
 import FormInput from "@/app/components/ui/FormInput";
 import FormButton from "@/app/components/ui/FormButton";
 import StatusModal from "@/app/components/ui/StatusModal";
+import LoadingOverlay from "@/app/components/ui/LoadingOverlay";
 
 // ✅ Password rules (at least 8 chars, uppercase, lowercase, number, and special character)
 const passwordRules =
@@ -22,7 +23,10 @@ const passwordRules =
 // ✅ Validation schema
 const schema = yup.object().shape({
   fullName: yup.string().required("Full name is required"),
-  email: yup.string().email("Provide a valid email").required("Email is required"),
+  email: yup
+    .string()
+    .email("Provide a valid email")
+    .required("Email is required"),
   password: yup
     .string()
     .required("Password is required")
@@ -43,15 +47,15 @@ export default function RegistrationForm() {
   // Status Modal state
   const [modal, setModal] = useState({
     open: false,
-    type: 'success',
-    title: '',
-    message: '',
+    type: "success",
+    title: "",
+    message: "",
   });
 
   // ✅ Confirm modal state for unverified email
   const [confirmModal, setConfirmModal] = useState({
     open: false,
-    email: '',
+    email: "",
   });
   const [resending, setResending] = useState(false);
 
@@ -86,7 +90,9 @@ export default function RegistrationForm() {
     const numReq = /[0-9]/.test(password);
     const specialReq = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
-    const passed = [lengthReq, upperReq, lowerReq, numReq, specialReq].filter(Boolean).length;
+    const passed = [lengthReq, upperReq, lowerReq, numReq, specialReq].filter(
+      Boolean,
+    ).length;
 
     if (password.length === 0) return setPasswordStrength("");
     if (passed <= 2) return setPasswordStrength("Weak");
@@ -102,11 +108,15 @@ export default function RegistrationForm() {
     setResending(true);
     try {
       await axios.post("/api/resend-code", { email: confirmModal.email });
-      setConfirmModal({ open: false, email: '' });
+      setConfirmModal({ open: false, email: "" });
       router.push(`/registration/verifyemail?email=${confirmModal.email}`);
     } catch {
-      setConfirmModal({ open: false, email: '' });
-      showModal('error', 'Resend Failed', 'Failed to resend verification code. Please try again later.');
+      setConfirmModal({ open: false, email: "" });
+      showModal(
+        "error",
+        "Resend Failed",
+        "Failed to resend verification code. Please try again later.",
+      );
     } finally {
       setResending(false);
     }
@@ -117,11 +127,15 @@ export default function RegistrationForm() {
     mutationFn: signUpWithCompleteInfo,
     onSuccess: (data) => {
       const { email, verified } = data?.data?.data || {};
-      
+
       if (!verified && email) {
         router.push(`/registration/verifyemail?email=${email}`);
       } else {
-        showModal('success', 'Registration Successful', 'Your account has been created. Redirecting to login...');
+        showModal(
+          "success",
+          "Registration Successful",
+          "Your account has been created. Redirecting to login...",
+        );
         setTimeout(() => router.push("/login"), 2000);
       }
     },
@@ -132,10 +146,21 @@ export default function RegistrationForm() {
       if (status === 409 && errorData?.unverified) {
         // ✅ Email exists but is NOT verified — prompt user to resend code
         setConfirmModal({ open: true, email: errorData.email });
-      } else if (status === 409 || errorData?.error === "Email already registered") {
-        showModal('error', 'Registration Failed', "This email is already registered. Please use a different one or try logging in.");
+      } else if (
+        status === 409 ||
+        errorData?.error === "Email already registered"
+      ) {
+        showModal(
+          "error",
+          "Registration Failed",
+          "This email is already registered. Please use a different one or try logging in.",
+        );
       } else {
-        showModal('error', 'Registration Failed', errorData?.error || "Registration failed. Please try again later.");
+        showModal(
+          "error",
+          "Registration Failed",
+          errorData?.error || "Registration failed. Please try again later.",
+        );
       }
     },
   });
@@ -157,21 +182,11 @@ export default function RegistrationForm() {
         onClose={closeModal}
       />
 
-      {/* ✅ Processing overlay while creating account */}
-      {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-xs text-center">
-            <div className="mx-auto w-14 h-14 flex items-center justify-center mb-4">
-              <svg className="animate-spin w-10 h-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">Creating Your Account</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400">Please wait while we set everything up...</p>
-          </div>
-        </div>
-      )}
+      <LoadingOverlay
+        isLoading={isLoading}
+        message="Creating Your Account"
+        subtitle="Please wait while we set everything up..."
+      />
 
       {/* ✅ Confirmation Modal for unverified email */}
       {confirmModal.open && (
@@ -179,18 +194,33 @@ export default function RegistrationForm() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center">
             <div className="mb-4">
               <div className="mx-auto w-14 h-14 flex items-center justify-center bg-yellow-100 dark:bg-yellow-900/30 rounded-full mb-3">
-                <svg className="w-7 h-7 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-7 h-7 text-yellow-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">Email Not Verified</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">
+                Email Not Verified
+              </h3>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-300 mb-6">
-              The email <span className="font-semibold">{confirmModal.email}</span> is already registered but not yet verified. Would you like to resend the verification code?
+              The email{" "}
+              <span className="font-semibold">{confirmModal.email}</span> is
+              already registered but not yet verified. Would you like to resend
+              the verification code?
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => setConfirmModal({ open: false, email: '' })}
+                onClick={() => setConfirmModal({ open: false, email: "" })}
                 disabled={resending}
                 className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
               >
@@ -214,7 +244,9 @@ export default function RegistrationForm() {
       {/* Hero Section (Visible on Large Screens) */}
       <div className="absolute inset-0 z-0 hidden lg:flex flex-col justify-center px-20 text-white">
         <div>
-          <h1 className="text-6xl font-bold tracking-tight uppercase">Pasig City</h1>
+          <h1 className="text-6xl font-bold tracking-tight uppercase">
+            Pasig City
+          </h1>
           <h2 className="text-5xl font-light mt-2 uppercase">Sanitation</h2>
           <h2 className="text-5xl font-light uppercase">Online Service</h2>
         </div>
@@ -230,7 +262,11 @@ export default function RegistrationForm() {
         </p>
 
         {/* Registration Form */}
-        <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className="flex flex-col gap-5">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          autoComplete="off"
+          className="flex flex-col gap-5"
+        >
           {/* Full Name */}
           <Controller
             name="fullName"
@@ -284,8 +320,8 @@ export default function RegistrationForm() {
                   passwordStrength === "Weak"
                     ? "text-red-500"
                     : passwordStrength === "Medium"
-                    ? "text-yellow-600 dark:text-yellow-500"
-                    : "text-green-600 dark:text-green-500"
+                      ? "text-yellow-600 dark:text-yellow-500"
+                      : "text-green-600 dark:text-green-500"
                 }`}
               >
                 Strength: {passwordStrength}
@@ -326,13 +362,18 @@ export default function RegistrationForm() {
         <div className="text-center mt-8">
           <div className="relative flex items-center mb-6">
             <div className="grow border-t border-gray-200 dark:border-slate-700"></div>
-            <span className="shrink mx-4 text-xs text-gray-400 uppercase font-bold tracking-widest">or</span>
+            <span className="shrink mx-4 text-xs text-gray-400 uppercase font-bold tracking-widest">
+              or
+            </span>
             <div className="grow border-t border-gray-200 dark:border-slate-700"></div>
           </div>
-          
+
           <p className="text-sm text-gray-600 dark:text-slate-400 font-medium">
             Already have an account?{" "}
-            <Link href="/login" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
+            <Link
+              href="/login"
+              className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+            >
               Sign In
             </Link>
           </p>
@@ -344,11 +385,11 @@ export default function RegistrationForm() {
             © {new Date().getFullYear()} CITY GOVERNMENT OF PASIG
           </p>
           <p className="text-xs text-red-500/80 dark:text-red-400/80 font-medium italic">
-            ⚠️ This platform is currently in development and not yet officially authorized.
+            ⚠️ This platform is currently in development and not yet officially
+            authorized.
           </p>
         </footer>
       </div>
     </div>
   );
 }
-

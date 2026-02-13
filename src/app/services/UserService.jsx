@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const baseURL = process.env.NEXT_PUBLIC_URL_AND_PORT;
+// ✅ Use baseURL from env, fallback to empty string for relative URLs
+const baseURL = process.env.NEXT_PUBLIC_URL_AND_PORT || "";
 
 // ✅ Create shared axios instance
 const axiosInstance = axios.create({
