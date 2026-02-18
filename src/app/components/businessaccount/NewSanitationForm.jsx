@@ -545,7 +545,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       clearMsrSelectionsButKeepDueDates(msrChecklist, setValue); // ✅ keep due dates intact
       setWarningMessage("");
 
-      router.push("/businessaccount/request");
+      router.push("/businessaccount/businesses/businesslist");
     },
 
     onError: (err) => {

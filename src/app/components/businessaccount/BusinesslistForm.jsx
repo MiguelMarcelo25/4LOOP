@@ -1,7 +1,15 @@
 "use client";
 
 import DocList from "@/app/components/ui/DocViewer";
-import { HiChevronDown, HiChevronUp, HiSearch, HiTrash } from "react-icons/hi";
+import {
+  HiChevronDown,
+  HiChevronUp,
+  HiSearch,
+  HiTrash,
+  HiUpload,
+  HiCheckCircle,
+  HiExclamationCircle,
+} from "react-icons/hi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -14,6 +22,202 @@ import {
   Typography,
 } from "@mui/material";
 import { getAddOwnerBusiness } from "@/app/services/BusinessService";
+
+// ─── file helper ────────────────────────────────────────────────────────────
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── MSR Upload Section ──────────────────────────────────────────────────────
+
+function MsrUploadSection({ business, onUploadSuccess }) {
+  const msrItems = business.msrChecklist || [];
+  const existing = business.personnelDocuments || [];
+
+  // Track pending file selections per MSR item id
+  const [pending, setPending] = useState({}); // { [msrId]: File }
+  const [uploading, setUploading] = useState({}); // { [msrId]: bool }
+  const [done, setDone] = useState({}); // { [msrId]: bool }
+
+  if (msrItems.length === 0) return null;
+
+  const isAlreadyUploaded = (item) =>
+    existing.some((d) => d.name?.startsWith(`[MSR] ${item.label}`));
+
+  const handleFileChange = (item, file) => {
+    if (!file) return;
+    setPending((p) => ({ ...p, [item.id]: file }));
+  };
+
+  const handleUpload = async (item) => {
+    const file = pending[item.id];
+    if (!file) return;
+
+    setUploading((u) => ({ ...u, [item.id]: true }));
+    try {
+      const base64 = await fileToBase64(file);
+      const newDoc = {
+        name: `[MSR] ${item.label} — ${file.name}`,
+        url: base64,
+      };
+
+      // Merge with existing personnelDocuments (keep old, add new)
+      const merged = [
+        ...existing.filter((d) => !d.name?.startsWith(`[MSR] ${item.label}`)),
+        newDoc,
+      ];
+
+      const res = await fetch(`/api/business/${business._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personnelDocuments: merged }),
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      setDone((d) => ({ ...d, [item.id]: true }));
+      setPending((p) => {
+        const n = { ...p };
+        delete n[item.id];
+        return n;
+      });
+      onUploadSuccess?.();
+    } catch (err) {
+      console.error("MSR upload error:", err);
+      alert("❌ Upload failed. Please try again.");
+    } finally {
+      setUploading((u) => ({ ...u, [item.id]: false }));
+    }
+  };
+
+  return (
+    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+      <div className="flex items-center gap-2 mb-4">
+        <HiExclamationCircle className="text-orange-500 text-lg" />
+        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+          Required MSR Documents — Upload Here
+        </h3>
+      </div>
+      <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">
+        The officer has flagged the following requirements. Please upload the
+        corresponding documents.
+      </p>
+      <div className="space-y-3">
+        {msrItems.map((item) => {
+          const alreadyDone = done[item.id] || isAlreadyUploaded(item);
+          const file = pending[item.id];
+          const busy = uploading[item.id];
+
+          return (
+            <div
+              key={item.id}
+              className={`flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border ${
+                alreadyDone
+                  ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                  : "bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800"
+              }`}
+            >
+              {/* Status icon + label */}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {alreadyDone ? (
+                  <HiCheckCircle className="text-green-500 text-lg flex-shrink-0" />
+                ) : (
+                  <HiExclamationCircle className="text-orange-400 text-lg flex-shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate">
+                    {item.label}
+                  </p>
+                  {item.dueDate && (
+                    <p className="text-xs text-red-500 dark:text-red-400">
+                      Due: {new Date(item.dueDate).toLocaleDateString("en-PH")}
+                    </p>
+                  )}
+                  {alreadyDone && (
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      ✓ Document uploaded
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Upload controls */}
+              {!alreadyDone && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileChange(item, e.target.files?.[0])
+                      }
+                    />
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors text-gray-700 dark:text-slate-300">
+                      📎{" "}
+                      {file
+                        ? file.name.slice(0, 20) +
+                          (file.name.length > 20 ? "…" : "")
+                        : "Choose file"}
+                    </span>
+                  </label>
+                  {file && (
+                    <button
+                      onClick={() => handleUpload(item)}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+                    >
+                      {busy ? (
+                        <>
+                          <span className="animate-spin">⏳</span> Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <HiUpload className="text-sm" /> Upload
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Re-upload option for already-done items */}
+              {alreadyDone && (
+                <label className="cursor-pointer flex-shrink-0">
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setPending((p) => ({ ...p, [item.id]: f }));
+                        setDone((d) => {
+                          const n = { ...d };
+                          delete n[item.id];
+                          return n;
+                        });
+                      }
+                    }}
+                  />
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors cursor-pointer">
+                    🔄 Replace
+                  </span>
+                </label>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -95,6 +299,7 @@ function getStatusBadge(status) {
 export default function BusinesslistForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [uploadingBiz, setUploadingBiz] = useState({});
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["business-list"],
@@ -639,6 +844,16 @@ export default function BusinesslistForm() {
                       </div>
                     )}
                   </div>
+
+                  {/* MSR Document Upload — only shown when officer has assigned MSR items */}
+                  {business.msrChecklist?.length > 0 && (
+                    <MsrUploadSection
+                      business={business}
+                      onUploadSuccess={() =>
+                        queryClient.invalidateQueries(["business-list"])
+                      }
+                    />
+                  )}
 
                   {/* Uploaded Documents */}
                   <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
