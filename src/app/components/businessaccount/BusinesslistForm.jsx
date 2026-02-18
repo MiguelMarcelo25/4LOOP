@@ -1,580 +1,671 @@
-'use client';
-import * as yup from 'yup';
-import { HiPencilAlt, HiX, HiSave, HiTrash, HiChevronDown, HiChevronUp, HiSearch } from 'react-icons/hi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { TextField, MenuItem, InputAdornment } from '@mui/material';
-import { getAddOwnerBusiness } from '@/app/services/BusinessService';
+"use client";
+
+import DocList from "@/app/components/ui/DocViewer";
+import { HiChevronDown, HiChevronUp, HiSearch, HiTrash } from "react-icons/hi";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Typography,
-  Stack,
-  Paper,
-  Box,
   Button,
+  TextField,
+  MenuItem,
   CircularProgress,
-  Divider,
-} from '@mui/material';
-// Helper to format violation codes nicely
+  Box,
+  Typography,
+} from "@mui/material";
+import { getAddOwnerBusiness } from "@/app/services/BusinessService";
+
+// ─── helpers ────────────────────────────────────────────────────────────────
+
 function formatViolationCode(code) {
-  if (!code) return '';
+  if (!code) return "";
   return code
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
+const STEPS = [
+  { label: "Verification", icon: "🔍" },
+  { label: "Compliance", icon: "📋" },
+  { label: "Permit Approval", icon: "✅" },
+  { label: "Release", icon: "🎉" },
+];
 
-const schema = yup.object().shape({
-  bidNumber: yup
-    .string()
-    .required('BID Number is required')
-    .matches(/^[A-Z]{2}-\d{4}-\d{6}$/, 'Format must be like AM-2025-123456')
-    .length(14, 'BID Number must be exactly 14 characters long'),
-  businessName: yup.string().required('Name of Company is required'),
-  businessNickname: yup.string().required('Trade Name is required'),
-  businessType: yup.string().required('Line of Business is required'),
-  businessAddress: yup.string().required('Business Address is required'),
-  contactPerson: yup.string().required('Contact Person is required'),
-  contactNumber: yup
-    .string()
-    .required('Contact Number is required')
-    .matches(/^09\d{9}$/, 'Enter a valid 11-digit mobile number (e.g. 09123456789)')
-    .length(11, 'Must be exactly 11 digits')
-});
+function getProgressStep(status) {
+  switch (status) {
+    case "draft":
+      return -1;
+    case "submitted":
+      return 0;
+    case "pending":
+      return 1;
+    case "pending2":
+      return 2;
+    case "pending3":
+      return 2;
+    case "completed":
+      return 3;
+    case "released":
+      return 4;
+    case "expired":
+      return 4;
+    default:
+      return -1;
+  }
+}
+
+function getStatusBadge(status) {
+  switch (status) {
+    case "released":
+      return {
+        label: "Valid",
+        cls: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+      };
+    case "expired":
+      return {
+        label: "Expired",
+        cls: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+      };
+    case "completed":
+      return {
+        label: "Approved",
+        cls: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      };
+    case "draft":
+      return {
+        label: "Draft",
+        cls: "bg-gray-100 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700",
+      };
+    case "submitted":
+      return {
+        label: "Submitted",
+        cls: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      };
+    default:
+      return {
+        label: "Processing",
+        cls: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
+      };
+  }
+}
+
+// ─── component ──────────────────────────────────────────────────────────────
+
 export default function BusinesslistForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['business-list'],
+    queryKey: ["business-list"],
     queryFn: () => getAddOwnerBusiness(),
   });
 
   const [businesses, setBusinesses] = useState([]);
+  const [searchType, setSearchType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expanded, setExpanded] = useState({});
 
-  const [searchType, setSearchType] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expanded, setExpanded] = useState({}); // ✅ track expanded businesses
-
-  const validateBusiness = () => {
-    const errors = {};
-    return errors;
-  };
-
-  const displayStatus = (status) => {
-    switch (status) {
-      case 'draft':
-        return '-';
-      case 'submitted':
-        return 'Request Submitted';
-      case 'pending':
-      case 'pending2':
-      case 'pending3':
-        return 'Processing';
-      case 'completed':
-        return 'Approved';
-      case 'released':
-        return 'Valid';
-      case 'expired':
-        return 'Expired';
-      default:
-        return status || '-';
-    }
-  };
-
-
+  // Fetch inspection tickets and merge into businesses
   useEffect(() => {
-  async function fetchInspectionDetails() {
-    if (!data?.data) return;
+    async function fetchInspectionDetails() {
+      if (!data?.data) return;
+      try {
+        const res = await fetch("/api/ticket");
+        if (!res.ok) return;
+        const allTickets = await res.json();
 
-    try {
-      const res = await fetch(`/api/ticket`);
-      if (!res.ok) return;
-
-      const allTickets = await res.json();
-
-      const updatedBusinesses = await Promise.all(
-        data.data.map(async (biz) => {
+        const updated = data.data.map((biz) => {
           const bizTickets = allTickets.filter(
-            (t) => t.business === biz._id || t.business?._id === biz._id
+            (t) => t.business === biz._id || t.business?._id === biz._id,
           );
-
           const latestTicket = bizTickets.length
             ? bizTickets.sort(
                 (a, b) =>
-                  new Date(b.inspectionDate) - new Date(a.inspectionDate)
+                  new Date(b.inspectionDate) - new Date(a.inspectionDate),
               )[0]
             : null;
-
           const violations = latestTicket?.violations || [];
-
-          // ✅ Aggregate violation codes for display
           const recordedViolation =
             violations.length > 0
               ? violations.map((v) => v.code).join(", ")
               : "—";
-
-          // ✅ Calculate total penalty fee
-          const penaltyFee =
-            violations.length > 0
-              ? violations.reduce((sum, v) => sum + (v.penalty || 0), 0)
-              : 0;
-
+          const penaltyFee = violations.reduce(
+            (sum, v) => sum + (v.penalty || 0),
+            0,
+          );
           return {
             ...biz,
-            inspectionStatus: latestTicket?.inspectionStatus || "-",
-            resolutionStatus: latestTicket?.resolutionStatus || "-",
+            inspectionStatus: latestTicket?.inspectionStatus || "—",
+            resolutionStatus: latestTicket?.resolutionStatus || "—",
             violations,
             recordedViolation,
             penaltyFee,
           };
-        })
-      );
+        });
 
-      setBusinesses(updatedBusinesses);
-    } catch (err) {
-      console.error("Failed to fetch inspection details:", err);
-    }
-  }
-
-  fetchInspectionDetails();
-}, [data]);
-
-
-
-  const handleDelete = async (businessId, status) => {
-    // ✅ Only allow delete for drafts
-    if (status !== 'draft') {
-      alert('❌ Only businesses in draft status can be deleted.');
-      return;
-    }
-
-    const confirmDelete = window.confirm('Are you sure you want to permanently delete this business?');
-    if (!confirmDelete) return;
-
-    try {
-      const res = await fetch(`/api/business/${businessId}`, {
-        method: 'DELETE',
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        alert(result.error || 'Failed to delete business.');
-        return;
+        setBusinesses(updated);
+      } catch (err) {
+        console.error("Failed to fetch inspection details:", err);
       }
-
-      alert('✅ Business deleted permanently.');
-      await queryClient.invalidateQueries(['business-list']);
-    } catch (err) {
-      console.error('Delete failed:', err);
-      alert('An error occurred while deleting the business.');
     }
-  };
-
-
-
+    fetchInspectionDetails();
+  }, [data]);
 
   const filteredBusinesses = useMemo(() => {
     if (!searchQuery.trim()) return businesses;
-    const query = searchQuery.toLowerCase();
-
+    const q = searchQuery.toLowerCase();
     return businesses.filter((biz) => {
-      if (searchType === 'all') {
+      if (searchType === "all") {
         return (
-          biz.bidNumber?.toLowerCase().includes(query) ||
-          biz.businessName?.toLowerCase().includes(query) ||
-          biz.businessNickname?.toLowerCase().includes(query)
+          biz.bidNumber?.toLowerCase().includes(q) ||
+          biz.businessName?.toLowerCase().includes(q) ||
+          biz.businessNickname?.toLowerCase().includes(q)
         );
       }
-      return biz[searchType]?.toLowerCase().includes(query);
+      return biz[searchType]?.toLowerCase().includes(q);
     });
   }, [businesses, searchType, searchQuery]);
 
-  const toggleExpand = (id) => {
+  const toggleExpand = (id) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const handleDelete = async (businessId, status) => {
+    if (status !== "draft") {
+      alert("❌ Only businesses in draft status can be deleted.");
+      return;
+    }
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this business?",
+      )
+    )
+      return;
+    try {
+      const res = await fetch(`/api/business/${businessId}`, {
+        method: "DELETE",
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.error || "Failed to delete business.");
+        return;
+      }
+      alert("✅ Business deleted permanently.");
+      await queryClient.invalidateQueries(["business-list"]);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("An error occurred while deleting the business.");
+    }
   };
 
-  if (isLoading) {
+  // ── loading / error states ────────────────────────────────────────────────
+
+  if (isLoading)
     return (
       <Box mt={4} textAlign="center">
         <CircularProgress />
         <Typography mt={2}>Loading businesses...</Typography>
       </Box>
     );
-  }
 
-  if (isError) {
+  if (isError)
     return (
       <Box mt={4} textAlign="center">
         <Typography color="error">❌ Failed: {error?.message}</Typography>
       </Box>
     );
-  }
+
+  // ── render ────────────────────────────────────────────────────────────────
 
   return (
-    <Box className="w-full bg-white dark:bg-slate-900 shadow rounded-lg p-6">
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
-      
-
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-300 uppercase">
-          My Businesses
-        </h1>
-        <Divider className="my-3 dark:border-slate-700" />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">
+            My Businesses
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 mt-1">
+            Manage and track all your registered businesses.
+          </p>
+        </div>
+        <span className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold rounded-full border border-blue-200 dark:border-blue-800">
+          {filteredBusinesses.length}{" "}
+          {filteredBusinesses.length === 1 ? "Business" : "Businesses"}
+        </span>
       </div>
 
-      {/* 🔍 Search Controls */}
-      <Box
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        gap={2}
-        mb={6}
-      >
-        {/* Search controls row */}
-        <Box
-          display="flex"
-          flexDirection={{ xs: 'column', sm: 'row' }}
-          alignItems={{ xs: 'stretch', sm: 'center' }}
-          justifyContent="center"
-          gap={2}
-          width="100%"
-        >
+      {/* Search & Filter */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-4 mb-8 flex flex-col md:flex-row gap-4 items-center">
+        <div className="flex-1 w-full relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <HiSearch className="text-gray-400 text-xl" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search businesses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        </div>
+        <div className="w-full md:w-auto min-w-[200px]">
           <TextField
             select
-            label="Search By"
+            label="Filter By"
             value={searchType}
             onChange={(e) => setSearchType(e.target.value)}
             size="small"
-            sx={{ minWidth: 180 }}
+            fullWidth
+            variant="outlined"
+            className="bg-gray-50 dark:bg-slate-700"
+            InputProps={{ className: "dark:text-slate-200" }}
             InputLabelProps={{ className: "dark:text-slate-400" }}
             SelectProps={{
-              className: "dark:text-slate-200",
-              MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } }
+              MenuProps: {
+                PaperProps: {
+                  className: "dark:bg-slate-800 dark:text-slate-200",
+                },
+              },
             }}
           >
-            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="all">All Fields</MenuItem>
             <MenuItem value="bidNumber">BID Number</MenuItem>
             <MenuItem value="businessName">Business Name</MenuItem>
             <MenuItem value="businessNickname">Trade Name</MenuItem>
             <MenuItem value="businessType">Business Type</MenuItem>
             <MenuItem value="businessAddress">Business Address</MenuItem>
-            <MenuItem value="landmark">Landmark</MenuItem>
             <MenuItem value="contactPerson">Contact Person</MenuItem>
             <MenuItem value="contactNumber">Contact Number</MenuItem>
           </TextField>
+        </div>
+      </div>
 
-          <TextField
-            placeholder="Enter search term..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            size="small"
-            fullWidth
-            InputProps={{
-              className: "dark:text-slate-200",
-              startAdornment: (
-                <InputAdornment position="start">
-                  <HiSearch className="text-gray-500 dark:text-slate-400" />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Box>
+      {/* Empty State */}
+      {filteredBusinesses.length === 0 && (
+        <div className="text-center py-20 text-gray-400 dark:text-slate-500">
+          <div className="text-6xl mb-4">🏢</div>
+          <p className="text-lg font-medium">No businesses found.</p>
+          <p className="text-sm mt-1">Add a new business to get started.</p>
+        </div>
+      )}
 
-        {/* ✅ Total Count Display */}
-        <Typography
-          variant="body2"
-          className="mt-1 text-center text-gray-500 dark:text-slate-400"
-        >
-          Showing <strong>{filteredBusinesses.length}</strong>{' '}
-          {filteredBusinesses.length === 1 ? 'business' : 'businesses'}
-        </Typography>
-      </Box>
-
-
-
-      {/* Business Tiles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Business Cards */}
+      <div className="space-y-6">
         {filteredBusinesses.map((business) => {
           const isExpanded = expanded[business._id];
+          const activeStep = getProgressStep(business.status);
+          const isExpired = business.status === "expired";
+          const badge = getStatusBadge(business.status);
+          const showTracker = business.status !== "draft";
 
           return (
-            <Paper
+            <div
               key={business._id}
-              elevation={3}
-              className="p-5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-xl transition-shadow duration-300 relative overflow-hidden flex flex-col"
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isExpanded ? "ring-2 ring-blue-100 dark:ring-blue-900/40 shadow-md" : "hover:shadow-md"}`}
             >
-              {/* Delete Button */}
-              <div className="absolute top-3 right-3">
-                <Button
-                  variant="contained"
-                  color="error"
-                  size="small"
-                  onClick={() => handleDelete(business._id, business.status)}
-                  disabled={business.status !== 'draft'}
-                  sx={{ minWidth: 'auto', p: 1 }}
-                >
-                  <HiTrash size={18} />
-                </Button>
-              </div>
-
-              {/* Status Badge */}
-              <div className="mb-4">
-                <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full uppercase ${
-                  business.status === 'released' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
-                  business.status === 'expired' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
-                  business.status === 'completed' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
-                  business.status === 'draft' ? 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300' :
-                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                }`}>
-                  {displayStatus(business.status)}
-                </span>
-              </div>
-
-              {/* BID Number - Prominent */}
-              <div className="mb-3">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">
-                  {business.bidNumber || '—'}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-slate-400">BID Number</p>
-              </div>
-
-              {/* Business Name */}
-              <div className="mb-3">
-                <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate" title={business.businessName}>
-                  {business.businessName || '—'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Business Name</p>
-              </div>
-
-              {/* Trade Name */}
-              {business.businessNickname && (
-                <div className="mb-3">
-                  <p className="text-sm text-gray-700 dark:text-slate-300 truncate" title={business.businessNickname}>
-                    {business.businessNickname}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Trade Name</p>
-                </div>
-              )}
-
-              {/* Business Type */}
-              <div className="mb-3">
-                <p className="text-sm text-gray-700 dark:text-slate-300">
-                  {business.businessType || '—'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Business Type</p>
-              </div>
-
-              {/* Address - Truncated */}
-              <div className="mb-3">
-                <p className="text-sm text-gray-700 dark:text-slate-300 line-clamp-2" title={business.businessAddress}>
-                  {business.businessAddress || '—'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Address</p>
-              </div>
-
-              {/* Landmark */}
-              {business.landmark && (
-                <div className="mb-3">
-                  <p className="text-sm text-gray-700 dark:text-slate-300 truncate" title={business.landmark}>
-                    {business.landmark}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Landmark</p>
-                </div>
-              )}
-
-              {/* Contact Info */}
-              <div className="mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
-                <p className="text-sm text-gray-700 dark:text-slate-300">
-                  {business.contactPerson || '—'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Contact Person</p>
-                <p className="text-sm text-gray-700 dark:text-slate-300">
-                  {business.contactNumber || '—'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Contact Number</p>
-              </div>
-
-              {/* Inspection Status (if available) */}
-              {business.inspectionStatus && business.inspectionStatus !== '-' && (
-                <div className="mb-3">
-                  <p className="text-sm text-gray-700 dark:text-slate-300">
-                    {business.inspectionStatus}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Inspection Status</p>
-                </div>
-              )}
-
-              {/* Spacer to push button to bottom */}
-              <div className="flex-1"></div>
-
-              {/* View More Button */}
-              <div className="mt-4">
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  fullWidth
-                  size="small"
-                  onClick={() => toggleExpand(business._id)}
-                  startIcon={isExpanded ? <HiChevronUp /> : <HiChevronDown />}
-                  className="dark:text-blue-400 dark:border-blue-400"
-                >
-                  {isExpanded ? 'Hide Details' : 'View More'}
-                </Button>
-              </div>
-
-              {/* Expanded Details Modal/Overlay */}
-              {isExpanded && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => toggleExpand(business._id)}>
-                  <div 
-                    className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* Modal Header */}
-                    <div className="sticky top-0 bg-white dark:bg-slate-800 border-b dark:border-slate-700 p-4 flex justify-between items-center z-10">
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">
-                        {business.businessName}
+              {/* ── Card Header ─────────────────────────────────────────── */}
+              <div className="p-6 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/50">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                  {/* Left: info + tracker */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1 flex-wrap">
+                      <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200 truncate">
+                        {business.businessName || "Unnamed Business"}
                       </h2>
-                      <Button
-                        variant="outlined"
-                        color="secondary"
-                        size="small"
-                        onClick={() => toggleExpand(business._id)}
-                        startIcon={<HiX />}
+                      <span
+                        className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide border flex-shrink-0 ${badge.cls}`}
                       >
-                        Close
-                      </Button>
+                        {badge.label}
+                      </span>
                     </div>
 
-                    {/* Modal Content */}
-                    <div className="p-6 space-y-6">
-                      {/* Full Business Details */}
-                      <div className="grid grid-cols-2 gap-4">
-                        {[['BID Number', business.bidNumber],
-                          ['Status', displayStatus(business.status)],
-                          ['Business Name', business.businessName],
-                          ['Trade Name', business.businessNickname],
-                          ['Business Type', business.businessType],
-                          ['Landmark', business.landmark],
-                          ['Contact Person', business.contactPerson],
-                          ['Contact Number', business.contactNumber]].map(([label, value]) => (
-                          <div key={label} className="flex flex-col">
-                            <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</span>
-                            <span className="text-sm text-gray-800 dark:text-slate-200 font-medium">{value || '—'}</span>
-                          </div>
-                        ))}
-                        <div className="col-span-2 flex flex-col">
-                          <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">Business Address</span>
-                          <span className="text-sm text-gray-800 dark:text-slate-200 font-medium">{business.businessAddress || '—'}</span>
-                        </div>
-                        <div className="col-span-2 flex flex-col">
-                          <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">Remarks</span>
-                          <span className="text-sm text-gray-800 dark:text-slate-200 font-medium whitespace-pre-line">{business.remarks || 'None'}</span>
+                    <div className="text-sm text-gray-500 dark:text-slate-400 flex flex-wrap gap-3 mb-4">
+                      <span>
+                        BID:{" "}
+                        <span className="font-mono text-gray-700 dark:text-slate-300">
+                          {business.bidNumber || "—"}
+                        </span>
+                      </span>
+                      <span>•</span>
+                      <span>{business.businessType || "—"}</span>
+                      <span>•</span>
+                      <span>{business.businessAddress || "No Address"}</span>
+                    </div>
+
+                    {/* Progress Tracker */}
+                    {showTracker && (
+                      <div>
+                        <p className="text-[10px] text-center font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Application Progress
+                        </p>
+                        <div className="flex items-start w-full gap-9">
+                          {STEPS.map((step, idx) => {
+                            const isDone = activeStep > idx;
+                            const isCurrent = activeStep === idx;
+                            const isLast = idx === STEPS.length - 1;
+                            return (
+                              <div
+                                key={idx}
+                                className="flex items-center flex-1"
+                              >
+                                <div className="flex flex-col items-center flex-shrink-0">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
+                                      isExpired
+                                        ? isDone || isCurrent
+                                          ? "bg-red-100 border-red-400 text-red-600"
+                                          : "bg-gray-100 border-gray-300 text-gray-400"
+                                        : isDone
+                                          ? "bg-green-500 border-green-500 text-white"
+                                          : isCurrent
+                                            ? "bg-blue-500 border-blue-500 text-white ring-2 ring-blue-200 dark:ring-blue-700"
+                                            : "bg-gray-100 border-gray-300 text-gray-400 dark:bg-slate-700 dark:border-slate-600"
+                                    }`}
+                                  >
+                                    {isDone && !isExpired ? "✓" : step.icon}
+                                  </div>
+                                  <span
+                                    className={`text-[9px] mt-1 text-center leading-tight font-semibold ${
+                                      isExpired
+                                        ? isDone || isCurrent
+                                          ? "text-red-500"
+                                          : "text-gray-400"
+                                        : isDone
+                                          ? "text-green-600 dark:text-green-400"
+                                          : isCurrent
+                                            ? "text-blue-600 dark:text-blue-400"
+                                            : "text-gray-400 dark:text-slate-500"
+                                    }`}
+                                  >
+                                    {step.label}
+                                  </span>
+                                </div>
+                                {!isLast && (
+                                  <div
+                                    className={`flex-1 h-0.5 mx-1 mb-4 rounded ${
+                                      isExpired
+                                        ? isDone
+                                          ? "bg-red-300"
+                                          : "bg-gray-200"
+                                        : isDone
+                                          ? "bg-green-400 dark:bg-green-600"
+                                          : "bg-gray-200 dark:bg-slate-700"
+                                    }`}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
+                    )}
+                  </div>
 
-                      {/* MSR Section */}
-                      <Divider className="dark:border-slate-700">
-                        <Typography variant="h6" fontWeight="bold" color="primary">MSR</Typography>
-                      </Divider>
+                  {/* Right: action buttons */}
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <Button
+                      variant={isExpanded ? "contained" : "outlined"}
+                      color="primary"
+                      onClick={() => toggleExpand(business._id)}
+                      endIcon={isExpanded ? <HiChevronUp /> : <HiChevronDown />}
+                      sx={{ textTransform: "none", borderRadius: "8px" }}
+                    >
+                      {isExpanded ? "Hide Details" : "View Details"}
+                    </Button>
+                    {business.status === "draft" && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() =>
+                          handleDelete(business._id, business.status)
+                        }
+                        startIcon={<HiTrash />}
+                        sx={{ textTransform: "none", borderRadius: "8px" }}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
 
+              {/* ── Expanded Details ─────────────────────────────────────── */}
+              {isExpanded && (
+                <div className="p-6 bg-white dark:bg-slate-800 animate-fadeIn">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Left: Business Info */}
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                        Business Information
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          ["BID Number", business.bidNumber],
+                          ["Trade Name", business.businessNickname],
+                          ["Business Type", business.businessType],
+                          ["Address", business.businessAddress],
+                          ["Landmark", business.landmark],
+                          ["Contact Person", business.contactPerson],
+                          ["Contact Number", business.contactNumber],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2"
+                          >
+                            <span className="text-gray-500 dark:text-slate-400 text-sm">
+                              {label}
+                            </span>
+                            <span className="text-gray-800 dark:text-slate-200 font-medium text-sm text-right max-w-[60%]">
+                              {value || "—"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Remarks */}
+                      <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg p-4">
+                        <span className="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">
+                          Remarks
+                        </span>
+                        <p className="text-gray-700 dark:text-slate-300 text-sm mt-1 whitespace-pre-line">
+                          {business.remarks || "No remarks."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right: Checklists */}
+                    <div className="space-y-8">
                       {/* Sanitary Permit Checklist */}
                       <div>
-                        <h3 className="text-md font-semibold text-blue-900 dark:text-blue-300 mb-3">A. Sanitary Permit Checklist</h3>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          A. Sanitary Permit Checklist
+                        </h3>
                         {business.sanitaryPermitChecklist?.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            {business.sanitaryPermitChecklist.map((item, idx) => (
-                              <div key={idx} className="bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 text-xs px-2 py-1 rounded">
+                          <div className="flex flex-wrap gap-2">
+                            {business.sanitaryPermitChecklist.map((item, i) => (
+                              <span
+                                key={i}
+                                className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600"
+                              >
                                 {item.label}
-                              </div>
+                              </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 dark:text-slate-400 italic">No items</p>
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
                         )}
                       </div>
 
-                      {/* Health Certificate Checklist */}
+                      {/* Health Cert Checklist */}
                       <div>
-                        <h3 className="text-md font-semibold text-blue-900 dark:text-blue-300 mb-3">B. Health Certificate Checklist</h3>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          B. Health Certificate Checklist
+                        </h3>
                         {business.healthCertificateChecklist?.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            {business.healthCertificateChecklist.map((item, idx) => (
-                              <div key={idx} className="bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 text-xs px-2 py-1 rounded">
-                                {item.label}
-                              </div>
-                            ))}
+                          <div className="flex flex-wrap gap-2">
+                            {business.healthCertificateChecklist.map(
+                              (item, i) => (
+                                <span
+                                  key={i}
+                                  className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600"
+                                >
+                                  {item.label}
+                                </span>
+                              ),
+                            )}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 dark:text-slate-400 italic">No items</p>
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
                         )}
                       </div>
 
                       {/* MSR Checklist */}
                       <div>
-                        <h3 className="text-md font-semibold text-blue-900 dark:text-blue-300 mb-3">C. Minimum Sanitary Requirements</h3>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          C. Minimum Sanitary Requirements
+                        </h3>
                         {business.msrChecklist?.length > 0 ? (
-                          <div className="space-y-2">
-                            {business.msrChecklist.map((item, idx) => (
-                              <div key={idx} className="bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 text-xs px-2 py-1 rounded flex justify-between">
-                                <span>{item.label}</span>
-                                <span className="text-red-700 dark:text-red-400">
-                                  {item.dueDate ? `Due: ${new Date(item.dueDate).toLocaleDateString('en-PH')}` : 'No due date'}
+                          <ul className="space-y-2">
+                            {business.msrChecklist.map((item, i) => (
+                              <li
+                                key={i}
+                                className="flex justify-between items-center text-sm bg-gray-50 dark:bg-slate-700 p-2 rounded border border-gray-100 dark:border-slate-600"
+                              >
+                                <span className="text-gray-700 dark:text-slate-300">
+                                  {item.label}
                                 </span>
-                              </div>
+                                {item.dueDate && (
+                                  <span className="text-red-500 dark:text-red-400 text-xs font-medium">
+                                    Due:{" "}
+                                    {new Date(item.dueDate).toLocaleDateString(
+                                      "en-PH",
+                                    )}
+                                  </span>
+                                )}
+                              </li>
                             ))}
-                          </div>
+                          </ul>
                         ) : (
-                          <p className="text-sm text-gray-500 dark:text-slate-400 italic">No items</p>
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
                         )}
                       </div>
+                    </div>
+                  </div>
 
-                      {/* Inspection & Penalty Records */}
-                      <Divider className="dark:border-slate-700">
-                        <Typography variant="h6" fontWeight="bold" color="primary">Inspection & Penalty Records</Typography>
-                      </Divider>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        {[
-                          ['Health Cert Fee', typeof business.healthCertFee === 'number' ? `₱${business.healthCertFee.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'],
-                          ['Health Cert Sanitary Fee', typeof business.healthCertSanitaryFee === 'number' ? `₱${business.healthCertSanitaryFee.toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'],
-                          ['OR Date (Health Cert)', business.orDateHealthCert ? new Date(business.orDateHealthCert).toLocaleDateString('en-PH') : '—'],
-                          ['OR Number (Health Cert)', business.orNumberHealthCert ?? '—'],
-                          ['Inspection Status', business.inspectionStatus ?? '—'],
-                          ['Inspection Count This Year', business.inspectionCountThisYear ?? '—'],
-                          ['Penalty Fee', `₱${business.penaltyFee?.toLocaleString('en-PH', { minimumFractionDigits: 2 }) || '0.00'}`],
-                        ].map(([label, value]) => (
-                          <div key={label} className="flex flex-col">
-                            <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</span>
-                            <span className="text-sm text-gray-800 dark:text-slate-200 font-medium">{value}</span>
+                  {/* Inspection & Fees */}
+                  <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                      Inspection & Penalty Records
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        [
+                          "Health Cert Fee",
+                          typeof business.healthCertFee === "number"
+                            ? `₱${business.healthCertFee.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+                            : null,
+                        ],
+                        [
+                          "Sanitary Fee",
+                          typeof business.healthCertSanitaryFee === "number"
+                            ? `₱${business.healthCertSanitaryFee.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+                            : null,
+                        ],
+                        ["OR Number", business.orNumberHealthCert],
+                        [
+                          "OR Date",
+                          business.orDateHealthCert
+                            ? new Date(
+                                business.orDateHealthCert,
+                              ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
+                        ["Inspection Status", business.inspectionStatus],
+                        [
+                          "Inspections This Year",
+                          business.inspectionCountThisYear,
+                        ],
+                        [
+                          "Penalty Fee",
+                          `₱${(business.penaltyFee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
+                        ],
+                        ["Recorded Violations", business.recordedViolation],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-center"
+                        >
+                          <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">
+                            {label}
                           </div>
-                        ))}
-                        
-                        {/* Violations - Full Width */}
-                        <div className="col-span-2 flex flex-col">
-                          <span className="text-xs text-gray-500 dark:text-slate-400 mb-1">Recorded Violations</span>
-                          <div className="text-sm text-gray-800 dark:text-slate-200">
-                            {business.violations && business.violations.length > 0 ? (
-                              business.violations.map((v, idx) => (
-                                <div key={idx} className="mb-1">
-                                  {formatViolationCode(v.code)} — ₱{v.penalty?.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ({v.status})
-                                </div>
-                              ))
-                            ) : '—'}
+                          <div className="font-semibold text-gray-800 dark:text-slate-200 text-sm">
+                            {value ?? "—"}
                           </div>
                         </div>
+                      ))}
+                    </div>
+
+                    {/* Violations detail */}
+                    {business.violations?.length > 0 && (
+                      <div className="mt-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg p-4">
+                        <span className="text-xs font-bold text-red-500 dark:text-red-400 uppercase">
+                          Violation Details
+                        </span>
+                        <ul className="mt-2 space-y-1">
+                          {business.violations.map((v, i) => (
+                            <li
+                              key={i}
+                              className="text-sm text-gray-700 dark:text-slate-300 flex justify-between"
+                            >
+                              <span>{formatViolationCode(v.code)}</span>
+                              <span className="text-red-600 dark:text-red-400 font-medium">
+                                ₱
+                                {v.penalty?.toLocaleString("en-PH", {
+                                  minimumFractionDigits: 2,
+                                })}{" "}
+                                ({v.status})
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Uploaded Documents */}
+                  <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                      Uploaded Documents
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <DocList
+                        label="Business Documents"
+                        docs={business.businessDocuments}
+                      />
+                      <DocList
+                        label="Permit Documents"
+                        docs={business.permitDocuments}
+                      />
+                      <DocList
+                        label="Personnel & Health Docs"
+                        docs={business.personnelDocuments}
+                      />
                     </div>
                   </div>
                 </div>
               )}
-            </Paper>
+            </div>
           );
         })}
       </div>
-    </Box>
+    </div>
   );
 }

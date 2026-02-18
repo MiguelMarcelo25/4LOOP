@@ -123,6 +123,9 @@ export async function POST(request) {
     healthCertificates = null,
     healthCertBalanceToComply = null,
     healthCertDueDate = null,
+    businessDocuments = [],
+    permitDocuments = [],
+    personnelDocuments = [],
   } = await request.json();
 
 
@@ -191,6 +194,10 @@ export async function POST(request) {
   if (healthCertificates !== null) businessQuery.healthCertificates = healthCertificates;
   if (healthCertBalanceToComply !== null) businessQuery.healthCertBalanceToComply = healthCertBalanceToComply;
   if (healthCertDueDate) businessQuery.healthCertDueDate = new Date(healthCertDueDate);
+
+  if (businessDocuments?.length > 0) businessQuery.businessDocuments = businessDocuments;
+  if (permitDocuments?.length > 0) businessQuery.permitDocuments = permitDocuments;
+  if (personnelDocuments?.length > 0) businessQuery.personnelDocuments = personnelDocuments;
 
   try {
     const business = new Business(businessQuery);

@@ -89,6 +89,25 @@ const BusinessSchema = new Schema(
       required: true,
       index: true,
     },
+
+    businessDocuments: [
+      {
+        name: { type: String },
+        url: { type: String },
+      },
+    ],
+    permitDocuments: [
+      {
+        name: { type: String },
+        url: { type: String },
+      },
+    ],
+    personnelDocuments: [
+      {
+        name: { type: String },
+        url: { type: String },
+      },
+    ],
   },
   {
     timestamps: true,

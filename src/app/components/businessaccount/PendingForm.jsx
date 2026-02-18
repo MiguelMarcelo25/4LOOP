@@ -1,15 +1,9 @@
-'use client';
-import {
-  HiChevronDown,
-  HiChevronUp,
-  HiSearch,
-} from 'react-icons/hi';
-import {
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+"use client";
+import DocList from "@/app/components/ui/DocViewer";
+import { HiChevronDown, HiChevronUp, HiSearch } from "react-icons/hi";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Stack,
@@ -21,53 +15,86 @@ import {
   InputAdornment,
   Divider,
   CircularProgress,
-} from '@mui/material';
-import { getSanitationOnlineRequest } from '@/app/services/OnlineRequest';
+} from "@mui/material";
+import { getSanitationOnlineRequest } from "@/app/services/OnlineRequest";
 
 export default function PendingRequestForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['pending-requests'],
+    queryKey: ["pending-requests"],
     queryFn: async () => {
       const res = await getSanitationOnlineRequest();
       const all = res?.data || [];
 
       // ✅ Only show "pending" statuses
-      const pendingStatuses = ['pending', 'pending2', 'pending3'];
+      const pendingStatuses = ["pending", "pending2", "pending3"];
       const pending = all.filter((req) => pendingStatuses.includes(req.status));
 
       // ✅ Remove duplicates (if any)
-      const unique = Array.from(new Map(pending.map((r) => [r._id, r])).values());
+      const unique = Array.from(
+        new Map(pending.map((r) => [r._id, r])).values(),
+      );
       return unique;
     },
     refetchInterval: 5000,
   });
 
   const [requests, setRequests] = useState([]);
-  const [searchType, setSearchType] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [expanded, setExpanded] = useState({});
 
- const displayStatus = (status) => {
-  switch (status) {
-    case 'draft':
-      return '(-)';
-    case 'pending':
-    case 'pending2':
-    case 'pending3':
-      return 'Processing';
-    case 'completed':
-      return 'Approved';
-    case 'released':
-      return 'Valid';
-    case 'expired':
-      return 'Expired';
-    default:
-      return status || '-';
-  }
-};
+  const displayStatus = (status) => {
+    switch (status) {
+      case "draft":
+        return "(-)";
+      case "pending":
+        return "Processing";
+      case "pending2":
+        return "Processing";
+      case "pending3":
+        return "Processing";
+      case "completed":
+        return "Approved";
+      case "released":
+        return "Valid";
+      case "expired":
+        return "Expired";
+      default:
+        return status || "-";
+    }
+  };
+
+  // Maps status → active step index (0=Verification, 1=Compliance, 2=Permit Approval, 3=Release)
+  const getProgressStep = (status) => {
+    switch (status) {
+      case "submitted":
+        return 0;
+      case "pending":
+        return 1;
+      case "pending2":
+        return 2;
+      case "pending3":
+        return 2;
+      case "completed":
+        return 3;
+      case "released":
+        return 4;
+      case "expired":
+        return 4;
+      default:
+        return 0;
+    }
+  };
+
+  const STEPS = [
+    { label: "Verification", icon: "🔍" },
+    { label: "Compliance", icon: "📋" },
+    { label: "Permit Approval", icon: "✅" },
+    { label: "Release", icon: "🎉" },
+  ];
 
   useEffect(() => {
     if (data) setRequests(data);
@@ -78,7 +105,7 @@ export default function PendingRequestForm() {
     const q = searchQuery.toLowerCase();
 
     return requests.filter((r) => {
-      if (searchType === 'all') {
+      if (searchType === "all") {
         return (
           r.bidNumber?.toLowerCase().includes(q) ||
           r.businessName?.toLowerCase().includes(q) ||
@@ -117,10 +144,13 @@ export default function PendingRequestForm() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">Pending Requests</h1>
-          <p className="text-gray-500 dark:text-slate-400 mt-1">Track the status of your sanitation permit applications.</p>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">
+            Pending Requests
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 mt-1">
+            Track the status of your sanitation permit applications.
+          </p>
         </div>
-       
       </div>
 
       {/* 🔍 Search & Filter Bar */}
@@ -137,7 +167,7 @@ export default function PendingRequestForm() {
             className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
-        
+
         <div className="w-full md:w-auto min-w-[200px]">
           <TextField
             select
@@ -150,7 +180,13 @@ export default function PendingRequestForm() {
             className="bg-gray-50 dark:bg-slate-700"
             InputProps={{ className: "dark:text-slate-200" }}
             InputLabelProps={{ className: "dark:text-slate-400" }}
-            SelectProps={{ MenuProps: { PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } } }}
+            SelectProps={{
+              MenuProps: {
+                PaperProps: {
+                  className: "dark:bg-slate-800 dark:text-slate-200",
+                },
+              },
+            }}
           >
             <MenuItem value="all">All Fields</MenuItem>
             <MenuItem value="bidNumber">BID Number</MenuItem>
@@ -163,7 +199,8 @@ export default function PendingRequestForm() {
 
       {/* Results Count */}
       <div className="mb-6 text-gray-500 dark:text-slate-400 text-sm font-medium">
-        Showing {filteredRequests.length} {filteredRequests.length === 1 ? 'request' : 'requests'}
+        Showing {filteredRequests.length}{" "}
+        {filteredRequests.length === 1 ? "request" : "requests"}
       </div>
 
       {/* 🧾 Pending Requests List */}
@@ -173,33 +210,113 @@ export default function PendingRequestForm() {
           return (
             <div
               key={req._id}
-              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isExpanded ? 'ring-2 ring-blue-100 shadow-md' : 'hover:shadow-md'}`}
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isExpanded ? "ring-2 ring-blue-100 shadow-md" : "hover:shadow-md"}`}
             >
               {/* Card Header (Summary) */}
               <div className="p-6 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200">{req.businessName || 'Unnamed Business'}</h2>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200">
+                      {req.businessName || "Unnamed Business"}
+                    </h2>
                     <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full uppercase tracking-wide border border-yellow-200">
                       {displayStatus(req.status)}
                     </span>
                   </div>
                   <div className="text-sm text-gray-500 dark:text-slate-400 flex gap-4">
-                    <span>BID: <span className="font-mono text-gray-700 dark:text-slate-300">{req.bidNumber || '—'}</span></span>
+                    <span>
+                      BID:{" "}
+                      <span className="font-mono text-gray-700 dark:text-slate-300">
+                        {req.bidNumber || "—"}
+                      </span>
+                    </span>
                     <span>•</span>
-                    <span>{req.businessAddress || 'No Address'}</span>
+                    <span>{req.businessAddress || "No Address"}</span>
                   </div>
                 </div>
-                
+
+                {/* Progress Tracker */}
+                <div className="mt-4">
+                  <p className="text-[10px] text-center font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                    Application Progress
+                  </p>
+                  <div className="flex items-start w-full gap-9">
+                    {STEPS.map((step, idx) => {
+                      const activeStep = getProgressStep(req.status);
+                      const isExpired = req.status === "expired";
+                      const isDone = activeStep > idx;
+                      const isCurrent = activeStep === idx;
+                      const isLast = idx === STEPS.length - 1;
+                      return (
+                        <div key={idx} className="flex items-center flex-1 ">
+                          <div className="flex flex-col items-center flex-shrink-0">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
+                                isExpired
+                                  ? isDone || isCurrent
+                                    ? "bg-red-100 border-red-400 text-red-600"
+                                    : "bg-gray-100 border-gray-300 text-gray-400"
+                                  : isDone
+                                    ? "bg-green-500 border-green-500 text-white"
+                                    : isCurrent
+                                      ? "bg-blue-500 border-blue-500 text-white ring-2 ring-blue-200"
+                                      : "bg-gray-100 border-gray-300 text-gray-400 dark:bg-slate-700 dark:border-slate-600"
+                              }`}
+                            >
+                              {isDone && !isExpired ? "✓" : step.icon}
+                            </div>
+                            <span
+                              className={`text-[9px] mt-1 text-center leading-tight font-semibold ${
+                                isExpired
+                                  ? isDone || isCurrent
+                                    ? "text-red-500"
+                                    : "text-gray-400"
+                                  : isDone
+                                    ? "text-green-600 dark:text-green-400"
+                                    : isCurrent
+                                      ? "text-blue-600 dark:text-blue-400"
+                                      : "text-gray-400 dark:text-slate-500"
+                              }`}
+                            >
+                              {step.label}
+                            </span>
+                          </div>
+                          {!isLast && (
+                            <div
+                              className={`flex-1 h-0.5 mx-1 mb-4 rounded ${
+                                isExpired
+                                  ? isDone
+                                    ? "bg-red-300"
+                                    : "bg-gray-200"
+                                  : isDone
+                                    ? "bg-green-400 dark:bg-green-600"
+                                    : "bg-gray-200 dark:bg-slate-700"
+                              }`}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <Button
                   variant={isExpanded ? "contained" : "outlined"}
                   color="primary"
                   onClick={() => toggleExpand(req._id)}
                   endIcon={isExpanded ? <HiChevronUp /> : <HiChevronDown />}
-                  className={isExpanded ? "bg-blue-600 shadow-none text-white" : "border-gray-300 text-gray-600 dark:text-slate-300 dark:border-slate-600"}
-                  sx={{ textTransform: 'none', borderRadius: '8px' }}
+                  className={
+                    isExpanded
+                      ? "bg-blue-600 shadow-none text-white"
+                      : "border-gray-300 text-gray-600 dark:text-slate-300 dark:border-slate-600"
+                  }
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: "8px",
+                    flexShrink: 0,
+                  }}
                 >
-                  {isExpanded ? 'Hide Details' : 'View Details'}
+                  {isExpanded ? "Hide Details" : "View Details"}
                 </Button>
               </div>
 
@@ -207,31 +324,48 @@ export default function PendingRequestForm() {
               {isExpanded && (
                 <div className="p-6 bg-white dark:bg-slate-800 animate-fadeIn">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    
                     {/* Left Column: Business Info */}
                     <div>
-                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Business Information</h3>
+                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                        Business Information
+                      </h3>
                       <div className="space-y-3">
                         {[
-                          ['Trade Name', req.businessNickname],
-                          ['Business Type', req.businessType],
-                          ['Landmark', req.landmark],
-                          ['Contact Person', req.contactPerson],
-                          ['Contact Number', req.contactNumber],
-                          ['Request Type', req.requestType],
-                          ['Submitted On', req.createdAt ? new Date(req.createdAt).toLocaleString('en-PH') : '—'],
+                          ["Trade Name", req.businessNickname],
+                          ["Business Type", req.businessType],
+                          ["Landmark", req.landmark],
+                          ["Contact Person", req.contactPerson],
+                          ["Contact Number", req.contactNumber],
+                          ["Request Type", req.requestType],
+                          [
+                            "Submitted On",
+                            req.createdAt
+                              ? new Date(req.createdAt).toLocaleString("en-PH")
+                              : "—",
+                          ],
                         ].map(([label, value]) => (
-                          <div key={label} className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
-                            <span className="text-gray-500 dark:text-slate-400 text-sm">{label}</span>
-                            <span className="text-gray-800 dark:text-slate-200 font-medium text-sm text-right">{value || '—'}</span>
+                          <div
+                            key={label}
+                            className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2"
+                          >
+                            <span className="text-gray-500 dark:text-slate-400 text-sm">
+                              {label}
+                            </span>
+                            <span className="text-gray-800 dark:text-slate-200 font-medium text-sm text-right">
+                              {value || "—"}
+                            </span>
                           </div>
                         ))}
                       </div>
 
                       {/* Remarks Box */}
                       <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg p-4">
-                        <span className="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">Remarks</span>
-                        <p className="text-gray-700 dark:text-slate-300 text-sm mt-1 whitespace-pre-line">{req.remarks || 'No remarks provided.'}</p>
+                        <span className="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">
+                          Remarks
+                        </span>
+                        <p className="text-gray-700 dark:text-slate-300 text-sm mt-1 whitespace-pre-line">
+                          {req.remarks || "No remarks provided."}
+                        </p>
                       </div>
                     </div>
 
@@ -239,68 +373,158 @@ export default function PendingRequestForm() {
                     <div className="space-y-8">
                       {/* Sanitary Permit Checklist */}
                       <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Sanitary Permit Checklist</h3>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          Sanitary Permit Checklist
+                        </h3>
                         {req.sanitaryPermitChecklist?.length ? (
                           <div className="flex flex-wrap gap-2">
                             {req.sanitaryPermitChecklist.map((item, i) => (
-                              <span key={i} className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600">
+                              <span
+                                key={i}
+                                className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600"
+                              >
                                 {item.label}
                               </span>
                             ))}
                           </div>
-                        ) : <span className="text-gray-400 text-sm italic">None</span>}
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
+                        )}
                       </div>
 
                       {/* Health Cert Checklist */}
                       <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Health Certificate Checklist</h3>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          Health Certificate Checklist
+                        </h3>
                         {req.healthCertificateChecklist?.length ? (
                           <div className="flex flex-wrap gap-2">
                             {req.healthCertificateChecklist.map((item, i) => (
-                              <span key={i} className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600">
+                              <span
+                                key={i}
+                                className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600"
+                              >
                                 {item.label}
                               </span>
                             ))}
                           </div>
-                        ) : <span className="text-gray-400 text-sm italic">None</span>}
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
+                        )}
                       </div>
 
                       {/* MSR Items */}
                       <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Minimum Sanitary Requirements</h3>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          Minimum Sanitary Requirements
+                        </h3>
                         {req.msrChecklist?.length ? (
                           <ul className="space-y-2">
                             {req.msrChecklist.map((item, i) => (
-                              <li key={i} className="flex justify-between items-center text-sm bg-gray-50 dark:bg-slate-700 p-2 rounded border border-gray-100 dark:border-slate-600">
-                                <span className="text-gray-700 dark:text-slate-300">{item.label}</span>
+                              <li
+                                key={i}
+                                className="flex justify-between items-center text-sm bg-gray-50 dark:bg-slate-700 p-2 rounded border border-gray-100 dark:border-slate-600"
+                              >
+                                <span className="text-gray-700 dark:text-slate-300">
+                                  {item.label}
+                                </span>
                                 {item.dueDate && (
                                   <span className="text-red-500 dark:text-red-400 text-xs font-medium">
-                                    Due: {new Date(item.dueDate).toLocaleDateString('en-PH')}
+                                    Due:{" "}
+                                    {new Date(item.dueDate).toLocaleDateString(
+                                      "en-PH",
+                                    )}
                                   </span>
                                 )}
                               </li>
                             ))}
                           </ul>
-                        ) : <span className="text-gray-400 text-sm italic">None</span>}
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Inspection Records Section */}
                   <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Inspection & Fees</h3>
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                      Personnel & Health Certificates
+                    </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {[
-                        ['Health Cert Fee', req.healthCertFee],
-                        ['Sanitary Fee', req.healthCertSanitaryFee],
-                        ['Inspection Status', req.inspectionStatus],
-                        ['Violations', req.recordedViolation],
+                        ["Total Personnel", req.declaredPersonnel],
+                        [
+                          "Personnel Due Date",
+                          req.declaredPersonnelDueDate
+                            ? new Date(
+                                req.declaredPersonnelDueDate,
+                              ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
+                        ["Health Certificates", req.healthCertificates],
+                        ["Balance to Comply", req.healthCertBalanceToComply],
+                        [
+                          "Health Cert Due",
+                          req.healthCertDueDate
+                            ? new Date(
+                                req.healthCertDueDate,
+                              ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
+                        [
+                          "Health Cert Fee",
+                          req.healthCertFee
+                            ? `₱${Number(req.healthCertFee).toLocaleString()}`
+                            : null,
+                        ],
+                        [
+                          "Sanitary Fee",
+                          req.healthCertSanitaryFee
+                            ? `₱${Number(req.healthCertSanitaryFee).toLocaleString()}`
+                            : null,
+                        ],
+                        ["OR Number", req.orNumberHealthCert],
                       ].map(([label, value]) => (
-                        <div key={label} className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-center">
-                          <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</div>
-                          <div className="font-semibold text-gray-800 dark:text-slate-200">{value || '—'}</div>
+                        <div
+                          key={label}
+                          className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-center"
+                        >
+                          <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">
+                            {label}
+                          </div>
+                          <div className="font-semibold text-gray-800 dark:text-slate-200 text-sm">
+                            {value ?? "—"}
+                          </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Uploaded Documents */}
+                  <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                      Uploaded Documents
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <DocList
+                        label="Business Documents"
+                        docs={req.businessDocuments}
+                      />
+                      <DocList
+                        label="Permit Documents"
+                        docs={req.permitDocuments}
+                      />
+                      <DocList
+                        label="Personnel & Health Docs"
+                        docs={req.personnelDocuments}
+                      />
                     </div>
                   </div>
                 </div>

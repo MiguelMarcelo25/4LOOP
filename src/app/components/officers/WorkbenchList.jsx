@@ -1,5 +1,6 @@
 "use client";
 
+import DocList from "@/app/components/ui/DocViewer";
 import {
   Typography,
   Paper,
@@ -942,6 +943,30 @@ export default function WorkbenchList({ title, filterStatus }) {
                       No inspection history found.
                     </Typography>
                   )}
+                </Box>
+
+                {/* Section 5: Uploaded Documents */}
+                <Box>
+                  <Typography
+                    variant="subtitle1"
+                    className="font-bold mb-4 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
+                  >
+                    Uploaded Documents
+                  </Typography>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <DocList
+                      label="Business Documents"
+                      docs={businessDetail.businessDocuments}
+                    />
+                    <DocList
+                      label="Permit Documents"
+                      docs={businessDetail.permitDocuments}
+                    />
+                    <DocList
+                      label="Personnel & Health Docs"
+                      docs={businessDetail.personnelDocuments}
+                    />
+                  </div>
                 </Box>
 
                 {/* Remarks */}

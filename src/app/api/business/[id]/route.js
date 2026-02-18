@@ -144,6 +144,9 @@ export async function PUT(request, { params }) {
   if (body.newContactNumber) updateFields.contactNumber = body.newContactNumber;
   if (body.newLandmark) updateFields.landmark = body.newLandmark;
   if (body.newRemarks) updateFields.remarks = body.newRemarks;
+  if (body.businessDocuments) updateFields.businessDocuments = body.businessDocuments;
+  if (body.permitDocuments) updateFields.permitDocuments = body.permitDocuments;
+  if (body.personnelDocuments) updateFields.personnelDocuments = body.personnelDocuments;
 
   if (body.officerInCharge) updateFields.officerInCharge = body.officerInCharge;
 

@@ -8,13 +8,13 @@ import * as yup from "yup";
 import { signUpWithCompleteInfo } from "@/app/services/UserService";
 import { useState, useCallback } from "react";
 import Link from "next/link";
+
 import axios from "axios";
 
 // Import reusable UI components
 import FormInput from "@/app/components/ui/FormInput";
 import FormButton from "@/app/components/ui/FormButton";
 import StatusModal from "@/app/components/ui/StatusModal";
-import LoadingOverlay from "@/app/components/ui/LoadingOverlay";
 
 // ✅ Password rules (at least 8 chars, uppercase, lowercase, number, and special character)
 const passwordRules =
@@ -67,12 +67,14 @@ export default function RegistrationForm() {
     setModal({ open: true, type, title, message });
   };
 
-  const showLoading = (title = 'Processing', message = 'Please wait...') => {
-    setModal({ open: true, type: 'loading', title, message });
+  const showLoading = (title = "Processing", message = "Please wait...") => {
+    setModal({ open: true, type: "loading", title, message });
   };
 
   const hideLoading = () => {
-    setModal((prev) => (prev.type === 'loading' ? { ...prev, open: false } : prev));
+    setModal((prev) =>
+      prev.type === "loading" ? { ...prev, open: false } : prev,
+    );
   };
 
   const {
@@ -177,7 +179,10 @@ export default function RegistrationForm() {
   });
 
   const onSubmit = ({ fullName, email, password }) => {
-    showLoading('Creating Your Account', 'Please wait while we set everything up...');
+    showLoading(
+      "Creating Your Account",
+      "Please wait while we set everything up...",
+    );
     mutate({ role: "business", fullName, email, password });
   };
 
@@ -192,12 +197,6 @@ export default function RegistrationForm() {
         title={modal.title}
         message={modal.message}
         onClose={closeModal}
-      />
-
-      <LoadingOverlay
-        isLoading={isLoading}
-        message="Creating Your Account"
-        subtitle="Please wait while we set everything up..."
       />
 
       {/* ✅ Confirmation Modal for unverified email */}

@@ -1,10 +1,8 @@
 import RegistrationForm from "@/app/components/user/RegistrationForm";
 
 export default function RegistrationPage() {
-
-  const name = "aica"
   return (
-    <div >
+    <div>
       <main>
         <RegistrationForm />
       </main>
