@@ -57,6 +57,7 @@ export default function RequestSentForm() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [searchType, setSearchType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expanded, setExpanded] = useState({});
@@ -96,8 +97,17 @@ export default function RequestSentForm() {
 
   const mutation = useMutation({
     mutationFn: ({ id, payload }) => updateSanitationOnlineRequest(id, payload),
-    onSuccess: () => queryClient.invalidateQueries(["online-request"]),
-    onError: (err) => console.error("Update failed:", err),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["online-request"]);
+      // Close dialog only after success
+      setIsWithdrawing(false);
+      setDeleteDialogOpen(false);
+      setRequestToDelete(null);
+    },
+    onError: (err) => {
+      console.error("Update failed:", err);
+      setIsWithdrawing(false);
+    },
   });
 
   const handleDeleteClick = (req) => {
@@ -105,11 +115,13 @@ export default function RequestSentForm() {
     setDeleteDialogOpen(true);
   };
   const handleDeleteCancel = () => {
+    if (isWithdrawing) return; // prevent closing mid-request
     setDeleteDialogOpen(false);
     setRequestToDelete(null);
   };
   const handleDeleteConfirm = () => {
-    if (!requestToDelete) return;
+    if (!requestToDelete || isWithdrawing) return;
+    setIsWithdrawing(true);
     mutation.mutate({
       id: requestToDelete._id,
       payload: {
@@ -125,8 +137,7 @@ export default function RequestSentForm() {
         newStatus: "draft",
       },
     });
-    setDeleteDialogOpen(false);
-    setRequestToDelete(null);
+    // ⚠️ Do NOT close here — wait for onSuccess
   };
 
   if (isLoading)
@@ -575,34 +586,58 @@ export default function RequestSentForm() {
       <Dialog
         open={deleteDialogOpen}
         onClose={handleDeleteCancel}
-        PaperProps={{ className: "dark:bg-slate-800" }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, p: 1 },
+          className: "dark:bg-slate-800",
+        }}
       >
-        <DialogTitle className="dark:text-slate-100">
-          Withdraw Request?
+        <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 1 }}>
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-4xl">
+              {isWithdrawing ? (
+                <CircularProgress size={32} color="warning" />
+              ) : (
+                "↩️"
+              )}
+            </div>
+            <span className="text-xl font-bold text-gray-800 dark:text-slate-100 mt-1">
+              {isWithdrawing ? "Withdrawing…" : "Withdraw Request?"}
+            </span>
+          </div>
         </DialogTitle>
-        <DialogContent>
-          <DialogContentText className="dark:text-slate-300">
-            Are you sure you want to withdraw this request? It will be moved
-            back to draft status.
-            {requestToDelete && (
+        <DialogContent sx={{ textAlign: "center", pb: 1 }}>
+          <DialogContentText className="dark:text-slate-300 text-sm">
+            {isWithdrawing ? (
+              "Please wait while your request is being withdrawn."
+            ) : (
               <>
-                <br />
-                <br />
-                <strong className="dark:text-slate-200">
-                  BID: {requestToDelete.bidNumber}
-                </strong>
-                <br />
-                <span className="dark:text-slate-300">
-                  {requestToDelete.businessName}
-                </span>
+                Are you sure you want to withdraw this request? It will be moved
+                back to <strong>draft</strong> status.
+                {requestToDelete && (
+                  <>
+                    <br />
+                    <br />
+                    <strong className="dark:text-slate-200">
+                      {requestToDelete.businessName}
+                    </strong>
+                    <br />
+                    <span className="text-xs text-gray-400 font-mono">
+                      BID: {requestToDelete.bidNumber}
+                    </span>
+                  </>
+                )}
               </>
             )}
           </DialogContentText>
         </DialogContent>
-        <DialogActions className="dark:bg-slate-800 p-4">
+        <DialogActions sx={{ justifyContent: "center", pb: 3, gap: 1 }}>
           <Button
             onClick={handleDeleteCancel}
             variant="outlined"
+            disabled={isWithdrawing}
+            sx={{ borderRadius: 2, px: 3, textTransform: "none" }}
             className="dark:text-slate-300 dark:border-slate-600"
           >
             Cancel
@@ -611,9 +646,22 @@ export default function RequestSentForm() {
             onClick={handleDeleteConfirm}
             variant="contained"
             color="error"
+            disabled={isWithdrawing}
             autoFocus
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: "none",
+              fontWeight: 600,
+              minWidth: 120,
+            }}
+            startIcon={
+              isWithdrawing ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : null
+            }
           >
-            Withdraw
+            {isWithdrawing ? "Withdrawing…" : "Yes, Withdraw"}
           </Button>
         </DialogActions>
       </Dialog>

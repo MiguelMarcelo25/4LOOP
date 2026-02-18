@@ -74,12 +74,14 @@ export default function LoginForm() {
     setModal({ open: true, type, title, message });
   };
 
-  const showLoading = (title = 'Processing', message = 'Please wait...') => {
-    setModal({ open: true, type: 'loading', title, message });
+  const showLoading = (title = "Processing", message = "Please wait...") => {
+    setModal({ open: true, type: "loading", title, message });
   };
 
   const hideLoading = () => {
-    setModal((prev) => (prev.type === 'loading' ? { ...prev, open: false } : prev));
+    setModal((prev) =>
+      prev.type === "loading" ? { ...prev, open: false } : prev,
+    );
   };
 
   const {
@@ -108,8 +110,12 @@ export default function LoginForm() {
   const onSubmitLogin = async ({ email, password }) => {
     setIsSubmitting(true);
     showLoading(
-      showReset ? 'Resetting Password' : showForgot ? 'Sending Reset Code' : 'Signing In',
-      'Please wait...'
+      showReset
+        ? "Resetting Password"
+        : showForgot
+          ? "Sending Reset Code"
+          : "Signing In",
+      "Please wait...",
     );
 
     try {
@@ -189,7 +195,7 @@ export default function LoginForm() {
   // === SEND RESET CODE HANDLER ===
   const onSubmitForgot = async ({ email }) => {
     setIsSubmitting(true);
-    showLoading('Sending Reset Code', 'Please wait...');
+    showLoading("Sending Reset Code", "Please wait...");
 
     try {
       const res = await fetch("/api/forgotpassword/sendcode", {
@@ -235,7 +241,7 @@ export default function LoginForm() {
     confirmPassword,
   }) => {
     setIsSubmitting(true);
-    showLoading('Resetting Password', 'Please wait...');
+    showLoading("Resetting Password", "Please wait...");
 
     try {
       // Step 1: Verify the code

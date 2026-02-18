@@ -697,8 +697,13 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         ...values,
         // preserve values.bidNumber
         businessName: "",
+        businessNickname: "",
+        businessType: "",
         businessAddress: "",
         businessEstablishment: "",
+        landmark: "",
+        contactPerson: "",
+        contactNumber: "",
         status: "",
         // ✅ Preserve MSR due dates while clearing selections and labels
         msrChecklist: Object.fromEntries(
@@ -720,6 +725,9 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         healthCertSanitaryFee: "",
         healthCertFee: "",
         requestType: "",
+        businessDocs: [],
+        permitDocs: [],
+        personnelDocs: [],
       }));
       setSanitaryPermitChecklistState([]);
       setHealthCertificateChecklistState("");
@@ -755,14 +763,79 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       );
     }
 
-    // populate fields from loaded businessData
+    // ✅ populate ALL fields from loaded businessData
     setValue("businessName", businessData?.businessName || "");
+    setValue("businessNickname", businessData?.businessNickname || "");
+    setValue("businessType", businessData?.businessType || "");
     setValue("businessAddress", businessData?.businessAddress || "");
-    setValue("status", businessData?.status || "");
     setValue(
       "businessEstablishment",
       businessData?.businessEstablishment || "",
     );
+    setValue("landmark", businessData?.landmark || "");
+    setValue("contactPerson", businessData?.contactPerson || "");
+    setValue("contactNumber", businessData?.contactNumber || "");
+    setValue("status", businessData?.status || "");
+    setValue("remarks", businessData?.remarks || "");
+
+    // ✅ Personnel & Health Cert fields
+    if (businessData?.declaredPersonnel != null)
+      setValue("declaredPersonnel", businessData.declaredPersonnel);
+    if (businessData?.declaredPersonnelDueDate)
+      setValue(
+        "declaredPersonnelDueDate",
+        formatDateForInput(businessData.declaredPersonnelDueDate),
+      );
+    if (businessData?.healthCertificates != null)
+      setValue("healthCertificates", businessData.healthCertificates);
+    if (businessData?.healthCertBalanceToComply != null)
+      setValue(
+        "healthCertBalanceToComply",
+        businessData.healthCertBalanceToComply,
+      );
+    if (businessData?.healthCertDueDate)
+      setValue(
+        "healthCertDueDate",
+        formatDateForInput(businessData.healthCertDueDate),
+      );
+    if (businessData?.orNumberHealthCert)
+      setValue("orNumberHealthCert", businessData.orNumberHealthCert);
+    if (businessData?.orDateHealthCert)
+      setValue(
+        "orDateHealthCert",
+        formatDateForInput(businessData.orDateHealthCert),
+      );
+    if (businessData?.healthCertFee != null)
+      setValue("healthCertFee", businessData.healthCertFee);
+    if (businessData?.healthCertSanitaryFee != null)
+      setValue("healthCertSanitaryFee", businessData.healthCertSanitaryFee);
+
+    // ✅ Pre-tick checklists from saved data
+    if (businessData?.sanitaryPermitChecklist?.length > 0) {
+      setSanitaryPermitChecklistState(
+        businessData.sanitaryPermitChecklist.map((i) => i.id),
+      );
+    }
+    if (businessData?.healthCertificateChecklist?.length > 0) {
+      // radio — take the first saved item id
+      setHealthCertificateChecklistState(
+        businessData.healthCertificateChecklist[0]?.id || "",
+      );
+    }
+    if (businessData?.msrChecklist?.length > 0) {
+      setMsrChecklistState(businessData.msrChecklist.map((i) => i.id));
+    }
+
+    // ✅ populate documents from loaded businessData
+    if (Array.isArray(businessData?.businessDocuments)) {
+      setValue("businessDocs", businessData.businessDocuments);
+    }
+    if (Array.isArray(businessData?.permitDocuments)) {
+      setValue("permitDocs", businessData.permitDocuments);
+    }
+    if (Array.isArray(businessData?.personnelDocuments)) {
+      setValue("personnelDocs", businessData.personnelDocuments);
+    }
   }, [businessData, bidNumber, tickets?.length, reset, setValue, watch]);
 
   useEffect(() => {

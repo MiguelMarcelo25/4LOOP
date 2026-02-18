@@ -132,9 +132,15 @@ export default function FileUpload({
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
                     {file.name}
                   </span>
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">
-                    {(file.size / (1024 * 1024)).toFixed(2)} MB
-                  </span>
+                  {file.size ? (
+                    <span className="text-[10px] text-slate-500 uppercase font-bold">
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-blue-500 uppercase font-bold">
+                      Already Uploaded
+                    </span>
+                  )}
                 </div>
               </div>
               <button

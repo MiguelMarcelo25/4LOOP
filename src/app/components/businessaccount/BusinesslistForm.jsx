@@ -20,6 +20,11 @@ import {
   CircularProgress,
   Box,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import { getAddOwnerBusiness } from "@/app/services/BusinessService";
 
@@ -301,6 +306,65 @@ export default function BusinesslistForm() {
   const queryClient = useQueryClient();
   const [uploadingBiz, setUploadingBiz] = useState({});
 
+  // ── Delete confirmation modal state ──────────────────────────────────────
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    businessId: null,
+    businessName: "",
+    bidNumber: "",
+    isDeleting: false,
+    result: null, // null | 'success' | 'error'
+    errorMsg: "",
+  });
+
+  const openDeleteModal = (business) => {
+    if (business.status !== "draft") return; // guard — button shouldn't show anyway
+    setDeleteModal({
+      open: true,
+      businessId: business._id,
+      businessName: business.businessName || "this business",
+      bidNumber: business.bidNumber || "",
+      isDeleting: false,
+      result: null,
+      errorMsg: "",
+    });
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteModal.result === "success") {
+      queryClient.invalidateQueries(["business-list"]);
+    }
+    setDeleteModal((p) => ({ ...p, open: false }));
+  };
+
+  const confirmDelete = async () => {
+    setDeleteModal((p) => ({ ...p, isDeleting: true }));
+    try {
+      const res = await fetch(`/api/business/${deleteModal.businessId}`, {
+        method: "DELETE",
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setDeleteModal((p) => ({
+          ...p,
+          isDeleting: false,
+          result: "error",
+          errorMsg: result.error || "Failed to delete business.",
+        }));
+        return;
+      }
+      setDeleteModal((p) => ({ ...p, isDeleting: false, result: "success" }));
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setDeleteModal((p) => ({
+        ...p,
+        isDeleting: false,
+        result: "error",
+        errorMsg: "An error occurred while deleting the business.",
+      }));
+    }
+  };
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["business-list"],
     queryFn: () => getAddOwnerBusiness(),
@@ -375,33 +439,7 @@ export default function BusinesslistForm() {
   const toggleExpand = (id) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const handleDelete = async (businessId, status) => {
-    if (status !== "draft") {
-      alert("❌ Only businesses in draft status can be deleted.");
-      return;
-    }
-    if (
-      !window.confirm(
-        "Are you sure you want to permanently delete this business?",
-      )
-    )
-      return;
-    try {
-      const res = await fetch(`/api/business/${businessId}`, {
-        method: "DELETE",
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        alert(result.error || "Failed to delete business.");
-        return;
-      }
-      alert("✅ Business deleted permanently.");
-      await queryClient.invalidateQueries(["business-list"]);
-    } catch (err) {
-      console.error("Delete failed:", err);
-      alert("An error occurred while deleting the business.");
-    }
-  };
+  // handleDelete replaced by openDeleteModal + confirmDelete above
 
   // ── loading / error states ────────────────────────────────────────────────
 
@@ -623,9 +661,7 @@ export default function BusinesslistForm() {
                         variant="outlined"
                         color="error"
                         size="small"
-                        onClick={() =>
-                          handleDelete(business._id, business.status)
-                        }
+                        onClick={() => openDeleteModal(business)}
                         startIcon={<HiTrash />}
                         sx={{ textTransform: "none", borderRadius: "8px" }}
                       >
@@ -881,6 +917,135 @@ export default function BusinesslistForm() {
           );
         })}
       </div>
+
+      {/* ── Delete Confirmation Modal ── */}
+      <Dialog
+        open={deleteModal.open}
+        onClose={deleteModal.isDeleting ? undefined : closeDeleteModal}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        {deleteModal.result === "success" ? (
+          /* ── Success state ── */
+          <>
+            <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 1 }}>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-4xl">
+                  ✅
+                </div>
+                <span className="text-xl font-bold text-gray-800 dark:text-slate-100 mt-1">
+                  Business Deleted
+                </span>
+              </div>
+            </DialogTitle>
+            <DialogContent sx={{ textAlign: "center", pb: 1 }}>
+              <p className="text-gray-600 dark:text-slate-300 text-sm">
+                <strong>{deleteModal.businessName}</strong> has been permanently
+                removed.
+              </p>
+            </DialogContent>
+            <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={closeDeleteModal}
+                sx={{
+                  borderRadius: 2,
+                  px: 4,
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                Done
+              </Button>
+            </DialogActions>
+          </>
+        ) : deleteModal.result === "error" ? (
+          /* ── Error state ── */
+          <>
+            <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 1 }}>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-4xl">
+                  ❌
+                </div>
+                <span className="text-xl font-bold text-gray-800 dark:text-slate-100 mt-1">
+                  Delete Failed
+                </span>
+              </div>
+            </DialogTitle>
+            <DialogContent sx={{ textAlign: "center", pb: 1 }}>
+              <p className="text-gray-600 dark:text-slate-300 text-sm">
+                {deleteModal.errorMsg}
+              </p>
+            </DialogContent>
+            <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
+              <Button
+                variant="outlined"
+                onClick={closeDeleteModal}
+                sx={{ borderRadius: 2, px: 4, textTransform: "none" }}
+              >
+                Close
+              </Button>
+            </DialogActions>
+          </>
+        ) : (
+          /* ── Confirm state ── */
+          <>
+            <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 1 }}>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-4xl">
+                  🗑️
+                </div>
+                <span className="text-xl font-bold text-gray-800 dark:text-slate-100 mt-1">
+                  Delete Business?
+                </span>
+              </div>
+            </DialogTitle>
+            <DialogContent sx={{ textAlign: "center", pb: 1 }}>
+              <DialogContentText className="text-gray-600 dark:text-slate-300 text-sm">
+                Are you sure you want to permanently delete{" "}
+                <strong>{deleteModal.businessName}</strong>?
+              </DialogContentText>
+              {deleteModal.bidNumber && (
+                <p className="mt-2 text-xs text-gray-400 dark:text-slate-500">
+                  BID:{" "}
+                  <span className="font-mono font-semibold">
+                    {deleteModal.bidNumber}
+                  </span>
+                </p>
+              )}
+              <p className="mt-3 text-xs text-red-500 font-medium">
+                ⚠️ This action cannot be undone.
+              </p>
+            </DialogContent>
+            <DialogActions sx={{ justifyContent: "center", pb: 3, gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={closeDeleteModal}
+                disabled={deleteModal.isDeleting}
+                sx={{ borderRadius: 2, px: 3, textTransform: "none" }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={confirmDelete}
+                disabled={deleteModal.isDeleting}
+                sx={{
+                  borderRadius: 2,
+                  px: 3,
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                {deleteModal.isDeleting ? "Deleting…" : "Yes, Delete"}
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </div>
   );
 }

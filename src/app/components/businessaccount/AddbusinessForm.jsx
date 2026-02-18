@@ -4,9 +4,18 @@ import * as yup from "yup";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import RHFTextField from "@/app/components/ReactHookFormElements/RHFTextField";
 import Button from "@mui/material/Button";
-import { MenuItem, TextField, Divider } from "@mui/material";
+import {
+  MenuItem,
+  TextField,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addOwnerBusiness } from "@/app/services/BusinessService";
 import FileUpload from "@/app/components/ui/FileUpload";
@@ -44,6 +53,9 @@ export default function AddbusinessForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [savedBusiness, setSavedBusiness] = useState(null);
+
   const {
     control,
     handleSubmit,
@@ -66,18 +78,23 @@ export default function AddbusinessForm() {
     resolver: yupResolver(schema),
   });
 
-  const { mutate } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: addOwnerBusiness,
     onSuccess: (data) => {
-      alert("A new business has been successfully saved to your account.");
       console.log("Business has been successfully saved!", data?.data);
       queryClient.invalidateQueries(["business-list"]);
-      router.push("/businessaccount/businesses/businesslist");
+      setSavedBusiness(data?.data);
+      setSuccessOpen(true);
     },
     onError: (err) => {
       console.error("Request Error:", err);
     },
   });
+
+  const handleModalClose = () => {
+    setSuccessOpen(false);
+    router.push("/businessaccount/businesses/businesslist");
+  };
 
   const onSubmit = async (data) => {
     // Convert File objects to Base64; skip plain objects (already-saved docs)
@@ -105,7 +122,6 @@ export default function AddbusinessForm() {
       personnelDocuments,
     };
     mutate(payload);
-    router.push("/businessaccount/businesses/businesslist");
   };
 
   const handleClear = () => {
@@ -532,6 +548,55 @@ export default function AddbusinessForm() {
           </div>
         </form>
       </div>
+
+      {/* ── Success Modal ── */}
+      <Dialog
+        open={successOpen}
+        onClose={handleModalClose}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 1 }}>
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-4xl">
+              ✅
+            </div>
+            <span className="text-xl font-bold text-gray-800 dark:text-slate-100 mt-1">
+              Business Saved!
+            </span>
+          </div>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: "center", pb: 1 }}>
+          <p className="text-gray-600 dark:text-slate-300 text-sm">
+            <strong>{savedBusiness?.businessName || "The new business"}</strong>{" "}
+            has been successfully added to your account as a <em>draft</em>.
+          </p>
+          {savedBusiness?.bidNumber && (
+            <p className="mt-2 text-xs text-gray-400 dark:text-slate-500">
+              BID:{" "}
+              <span className="font-mono font-semibold">
+                {savedBusiness.bidNumber}
+              </span>
+            </p>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", pb: 3, gap: 1 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleModalClose}
+            sx={{
+              borderRadius: 2,
+              px: 4,
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Go to Business List
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

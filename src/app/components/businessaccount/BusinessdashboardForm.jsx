@@ -234,7 +234,10 @@ export default function DashboardForm() {
       <div className="flex justify-between items-center mb-8 px-1">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">
-            Welcome{user?.name ? `, ${user.name}` : ""} 👋
+            Welcome{" "}
+            <span className="text-blue-600 dark:text-blue-400">
+              {user?.fullName ? `, ${user.fullName}` : ""}
+            </span>
           </h1>
           <p className="text-gray-500 dark:text-slate-400 mt-1 text-sm">
             Here's an overview of your registered businesses.
