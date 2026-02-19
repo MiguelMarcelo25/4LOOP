@@ -19,6 +19,9 @@ import {
   Step,
   StepLabel,
   Box,
+  Backdrop,
+  CircularProgress,
+  Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import RHFTextField from "@/app/components/ReactHookFormElements/RHFTextField";
@@ -225,25 +228,6 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   // Multi-step wizard state
   const [activeStep, setActiveStep] = useState(0);
 
-  // ✅ Prevent auto-submission when entering Review step
-  useEffect(() => {
-    if (activeStep === 4) {
-      // Review & Submit Step
-      setSubmitReady(false);
-      const timer = setTimeout(() => setSubmitReady(true), 1000); // 1s delay
-      return () => clearTimeout(timer);
-    } else {
-      setSubmitReady(false);
-    }
-  }, [activeStep]);
-  const steps = [
-    "Business Information",
-    "Permits & Certificates",
-    "Personnel & Health Certificates",
-    "Inspection & Penalty Records",
-    "Review & Submit",
-  ];
-
   const {
     control,
     register, // ← added register
@@ -418,6 +402,39 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
   const hasInspections = (businessData?.inspectionRecords?.length || 0) > 0;
   const hasPenalties = (businessData?.penaltyRecords?.length || 0) > 0;
+
+  // ✅ Step configuration
+  const allSteps = [
+    { id: 0, label: "Business Information" },
+    { id: 1, label: "Permits & Certificates" },
+    { id: 2, label: "Personnel & Health Certificates" },
+    { id: 3, label: "Inspection & Penalty Records" },
+    { id: 4, label: "Review & Submit" },
+  ];
+
+  // ✅ Filter steps: Hide Inspection (id: 3) if New, show if Renewal
+  const steps = allSteps.filter((s) => {
+    if (s.id === 3) {
+      return requestType === "Renewal";
+    }
+    return true;
+  });
+
+  const currentStep = steps[activeStep] || steps[0];
+  const currentStepId = currentStep.id;
+
+  // ✅ Prevent auto-submission when entering Review step
+  useEffect(() => {
+    if (currentStepId === 4) {
+      // Review & Submit Step
+      setSubmitReady(false);
+      const timer = setTimeout(() => setSubmitReady(true), 1000); // 1s delay
+      return () => clearTimeout(timer);
+    } else {
+      setSubmitReady(false);
+    }
+  }, [currentStepId]);
+
   const isLocked =
     requestType === "Renewal" && (hasInspections || hasPenalties);
   const noRecords = !hasInspections && !hasPenalties;
@@ -533,7 +550,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     return payload;
   };
 
-  const { mutate } = useMutation({
+  const { mutate, isLoading } = useMutation({
     mutationFn: updateBusinessRequest,
 
     onSuccess: (data) => {
@@ -994,7 +1011,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     // Validate current step before proceeding
     let isValid = true;
 
-    switch (activeStep) {
+    switch (currentStepId) {
       case 0: // Business Information
         isValid = await trigger([
           "bidNumber",
@@ -1004,14 +1021,21 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         ]);
         break;
       case 1: // Permits & Certificates
-        // Ensure at least one sanitary permit and one health certificate type is selected
-        const sanitarySelected = sanitaryPermitChecklistState.length > 0;
+        // Ensure mandatory sanitary permit requirements are selected
+        const topSelected = sanitaryPermitChecklistState.includes(
+          "tax_order_of_payment_TOP",
+        );
+        const orSelected =
+          sanitaryPermitChecklistState.includes("official_receipt");
         const healthSelected = !!healthCertificateChecklistState;
 
-        if (!sanitarySelected || !healthSelected) {
-          setWarningMessage(
-            "Please select at least one Sanitary Permit and one Health Certificate requirement.",
-          );
+        if (!topSelected || !orSelected || !healthSelected) {
+          let missing = [];
+          if (!topSelected) missing.push("Tax Order of Payment (TOP)");
+          if (!orSelected) missing.push("Official Receipt");
+          if (!healthSelected) missing.push("Health Certificate requirement");
+
+          setWarningMessage(`Please select: ${missing.join(", ")}.`);
           isValid = false;
         } else {
           setWarningMessage("");
@@ -1093,8 +1117,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         {/* Stepper Section */}
         <div className="px-8 pt-8 pb-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300">
           <Stepper activeStep={activeStep} alternativeLabel>
-            {steps.map((label, index) => (
-              <Step key={label}>
+            {steps.map((step) => (
+              <Step key={step.id}>
                 <StepLabel
                   sx={{
                     "& .MuiStepLabel-label": {
@@ -1127,7 +1151,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     },
                   }}
                 >
-                  {label}
+                  {step.label}
                 </StepLabel>
               </Step>
             ))}
@@ -1145,7 +1169,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             className="space-y-8"
           >
             {/* STEP 1: Business Information */}
-            {activeStep === 0 && (
+            {currentStepId === 0 && (
               <div className="max-w-4xl mx-auto space-y-8">
                 {/* Section 1: Business Identification */}
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
@@ -1295,29 +1319,11 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     </div>
                   </div>
                 </div>
-
-                {/* Section 3: Document Upload */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <Controller
-                    name="businessDocs"
-                    control={control}
-                    render={({ field }) => (
-                      <FileUpload
-                        label="Business Registration Documents"
-                        helperText="Upload DTI/SEC Registration, Business Permit, or any proof of business."
-                        multiple={true}
-                        value={field.value}
-                        onChange={field.onChange}
-                        error={errors.businessDocs?.message}
-                      />
-                    )}
-                  />
-                </div>
               </div>
             )}
 
             {/* STEP 2: Permits & Certificates */}
-            {activeStep === 1 && (
+            {currentStepId === 1 && (
               <div className="space-y-8 max-w-5xl mx-auto">
                 {/* A. Sanitary Permit */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -1359,6 +1365,10 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                             />
                             <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
                               {item.label}
+                              {(item.id === "tax_order_of_payment_TOP" ||
+                                item.id === "official_receipt") && (
+                                <span className="text-red-500 ml-1">*</span>
+                              )}
                             </span>
                           </label>
                         ))}
@@ -1610,27 +1620,30 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     </h2>
                   </div>
                   <div className="p-6">
-                    <Controller
-                      name="permitDocs"
-                      control={control}
-                      render={({ field }) => (
-                        <FileUpload
-                          label="Upload Permits & Certificates"
-                          helperText="Upload TOP, Official Receipts, or other permit-related documents."
-                          multiple={true}
-                          value={field.value}
-                          onChange={field.onChange}
-                          error={errors.permitDocs?.message}
-                        />
-                      )}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Controller
+                        name="permitDocs"
+                        control={control}
+                        render={({ field }) => (
+                          <FileUpload
+                            label="Upload Permits & Certificates"
+                            helperText="Upload TOP, Official Receipts, or other permit-related documents."
+                            multiple={true}
+                            value={field.value}
+                            onChange={field.onChange}
+                            error={errors.permitDocs?.message}
+                            size="small"
+                          />
+                        )}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* STEP 3: Personnel & Health Certificates */}
-            {activeStep === 2 && (
+            {currentStepId === 2 && (
               <div className="max-w-4xl mx-auto">
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                   <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-6 border-b border-slate-100 dark:border-slate-700">
@@ -1723,27 +1736,30 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
                   {/* Section 3: Document Upload */}
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700 mt-8">
-                    <Controller
-                      name="personnelDocs"
-                      control={control}
-                      render={({ field }) => (
-                        <FileUpload
-                          label="Personnel & Health Documents"
-                          helperText="Upload the list of personnel and their health certificates (consolidated PDF or individual images)."
-                          multiple={true}
-                          value={field.value}
-                          onChange={field.onChange}
-                          error={errors.personnelDocs?.message}
-                        />
-                      )}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Controller
+                        name="personnelDocs"
+                        control={control}
+                        render={({ field }) => (
+                          <FileUpload
+                            label="Personnel & Health Documents"
+                            helperText="Upload the list of personnel and their health certificates (consolidated PDF or individual images)."
+                            multiple={true}
+                            value={field.value}
+                            onChange={field.onChange}
+                            error={errors.personnelDocs?.message}
+                            size="small"
+                          />
+                        )}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* STEP 4: Inspection & Penalty Records */}
-            {activeStep === 3 && (
+            {currentStepId === 3 && (
               <div className="space-y-8 max-w-5xl mx-auto">
                 {/* Inspection Record */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -2060,7 +2076,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             )}
 
             {/* STEP 5: Review & Submit */}
-            {activeStep === 4 && (
+            {currentStepId === 4 && (
               <div className="max-w-4xl mx-auto space-y-8">
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">
                   <div className="text-center mb-8">
@@ -2246,37 +2262,92 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                       <button
                         type="button"
                         onClick={handleSaveDraft}
-                        className="px-6 py-2.5 rounded-lg font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-all dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
+                        disabled={isLoading}
+                        className="px-6 py-2.5 rounded-lg font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-all dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30 flex items-center gap-2"
                       >
-                        Save as Draft
+                        {isLoading ? (
+                          <>
+                            <svg
+                              className="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Saving...
+                          </>
+                        ) : (
+                          "Save as Draft"
+                        )}
                       </button>
                       <button
                         type="submit"
-                        disabled={!canSubmit || !submitReady}
+                        disabled={!canSubmit || !submitReady || isLoading}
                         className={`
                       px-8 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/30 flex items-center gap-2
                       ${
-                        !canSubmit || !submitReady
+                        !canSubmit || !submitReady || isLoading
                           ? "bg-slate-400 cursor-not-allowed shadow-none"
                           : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5 transition-all"
                       }
                     `}
                       >
-                        Submit Application
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M14 5l7 7m0 0l-7 7m7-7H3"
-                          />
-                        </svg>
+                        {isLoading ? (
+                          <>
+                            <svg
+                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            Submit Application
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M14 5l7 7m0 0l-7 7m7-7H3"
+                              />
+                            </svg>
+                          </>
+                        )}
                       </button>
                     </>
                   ) : (
@@ -2309,6 +2380,35 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
           </form>
         </div>
       </div>
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 1000,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)", // slate-900 with opacity
+        }}
+        open={isLoading}
+      >
+        <div className="relative">
+          <CircularProgress color="inherit" size={60} thickness={4} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 bg-white/10 rounded-full animate-ping"></div>
+          </div>
+        </div>
+        <div className="text-center">
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: "bold", letterSpacing: "0.025em" }}
+          >
+            Processing Application
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            Please wait while we secure your documents...
+          </Typography>
+        </div>
+      </Backdrop>
     </div>
   );
 }

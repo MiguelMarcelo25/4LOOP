@@ -358,12 +358,39 @@ export default function OfficersListForm() {
             onClick={confirmDialog.action}
             color="primary"
             variant="contained"
+            disabled={toggleStatusMutation.isPending}
+            startIcon={
+              toggleStatusMutation.isPending && (
+                <CircularProgress size={16} color="inherit" />
+              )
+            }
             autoFocus
           >
-            Confirm
+            {toggleStatusMutation.isPending ? "Processing..." : "Confirm"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Loading Backdrop ── */}
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 9999,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)",
+        }}
+        open={toggleStatusMutation.isPending}
+      >
+        <CircularProgress color="inherit" size={60} thickness={4} />
+        <Typography variant="h6" fontWeight="bold">
+          Updating Officer Status
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          Syncing changes and updating credentials...
+        </Typography>
+      </Backdrop>
     </Box>
   );
 }

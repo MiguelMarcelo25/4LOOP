@@ -1,6 +1,7 @@
 "use client";
 
-import DocList from "@/app/components/ui/DocViewer";
+import DocList, { CollapsibleDocList } from "@/app/components/ui/DocViewer";
+import CollapsibleSection from "@/app/components/ui/CollapsibleSection";
 import { HiChevronDown, HiChevronUp, HiSearch } from "react-icons/hi";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useMemo } from "react";
@@ -578,10 +579,10 @@ export default function BusinessesForm() {
                     {/* Right: Checklists */}
                     <div className="space-y-6">
                       {/* Sanitary Permit Checklist */}
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-                          A. Sanitary Permit Checklist
-                        </h3>
+                      <CollapsibleSection
+                        title="A. Sanitary Permit Checklist"
+                        count={biz.sanitaryPermitChecklist?.length || 0}
+                      >
                         {biz.sanitaryPermitChecklist?.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {biz.sanitaryPermitChecklist.map((item, i) => (
@@ -598,13 +599,13 @@ export default function BusinessesForm() {
                             None
                           </span>
                         )}
-                      </div>
+                      </CollapsibleSection>
 
                       {/* Health Cert Checklist */}
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-                          B. Health Certificate Checklist
-                        </h3>
+                      <CollapsibleSection
+                        title="B. Health Certificate Checklist"
+                        count={biz.healthCertificateChecklist?.length || 0}
+                      >
                         {biz.healthCertificateChecklist?.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {biz.healthCertificateChecklist.map((item, i) => (
@@ -621,13 +622,13 @@ export default function BusinessesForm() {
                             None
                           </span>
                         )}
-                      </div>
+                      </CollapsibleSection>
 
                       {/* MSR Checklist */}
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-                          C. Minimum Sanitary Requirements
-                        </h3>
+                      <CollapsibleSection
+                        title="C. Minimum Sanitary Requirements"
+                        count={biz.msrChecklist?.length || 0}
+                      >
                         {biz.msrChecklist?.length > 0 ? (
                           <ul className="space-y-2">
                             {biz.msrChecklist.map((item, i) => (
@@ -654,7 +655,7 @@ export default function BusinessesForm() {
                             None
                           </span>
                         )}
-                      </div>
+                      </CollapsibleSection>
 
                       {/* Permit Validity */}
                       <div>
@@ -781,16 +782,16 @@ export default function BusinessesForm() {
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
                       Uploaded Documents
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <DocList
+                    <div className="space-y-4">
+                      <CollapsibleDocList
                         label="Business Documents"
                         docs={biz.businessDocuments}
                       />
-                      <DocList
+                      <CollapsibleDocList
                         label="Permit Documents"
                         docs={biz.permitDocuments}
                       />
-                      <DocList
+                      <CollapsibleDocList
                         label="Personnel & Health Docs"
                         docs={biz.personnelDocuments}
                       />

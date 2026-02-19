@@ -15,6 +15,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Backdrop,
+  CircularProgress,
+  Typography,
 } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addOwnerBusiness } from "@/app/services/BusinessService";
@@ -471,7 +474,7 @@ export default function AddbusinessForm() {
                 </div>
               </div>
 
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Controller
                   name="businessDocs"
                   control={control}
@@ -482,6 +485,7 @@ export default function AddbusinessForm() {
                       multiple={true}
                       value={field.value}
                       onChange={field.onChange}
+                      size="small"
                     />
                   )}
                 />
@@ -496,6 +500,7 @@ export default function AddbusinessForm() {
                       multiple={true}
                       value={field.value}
                       onChange={field.onChange}
+                      size="small"
                     />
                   )}
                 />
@@ -510,6 +515,7 @@ export default function AddbusinessForm() {
                       multiple={true}
                       value={field.value}
                       onChange={field.onChange}
+                      size="small"
                     />
                   )}
                 />
@@ -526,23 +532,56 @@ export default function AddbusinessForm() {
               </button>
               <button
                 type="submit"
-                className="px-8 py-2.5 rounded-lg font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                disabled={isPending}
+                className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all ${
+                  isPending
+                    ? "bg-slate-400 cursor-not-allowed shadow-none"
+                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5"
+                }`}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Save Business
+                {isPending ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    Save Business
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -597,6 +636,36 @@ export default function AddbusinessForm() {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* ── Loading Backdrop ── */}
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 9999,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)",
+        }}
+        open={isPending}
+      >
+        <div className="relative">
+          <CircularProgress color="inherit" size={60} thickness={4} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 bg-white/10 rounded-full animate-ping"></div>
+          </div>
+        </div>
+        <div className="text-center">
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: "bold", letterSpacing: "0.025em" }}
+          >
+            Saving Business Profile
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            Please wait while we register your documents...
+          </Typography>
+        </div>
+      </Backdrop>
     </div>
   );
 }

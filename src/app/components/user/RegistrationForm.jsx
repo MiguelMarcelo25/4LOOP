@@ -15,6 +15,7 @@ import axios from "axios";
 import FormInput from "@/app/components/ui/FormInput";
 import FormButton from "@/app/components/ui/FormButton";
 import StatusModal from "@/app/components/ui/StatusModal";
+import LoadingOverlay from "@/app/components/ui/LoadingOverlay";
 
 // ✅ Password rules (at least 8 chars, uppercase, lowercase, number, and special character)
 const passwordRules =
@@ -197,6 +198,12 @@ export default function RegistrationForm() {
         title={modal.title}
         message={modal.message}
         onClose={closeModal}
+      />
+
+      <LoadingOverlay
+        isLoading={isPending || resending}
+        message={resending ? "Resending Code" : "Creating Account"}
+        subtitle="Please wait..."
       />
 
       {/* ✅ Confirmation Modal for unverified email */}

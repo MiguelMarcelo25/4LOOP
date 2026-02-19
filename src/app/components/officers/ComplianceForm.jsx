@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { getSanitationOnlineRequest } from '@/app/services/OnlineRequest';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { getSanitationOnlineRequest } from "@/app/services/OnlineRequest";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Box,
@@ -23,20 +23,21 @@ import {
   FormControl,
   InputLabel,
   Select,
-} from '@mui/material';
+  Backdrop,
+} from "@mui/material";
 
 export default function ComplianceForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['compliance-requests'],
+    queryKey: ["compliance-requests"],
     queryFn: async () => {
       const onlinerequest = await getSanitationOnlineRequest();
       const allRequests = [...(onlinerequest?.data || [])];
-      const pending = allRequests.filter((req) => req.status === 'pending2');
+      const pending = allRequests.filter((req) => req.status === "pending2");
       const uniqueRequests = Array.from(
-        new Map(pending.map((req) => [req._id, req])).values()
+        new Map(pending.map((req) => [req._id, req])).values(),
       );
       return uniqueRequests;
     },
@@ -44,14 +45,16 @@ export default function ComplianceForm() {
   });
 
   const [requests, setRequests] = useState([]);
-  const [searchField, setSearchField] = useState('businessName');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState("businessName");
+  const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
-    key: 'createdAt',
-    direction: 'desc',
+    key: "createdAt",
+    direction: "desc",
   });
   const [page, setPage] = useState(1);
   const limit = 10;
+
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     if (data) setRequests(data);
@@ -61,33 +64,29 @@ export default function ComplianceForm() {
     const compliance = requests.find((req) => req._id === _id);
     if (!compliance) return;
 
+    setIsVerifying(true);
     try {
-      localStorage.setItem('complianceRequestId', _id);
+      localStorage.setItem("complianceRequestId", _id);
       router.push(`/officers/workbench/complianceonlinerequest?id=${_id}`);
     } catch (err) {
-      console.error('❌ Failed to navigate for compliance:', err);
+      console.error("❌ Failed to navigate for compliance:", err);
+      setIsVerifying(false);
     }
-
-    // Optimistically remove from list
-    setRequests((prev) => prev.filter((req) => req._id !== _id));
-
-    // Trigger background refetch for consistency
-    queryClient.invalidateQueries(['compliance-requests']);
   };
 
   const handleSort = (key) => {
-    if (key === 'actions') return; // 🚫 disable sorting on Action
+    if (key === "actions") return; // 🚫 disable sorting on Action
     setSortConfig((prev) =>
       prev.key === key
-        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { key, direction: 'asc' }
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
     );
   };
 
   // 🔍 Search + filter
   const filteredRequests = useMemo(() => {
     return requests.filter((req) => {
-      const value = req?.[searchField]?.toString().toLowerCase() ?? '';
+      const value = req?.[searchField]?.toString().toLowerCase() ?? "";
       return value.includes(searchTerm.toLowerCase());
     });
   }, [requests, searchField, searchTerm]);
@@ -96,10 +95,10 @@ export default function ComplianceForm() {
   const sortedRequests = useMemo(() => {
     return [...filteredRequests].sort((a, b) => {
       if (!sortConfig.key) return 0;
-      const aValue = a?.[sortConfig.key]?.toString().toLowerCase() ?? '';
-      const bValue = b?.[sortConfig.key]?.toString().toLowerCase() ?? '';
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      const aValue = a?.[sortConfig.key]?.toString().toLowerCase() ?? "";
+      const bValue = b?.[sortConfig.key]?.toString().toLowerCase() ?? "";
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredRequests, sortConfig]);
@@ -108,34 +107,37 @@ export default function ComplianceForm() {
   const total = sortedRequests.length;
   const totalPages = Math.ceil(total / limit);
   const startIndex = (page - 1) * limit;
-  const paginatedRequests = sortedRequests.slice(startIndex, startIndex + limit);
+  const paginatedRequests = sortedRequests.slice(
+    startIndex,
+    startIndex + limit,
+  );
 
   const searchFields = [
-    { value: 'businessName', label: 'Business Name' },
-    { value: 'bidNumber', label: 'BID Number' },
-    { value: 'requestType', label: 'Request Type' },
-    { value: 'businessNickname', label: 'Trade Name' },
-    { value: 'businessType', label: 'Business Type' },
-    { value: 'businessAddress', label: 'Address' },
+    { value: "businessName", label: "Business Name" },
+    { value: "bidNumber", label: "BID Number" },
+    { value: "requestType", label: "Request Type" },
+    { value: "businessNickname", label: "Trade Name" },
+    { value: "businessType", label: "Business Type" },
+    { value: "businessAddress", label: "Address" },
   ];
 
   const columns = [
-    { key: 'requestType', label: 'Request Type' },
-    { key: 'bidNumber', label: 'BID Number' },
-    { key: 'businessName', label: 'Business Name' },
-    { key: 'businessNickname', label: 'Trade Name' },
-    { key: 'businessType', label: 'Business Type' },
-    { key: 'businessAddress', label: 'Address' },
-    { key: 'createdAt', label: 'Submitted On' },
-    { key: 'actions', label: 'Action' },
+    { key: "requestType", label: "Request Type" },
+    { key: "bidNumber", label: "BID Number" },
+    { key: "businessName", label: "Business Name" },
+    { key: "businessNickname", label: "Trade Name" },
+    { key: "businessType", label: "Business Type" },
+    { key: "businessAddress", label: "Address" },
+    { key: "createdAt", label: "Submitted On" },
+    { key: "actions", label: "Action" },
   ];
 
- return (
+  return (
     <Box p={3}>
       <Button
         variant="outlined"
         color="secondary"
-        onClick={() => router.push('/officers/workbench')}
+        onClick={() => router.push("/officers/workbench")}
         sx={{ mb: 2 }}
       >
         ← Back to Workbench
@@ -191,8 +193,9 @@ export default function ComplianceForm() {
         </FormControl>
       </Stack>
 
-      <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }}>
-        Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} of {total} requests
+      <Typography variant="body2" sx={{ mb: 1, fontStyle: "italic" }}>
+        Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} of{" "}
+        {total} requests
       </Typography>
 
       {/* ⏳ Loading */}
@@ -206,7 +209,7 @@ export default function ComplianceForm() {
       {/* ❌ Error */}
       {isError && (
         <Typography color="error" mt={2}>
-          Error loading requests: {error?.message || 'Unknown error'}
+          Error loading requests: {error?.message || "Unknown error"}
         </Typography>
       )}
 
@@ -219,13 +222,20 @@ export default function ComplianceForm() {
                 {columns.map((col) => (
                   <TableCell
                     key={col.key}
-                    sx={{ cursor: col.key !== 'actions' ? 'pointer' : 'default', fontWeight: 'bold' }}
+                    sx={{
+                      cursor: col.key !== "actions" ? "pointer" : "default",
+                      fontWeight: "bold",
+                    }}
                     onClick={() => handleSort(col.key)}
                   >
-                    {col.key !== 'actions' ? (
+                    {col.key !== "actions" ? (
                       <TableSortLabel
                         active={sortConfig.key === col.key}
-                        direction={sortConfig.key === col.key ? sortConfig.direction : 'asc'}
+                        direction={
+                          sortConfig.key === col.key
+                            ? sortConfig.direction
+                            : "asc"
+                        }
                       >
                         {col.label}
                       </TableSortLabel>
@@ -249,8 +259,8 @@ export default function ComplianceForm() {
                     <TableCell>{req.businessAddress}</TableCell>
                     <TableCell>
                       {req.createdAt
-                        ? new Date(req.createdAt).toLocaleString('en-PH')
-                        : 'N/A'}
+                        ? new Date(req.createdAt).toLocaleString("en-PH")
+                        : "N/A"}
                     </TableCell>
                     <TableCell>
                       <Button
@@ -293,7 +303,7 @@ export default function ComplianceForm() {
             <button
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
               disabled={page === 1}
-              style={{ marginRight: '8px' }}
+              style={{ marginRight: "8px" }}
             >
               Prev
             </button>
@@ -306,6 +316,27 @@ export default function ComplianceForm() {
           </Box>
         </Stack>
       )}
+
+      {/* ── Loading Backdrop ── */}
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 9999,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)",
+        }}
+        open={isVerifying}
+      >
+        <CircularProgress color="inherit" size={60} thickness={4} />
+        <Typography variant="h6" fontWeight="bold">
+          Preparing Verification
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          Loading application documents and business history...
+        </Typography>
+      </Backdrop>
     </Box>
   );
 }

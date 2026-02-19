@@ -1,6 +1,7 @@
 "use client";
 
-import DocList from "@/app/components/ui/DocViewer";
+import DocList, { CollapsibleDocList } from "@/app/components/ui/DocViewer";
+import CollapsibleSection from "@/app/components/ui/CollapsibleSection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,6 +11,7 @@ import {
   CircularProgress,
   Divider,
   TextField,
+  Backdrop,
 } from "@mui/material";
 import { useState } from "react";
 
@@ -18,6 +20,7 @@ export default function VerifyOnlineRequestForm() {
   const searchParams = useSearchParams();
   const id = searchParams?.get("id");
   const [remark, setRemark] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch business data
@@ -38,6 +41,7 @@ export default function VerifyOnlineRequestForm() {
   });
 
   const handleUpdate = async () => {
+    setIsUpdating(true);
     try {
       const res = await fetch(`/api/business/${id}`, {
         method: "PUT",
@@ -57,6 +61,7 @@ export default function VerifyOnlineRequestForm() {
       router.push("/officers/workbench/verification");
     } catch (err) {
       console.error("❌ Update failed:", err);
+      setIsUpdating(false);
     }
   };
 
@@ -162,18 +167,19 @@ export default function VerifyOnlineRequestForm() {
         </Typography>
       </Divider>
 
-      <div className="w-full max-w-4xl mx-auto space-y-8 mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <DocList
-            label="Business Documents"
-            docs={business.businessDocuments}
-          />
-          <DocList label="Permit Documents" docs={business.permitDocuments} />
-          <DocList
-            label="Personnel & Health Docs"
-            docs={business.personnelDocuments}
-          />
-        </div>
+      <div className="w-full max-w-4xl mx-auto space-y-4 mb-10">
+        <CollapsibleDocList
+          label="Business Documents"
+          docs={business.businessDocuments}
+        />
+        <CollapsibleDocList
+          label="Permit Documents"
+          docs={business.permitDocuments}
+        />
+        <CollapsibleDocList
+          label="Personnel & Health Docs"
+          docs={business.personnelDocuments}
+        />
       </div>
 
       <Divider className="my-10">
@@ -183,11 +189,11 @@ export default function VerifyOnlineRequestForm() {
       </Divider>
 
       {/* Checklists */}
-      <div className="w-full max-w-4xl mx-auto space-y-10 mb-10">
-        <div>
-          <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
-            A. Sanitary Permit Checklist
-          </h3>
+      <div className="w-full max-w-4xl mx-auto space-y-4 mb-10">
+        <CollapsibleSection
+          title="A. Sanitary Permit Checklist"
+          count={business.sanitaryPermitChecklist?.length || 0}
+        >
           {business.sanitaryPermitChecklist?.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {business.sanitaryPermitChecklist.map((item, idx) => (
@@ -204,12 +210,12 @@ export default function VerifyOnlineRequestForm() {
               No checklist items available.
             </p>
           )}
-        </div>
+        </CollapsibleSection>
 
-        <div>
-          <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
-            B. Health Certificate Checklist
-          </h3>
+        <CollapsibleSection
+          title="B. Health Certificate Checklist"
+          count={business.healthCertificateChecklist?.length || 0}
+        >
           {business.healthCertificateChecklist?.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {business.healthCertificateChecklist.map((item, idx) => (
@@ -226,12 +232,12 @@ export default function VerifyOnlineRequestForm() {
               No checklist items available.
             </p>
           )}
-        </div>
+        </CollapsibleSection>
 
-        <div>
-          <h3 className="text-lg font-semibold text-blue-900 text-center mb-4">
-            C. Minimum Sanitary Requirements (MSR)
-          </h3>
+        <CollapsibleSection
+          title="C. Minimum Sanitary Requirements (MSR)"
+          count={business.msrChecklist?.length || 0}
+        >
           {business.msrChecklist?.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {business.msrChecklist.map((item, idx) => (
@@ -255,7 +261,7 @@ export default function VerifyOnlineRequestForm() {
               No checklist items available.
             </p>
           )}
-        </div>
+        </CollapsibleSection>
       </div>
 
       <Divider className="my-10">
@@ -339,17 +345,57 @@ export default function VerifyOnlineRequestForm() {
 
       {/* Buttons */}
       <div className="flex justify-center gap-4 mt-10">
-        <Button variant="contained" color="primary" onClick={handleUpdate}>
-          Proceed
+        <Button
+          variant="contained"
+          onClick={handleUpdate}
+          disabled={isUpdating}
+          startIcon={
+            isUpdating && <CircularProgress size={16} color="inherit" />
+          }
+          sx={{
+            px: 4,
+            py: 1,
+            borderRadius: 2,
+            fontWeight: "bold",
+            fontSize: "1rem",
+            background: "linear-gradient(to right, #2563eb, #4f46e5)",
+            "&:hover": {
+              background: "linear-gradient(to right, #1d4ed8, #4338ca)",
+            },
+          }}
+        >
+          {isUpdating ? "Processing..." : "Proceed"}
         </Button>
         <Button
           variant="outlined"
           color="secondary"
           onClick={() => router.back()}
+          disabled={isUpdating}
         >
           Back
         </Button>
       </div>
+
+      {/* ── Loading Backdrop ── */}
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 9999,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)",
+        }}
+        open={isUpdating}
+      >
+        <CircularProgress color="inherit" size={60} thickness={4} />
+        <Typography variant="h6" fontWeight="bold">
+          Submitting Verification
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          Updating business status and notifying stakeholders...
+        </Typography>
+      </Backdrop>
     </Box>
   );
 }

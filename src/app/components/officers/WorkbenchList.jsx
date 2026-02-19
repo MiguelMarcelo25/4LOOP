@@ -1,6 +1,7 @@
 "use client";
 
-import DocList from "@/app/components/ui/DocViewer";
+import DocList, { CollapsibleDocList } from "@/app/components/ui/DocViewer";
+import CollapsibleSection from "@/app/components/ui/CollapsibleSection";
 import {
   Typography,
   Paper,
@@ -790,15 +791,10 @@ export default function WorkbenchList({ title, filterStatus }) {
                 </Box>
 
                 {/* Section 3.5: Minimum Sanitary Requirements (MSR) */}
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    className="font-bold mb-2 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
-                  >
-                    C. Minimum Sanitary Requirements
-                  </Typography>
-
-                  {/* Use top-level MSR_OPTIONS */}
+                <CollapsibleSection
+                  title="C. Minimum Sanitary Requirements"
+                  count={msrEdits?.length || 0}
+                >
                   {(() => {
                     // Create a map for quick lookup of existing items
                     const businessMsrMap = (msrEdits || []).reduce(
@@ -881,7 +877,7 @@ export default function WorkbenchList({ title, filterStatus }) {
                       </div>
                     );
                   })()}
-                </Box>
+                </CollapsibleSection>
 
                 {/* Section 4: Inspection & Penalty Records */}
                 <Box>
@@ -953,16 +949,16 @@ export default function WorkbenchList({ title, filterStatus }) {
                   >
                     Uploaded Documents
                   </Typography>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <DocList
+                  <div className="space-y-4">
+                    <CollapsibleDocList
                       label="Business Documents"
                       docs={businessDetail.businessDocuments}
                     />
-                    <DocList
+                    <CollapsibleDocList
                       label="Permit Documents"
                       docs={businessDetail.permitDocuments}
                     />
-                    <DocList
+                    <CollapsibleDocList
                       label="Personnel & Health Docs"
                       docs={businessDetail.personnelDocuments}
                     />

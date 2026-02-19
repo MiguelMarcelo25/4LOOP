@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { getSanitationOnlineRequest } from '@/app/services/OnlineRequest';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { getSanitationOnlineRequest } from "@/app/services/OnlineRequest";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Box,
@@ -23,7 +23,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-} from '@mui/material';
+  Backdrop,
+} from "@mui/material";
 
 export default function VerificationOfRequestForm() {
   const router = useRouter();
@@ -31,13 +32,13 @@ export default function VerificationOfRequestForm() {
 
   // 🔄 Fetch all "pending" requests
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['online-requests'],
+    queryKey: ["online-requests"],
     queryFn: async () => {
       const onlinerequest = await getSanitationOnlineRequest();
       const allRequests = [...(onlinerequest?.data || [])];
-      const pending = allRequests.filter((req) => req.status === 'submitted');
+      const pending = allRequests.filter((req) => req.status === "submitted");
       const uniqueRequests = Array.from(
-        new Map(pending.map((req) => [req._id, req])).values()
+        new Map(pending.map((req) => [req._id, req])).values(),
       );
       return uniqueRequests;
     },
@@ -45,11 +46,16 @@ export default function VerificationOfRequestForm() {
   });
 
   const [requests, setRequests] = useState([]);
-  const [searchField, setSearchField] = useState('businessName');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+  const [searchField, setSearchField] = useState("businessName");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({
+    key: "createdAt",
+    direction: "desc",
+  });
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     if (data) setRequests(data);
@@ -59,35 +65,37 @@ export default function VerificationOfRequestForm() {
     const selected = requests.find((req) => req._id === _id);
     if (!selected) return;
 
+    setIsVerifying(true);
     try {
-      localStorage.setItem('acceptedRequestId', _id);
+      localStorage.setItem("acceptedRequestId", _id);
       router.push(`/officers/workbench/acceptedonlinerequest?id=${_id}`);
     } catch (err) {
-      console.error('❌ Failed to update status:', err);
+      console.error("❌ Failed to update status:", err);
+      setIsVerifying(false);
     }
 
-    setRequests((prev) => prev.filter((req) => req._id !== _id));
-    queryClient.invalidateQueries(['online-requests']);
+    // setRequests((prev) => prev.filter((req) => req._id !== _id));
+    // queryClient.invalidateQueries(['online-requests']);
   };
 
   const searchFields = [
-    { value: 'businessName', label: 'Business Name' },
-    { value: 'bidNumber', label: 'BID Number' },
-    { value: 'requestType', label: 'Request Type' },
-    { value: 'businessNickname', label: 'Trade Name' },
-    { value: 'businessType', label: 'Business Type' },
-    { value: 'businessAddress', label: 'Address' },
+    { value: "businessName", label: "Business Name" },
+    { value: "bidNumber", label: "BID Number" },
+    { value: "requestType", label: "Request Type" },
+    { value: "businessNickname", label: "Trade Name" },
+    { value: "businessType", label: "Business Type" },
+    { value: "businessAddress", label: "Address" },
   ];
 
   const columns = [
-    { key: 'requestType', label: 'Request Type' },
-    { key: 'bidNumber', label: 'BID Number' },
-    { key: 'businessName', label: 'Business Name' },
-    { key: 'businessNickname', label: 'Trade Name' },
-    { key: 'businessType', label: 'Business Type' },
-    { key: 'businessAddress', label: 'Address' },
-    { key: 'createdAt', label: 'Submitted On' },
-    { key: 'actions', label: 'Action' },
+    { key: "requestType", label: "Request Type" },
+    { key: "bidNumber", label: "BID Number" },
+    { key: "businessName", label: "Business Name" },
+    { key: "businessNickname", label: "Trade Name" },
+    { key: "businessType", label: "Business Type" },
+    { key: "businessAddress", label: "Address" },
+    { key: "createdAt", label: "Submitted On" },
+    { key: "actions", label: "Action" },
   ];
 
   // 🔍 Filter
@@ -95,7 +103,7 @@ export default function VerificationOfRequestForm() {
     let result = [...requests];
     if (searchTerm) {
       result = result.filter((req) => {
-        const value = req?.[searchField]?.toString().toLowerCase() ?? '';
+        const value = req?.[searchField]?.toString().toLowerCase() ?? "";
         return value.includes(searchTerm.toLowerCase());
       });
     }
@@ -111,16 +119,16 @@ export default function VerificationOfRequestForm() {
       let aValue = a?.[sortConfig.key];
       let bValue = b?.[sortConfig.key];
 
-      if (sortConfig.key === 'createdAt') {
+      if (sortConfig.key === "createdAt") {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       } else {
-        aValue = aValue?.toString().toLowerCase() ?? '';
-        bValue = bValue?.toString().toLowerCase() ?? '';
+        aValue = aValue?.toString().toLowerCase() ?? "";
+        bValue = bValue?.toString().toLowerCase() ?? "";
       }
 
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredRequests, sortConfig]);
@@ -129,15 +137,18 @@ export default function VerificationOfRequestForm() {
   const total = sortedRequests.length;
   const totalPages = Math.ceil(total / limit);
   const startIndex = (page - 1) * limit;
-  const paginatedRequests = sortedRequests.slice(startIndex, startIndex + limit);
+  const paginatedRequests = sortedRequests.slice(
+    startIndex,
+    startIndex + limit,
+  );
 
   const handleSort = (key) => {
     // prevent sorting on Action column
-    if (key === 'actions') return;
+    if (key === "actions") return;
     setSortConfig((prev) =>
       prev.key === key
-        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { key, direction: 'asc' }
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
     );
   };
 
@@ -146,13 +157,18 @@ export default function VerificationOfRequestForm() {
       <Button
         variant="outlined"
         color="secondary"
-        onClick={() => router.push('/officers/workbench')}
+        onClick={() => router.push("/officers/workbench")}
         sx={{ mb: 2 }}
       >
         ← Back to Workbench
       </Button>
 
-      <Typography variant="h6" fontWeight="bold" mb={3} className="dark:text-white">
+      <Typography
+        variant="h6"
+        fontWeight="bold"
+        mb={3}
+        className="dark:text-white"
+      >
         🧾 New Requests
       </Typography>
 
@@ -169,8 +185,10 @@ export default function VerificationOfRequestForm() {
           InputProps={{ className: "dark:text-slate-200" }}
           SelectProps={{
             MenuProps: {
-              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
-            }
+              PaperProps: {
+                className: "dark:bg-slate-800 dark:text-slate-200",
+              },
+            },
           }}
         >
           {searchFields.map((f) => (
@@ -205,7 +223,9 @@ export default function VerificationOfRequestForm() {
             }}
             className="dark:bg-slate-800 dark:text-slate-200"
             MenuProps={{
-              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
+              PaperProps: {
+                className: "dark:bg-slate-800 dark:text-slate-200",
+              },
             }}
           >
             {[10, 20, 30, 50].map((size) => (
@@ -217,8 +237,13 @@ export default function VerificationOfRequestForm() {
         </FormControl>
       </Stack>
 
-      <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }} className="dark:text-slate-400">
-        Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} of {total} requests
+      <Typography
+        variant="body2"
+        sx={{ mb: 1, fontStyle: "italic" }}
+        className="dark:text-slate-400"
+      >
+        Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} of{" "}
+        {total} requests
       </Typography>
 
       {/* ⏳ Loading */}
@@ -232,7 +257,7 @@ export default function VerificationOfRequestForm() {
       {/* ❌ Error */}
       {isError && (
         <Typography color="error" mt={2}>
-          Error loading requests: {error?.message || 'Unknown error'}
+          Error loading requests: {error?.message || "Unknown error"}
         </Typography>
       )}
 
@@ -245,18 +270,27 @@ export default function VerificationOfRequestForm() {
                 {columns.map((col) => (
                   <TableCell
                     key={col.key}
-                    sx={{ cursor: col.key !== 'actions' ? 'pointer' : 'default', fontWeight: 'bold' }}
+                    sx={{
+                      cursor: col.key !== "actions" ? "pointer" : "default",
+                      fontWeight: "bold",
+                    }}
                     onClick={() => handleSort(col.key)}
                     className="dark:bg-slate-800 dark:text-slate-200 border-b dark:border-slate-700"
                   >
-                    {col.key !== 'actions' ? (
+                    {col.key !== "actions" ? (
                       <TableSortLabel
                         active={sortConfig.key === col.key}
-                        direction={sortConfig.key === col.key ? sortConfig.direction : 'asc'}
+                        direction={
+                          sortConfig.key === col.key
+                            ? sortConfig.direction
+                            : "asc"
+                        }
                         className="dark:text-slate-200 dark:hover:text-slate-100"
                         sx={{
-                          '&.Mui-active': { color: 'inherit' },
-                          '& .MuiTableSortLabel-icon': { color: 'inherit !important' },
+                          "&.Mui-active": { color: "inherit" },
+                          "& .MuiTableSortLabel-icon": {
+                            color: "inherit !important",
+                          },
                         }}
                       >
                         {col.label}
@@ -272,17 +306,33 @@ export default function VerificationOfRequestForm() {
             <TableBody>
               {paginatedRequests.length > 0 ? (
                 paginatedRequests.map((req) => (
-                  <TableRow key={req._id} hover className="dark:hover:bg-slate-700">
-                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.requestType}</TableCell>
-                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.bidNumber}</TableCell>
-                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessName}</TableCell>
-                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessNickname}</TableCell>
-                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessType}</TableCell>
-                    <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessAddress}</TableCell>
+                  <TableRow
+                    key={req._id}
+                    hover
+                    className="dark:hover:bg-slate-700"
+                  >
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                      {req.requestType}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                      {req.bidNumber}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                      {req.businessName}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                      {req.businessNickname}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                      {req.businessType}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                      {req.businessAddress}
+                    </TableCell>
                     <TableCell className="dark:text-slate-300 dark:border-slate-700">
                       {req.createdAt
-                        ? new Date(req.createdAt).toLocaleString('en-PH')
-                        : 'N/A'}
+                        ? new Date(req.createdAt).toLocaleString("en-PH")
+                        : "N/A"}
                     </TableCell>
                     <TableCell className="dark:border-slate-700">
                       <Button
@@ -298,7 +348,11 @@ export default function VerificationOfRequestForm() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" className="dark:text-slate-400 dark:border-slate-700">
+                  <TableCell
+                    colSpan={8}
+                    align="center"
+                    className="dark:text-slate-400 dark:border-slate-700"
+                  >
                     No pending online requests found.
                   </TableCell>
                 </TableRow>
@@ -344,6 +398,27 @@ export default function VerificationOfRequestForm() {
           </Box>
         </Stack>
       )}
+
+      {/* ── Loading Backdrop ── */}
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 9999,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)",
+        }}
+        open={isVerifying}
+      >
+        <CircularProgress color="inherit" size={60} thickness={4} />
+        <Typography variant="h6" fontWeight="bold">
+          Preparing Application
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          Loading request details and business documents...
+        </Typography>
+      </Backdrop>
     </Box>
   );
 }

@@ -6,6 +6,8 @@ import {
   MdImage,
   MdPictureAsPdf,
   MdOpenInNew,
+  MdExpandMore,
+  MdExpandLess,
 } from "react-icons/md";
 
 /**
@@ -182,6 +184,65 @@ export default function DocList({ label, docs }) {
         {docs.map((doc, idx) => (
           <DocCard key={idx} doc={doc} onClick={setSelected} />
         ))}
+      </div>
+
+      {/* Lightbox Modal */}
+      {selected && (
+        <DocViewerModal doc={selected} onClose={() => setSelected(null)} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * CollapsibleDocList — renders a labeled section of documents that can be toggled.
+ */
+export function CollapsibleDocList({ label, docs, initialOpen = false }) {
+  const [isOpen, setIsOpen] = useState(initialOpen);
+  const [selected, setSelected] = useState(null);
+  const hasDocs = docs && docs.length > 0;
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-200">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+      >
+        <div className="flex flex-col">
+          <span className="text-sm font-bold text-gray-800 dark:text-slate-100 uppercase tracking-wide">
+            {label} {hasDocs ? `(${docs.length})` : ""}
+          </span>
+          {hasDocs && (
+            <span className="text-[10px] text-blue-500 font-medium">
+              Click to view attachments
+            </span>
+          )}
+        </div>
+        <div
+          className={`p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+        >
+          <MdExpandMore size={20} />
+        </div>
+      </button>
+
+      <div
+        className={`transition-all duration-300 ease-in-out ${isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"} overflow-hidden`}
+      >
+        <div className="p-5 pt-0">
+          <div className="h-px bg-gray-100 dark:bg-slate-700 mb-5" />
+          {!hasDocs ? (
+            <div className="flex flex-col items-center py-6 text-gray-400 dark:text-slate-500">
+              <MdInsertDriveFile size={32} className="opacity-20 mb-2" />
+              <p className="text-xs italic">No documents uploaded.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {docs.map((doc, idx) => (
+                <DocCard key={idx} doc={doc} onClick={setSelected} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Lightbox Modal */}
