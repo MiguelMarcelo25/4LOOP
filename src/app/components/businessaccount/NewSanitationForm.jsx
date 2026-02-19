@@ -25,6 +25,8 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import RHFTextField from "@/app/components/ReactHookFormElements/RHFTextField";
+import { RHFDatePicker } from "@/app/components/ui/DatePicker";
+import DateInput from "@/app/components/ui/DatePicker";
 import {
   getBusinessByBid,
   getUserBusinesses,
@@ -1464,22 +1466,13 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
                       {/* Payment Details Inputs */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                        <RHFTextField
+                        <RHFDatePicker
                           control={control}
                           name="orDateHealthCert"
-                          type="date"
-                          variant="outlined"
                           label="O.R. Date"
                           fullWidth
                           size="small"
-                          InputLabelProps={{
-                            shrink: true,
-                            className: "dark:text-slate-300",
-                          }}
-                          InputProps={{
-                            className:
-                              "dark:text-slate-200 dark:bg-slate-700/50",
-                          }}
+                          placeholder="Select O.R. date"
                         />
 
                         <RHFTextField
@@ -1629,6 +1622,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                             label="Upload Permits & Certificates"
                             helperText="Upload TOP, Official Receipts, or other permit-related documents."
                             multiple={true}
+                            allowedTypes={["image/*", ".pdf", ".docx"]}
+                            maxSizeMB={20}
                             value={field.value}
                             onChange={field.onChange}
                             error={errors.permitDocs?.message}
@@ -1672,13 +1667,12 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                            Due Date to Comply
-                          </label>
-                          <input
-                            type="date"
-                            {...register("declaredPersonnelDueDate")}
-                            className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          <RHFDatePicker
+                            control={control}
+                            name="declaredPersonnelDueDate"
+                            label="Due Date to Comply"
+                            fullWidth
+                            placeholder="Select due date"
                           />
                         </div>
                       </div>
@@ -1722,13 +1716,13 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase h-8 flex items-end">
-                          Due Date
-                        </label>
-                        <input
-                          type="date"
-                          {...register("healthCertDueDate")}
-                          className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        <RHFDatePicker
+                          control={control}
+                          name="healthCertDueDate"
+                          label="Due Date"
+                          fullWidth
+                          size="small"
+                          placeholder="Select due date"
                         />
                       </div>
                     </div>
@@ -1745,6 +1739,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                             label="Personnel & Health Documents"
                             helperText="Upload the list of personnel and their health certificates (consolidated PDF or individual images)."
                             multiple={true}
+                            allowedTypes={["image/*", ".pdf", ".docx"]}
+                            maxSizeMB={20}
                             value={field.value}
                             onChange={field.onChange}
                             error={errors.personnelDocs?.message}
@@ -1802,17 +1798,12 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                                 {label}
                               </td>
                               <td className="px-6 py-4">
-                                <RHFTextField
+                                <RHFDatePicker
                                   control={control}
                                   name={`inspectionRecords.${index}.date`}
-                                  type="date"
-                                  variant="outlined"
-                                  size="small"
                                   fullWidth
-                                  InputProps={{
-                                    className:
-                                      "bg-white dark:bg-slate-700 dark:text-slate-200",
-                                  }}
+                                  size="small"
+                                  placeholder="Select date"
                                 />
                               </td>
                               <td className="px-6 py-4">
@@ -1984,11 +1975,13 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                                   control={control}
                                   defaultValue={row.orDate || ""}
                                   render={({ field }) => (
-                                    <input
-                                      {...field}
-                                      type="date"
-                                      className="w-full bg-transparent text-sm focus:outline-none border-b border-transparent focus:border-blue-500 transition-colors py-1"
-                                      readOnly={!noRecords && isLocked}
+                                    <DateInput
+                                      value={field.value ?? ""}
+                                      onChange={field.onChange}
+                                      size="small"
+                                      fullWidth
+                                      disabled={!noRecords && isLocked}
+                                      placeholder="O.R. date"
                                     />
                                   )}
                                 />

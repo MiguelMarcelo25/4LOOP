@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import DateInput from "@/app/components/ui/DatePicker";
 import { useRouter } from "next/navigation";
 import {
   Typography,
@@ -576,14 +577,15 @@ export default function CreateTicketInspectionForm() {
           Inspection Form for {selectedBusiness?.businessName}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            label="Inspection Date"
-            type="date"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={inspectionDate}
-            onChange={(e) => setInspectionDate(e.target.value)}
-          />
+          <div className="pt-2">
+            <DateInput
+              label="Inspection Date"
+              value={inspectionDate}
+              onChange={setInspectionDate}
+              fullWidth
+              placeholder="Select inspection date"
+            />
+          </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseConfirm} disabled={isSaving}>

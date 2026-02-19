@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import DateInput from '@/app/components/ui/DatePicker';
 import { useRouter } from 'next/navigation';
 import {
   Typography,
@@ -480,17 +481,15 @@ export default function ViewTicketInspectionForm() {
           Inspection Form for {selectedBusiness?.businessName}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            label="Inspection Date"
-            type="date"
-            fullWidth
-            InputLabelProps={{ shrink: true, className: "dark:text-slate-300" }}
-            value={inspectionDate}
-            onChange={(e) => setInspectionDate(e.target.value)}
-            sx={{ mb: 2 }}
-            className="dark:bg-slate-700 rounded mt-2"
-            InputProps={{ className: "dark:text-slate-200" }}
-          />
+          <div className="pt-2 pb-2">
+            <DateInput
+              label="Inspection Date"
+              value={inspectionDate}
+              onChange={setInspectionDate}
+              fullWidth
+              placeholder="Select inspection date"
+            />
+          </div>
           <TextField
             label="Remarks"
             fullWidth

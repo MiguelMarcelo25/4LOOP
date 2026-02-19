@@ -1,5 +1,6 @@
 "use client";
 
+import DateInput from "@/app/components/ui/DatePicker";
 import {
   Typography,
   Box,
@@ -900,27 +901,13 @@ export default function InspectingCurrentBusinessForm() {
                       >
                         Scheduled Re-inspection Date
                       </Typography>
-                      <TextField
-                        type="date"
-                        size="medium"
+                      <DateInput
                         value={
                           dateReinspected ||
                           new Date().toISOString().split("T")[0]
                         }
                         disabled
-                        sx={{
-                          maxWidth: "300px",
-                          backgroundColor: (theme) =>
-                            theme.palette.mode === "dark"
-                              ? "rgba(255,255,255,0.05)"
-                              : "#f8fafc",
-                          "& .MuiInputBase-input.Mui-disabled": {
-                            WebkitTextFillColor: (theme) =>
-                              theme.palette.mode === "dark"
-                                ? "rgba(255,255,255,0.5)"
-                                : "rgba(0,0,0,0.5)",
-                          },
-                        }}
+                        className="max-w-[300px]"
                       />
                     </Box>
 

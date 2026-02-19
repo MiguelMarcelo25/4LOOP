@@ -483,6 +483,8 @@ export default function AddbusinessForm() {
                       label="Business Registration Documents"
                       helperText="DTI/SEC Registration, Business Permit, or any proof of business."
                       multiple={true}
+                      allowedTypes={["image/*", ".pdf", ".docx"]}
+                      maxSizeMB={20}
                       value={field.value}
                       onChange={field.onChange}
                       size="small"
@@ -498,6 +500,8 @@ export default function AddbusinessForm() {
                       label="Permit Documents"
                       helperText="Tax Order of Payment (TOP), Official Receipts, or other permit-related documents."
                       multiple={true}
+                      allowedTypes={["image/*", ".pdf", ".docx"]}
+                      maxSizeMB={20}
                       value={field.value}
                       onChange={field.onChange}
                       size="small"
@@ -513,6 +517,8 @@ export default function AddbusinessForm() {
                       label="Personnel & Health Documents"
                       helperText="List of personnel and their health certificates."
                       multiple={true}
+                      allowedTypes={["image/*", ".pdf", ".docx"]}
+                      maxSizeMB={20}
                       value={field.value}
                       onChange={field.onChange}
                       size="small"
