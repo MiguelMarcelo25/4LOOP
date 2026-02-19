@@ -36,7 +36,13 @@ import {
   ListItemText,
   Checkbox,
 } from "@mui/material";
-import { HiCheckCircle, HiExclamationCircle, HiSave } from "react-icons/hi";
+import {
+  HiCheckCircle,
+  HiExclamationCircle,
+  HiSave,
+  HiSearch,
+} from "react-icons/hi";
+import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
 
 const MSR_OPTIONS = [
   { id: "health_certificate", label: "Health Certificate" },
@@ -104,6 +110,7 @@ export default function WorkbenchList({ title, filterStatus }) {
   const [loggedUserId, setLoggedUserId] = useState(null);
   const [msrEdits, setMsrEdits] = useState([]);
   const [isSavingMsr, setIsSavingMsr] = useState(false);
+  const [confirmStatusData, setConfirmStatusData] = useState(null); // { id, nextStatus, label }
 
   const [sortConfig, setSortConfig] = useState({
     key: "createdAt",
@@ -278,209 +285,242 @@ export default function WorkbenchList({ title, filterStatus }) {
 
   return (
     <Paper
-      elevation={2}
-      sx={{ p: 3 }}
-      className="dark:bg-slate-800 dark:text-slate-200 min-h-[500px]"
+      elevation={0}
+      className="dark:bg-slate-900 bg-white dark:text-slate-200 min-h-[500px] border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden"
     >
-      <Typography
-        variant="h5"
-        gutterBottom
-        className="dark:text-slate-100 font-bold mb-6"
-      >
-        {title}
-      </Typography>
-
-      {/* Controls */}
-      <Stack direction="row" spacing={2} sx={{ mb: 4 }} alignItems="center">
-        <TextField
-          label="Search Business"
-          variant="outlined"
-          size="small"
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setPage(1);
-          }}
-          className="dark:bg-slate-700 dark:text-slate-200 rounded flex-1 max-w-md"
-          InputLabelProps={{ className: "dark:text-slate-300" }}
-          InputProps={{ className: "dark:text-slate-200" }}
-        />
-
-        <FormControl size="small" sx={{ width: 120 }}>
-          <InputLabel className="dark:text-slate-300">Rows</InputLabel>
-          <Select
-            value={limit}
-            label="Rows"
-            onChange={(e) => setLimit(Number(e.target.value))}
-            className="dark:text-slate-200 dark:border-slate-600"
+      {/* Header Banner */}
+      <Box className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 p-8 text-white relative overflow-hidden">
+        <Box className="relative z-10">
+          <Typography
+            variant="h4"
+            className="font-extrabold tracking-tight mb-1"
           >
-            {[10, 20, 50].map((n) => (
-              <MenuItem key={n} value={n}>
-                {n}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
+            {title}
+          </Typography>
+          <Typography variant="body2" className="opacity-80 font-medium">
+            Manage and track all business applications efficiently
+          </Typography>
+        </Box>
+        {/* Decorative circle */}
+        <Box className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+      </Box>
 
-      <Typography
-        variant="body2"
-        sx={{ mb: 2, fontStyle: "italic" }}
-        className="dark:text-slate-400"
-      >
-        Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} of{" "}
-        {total} items
-      </Typography>
+      <Box className="p-8">
+        {/* Controls Section */}
+        <Box className="flex flex-col md:flex-row gap-4 mb-8 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-700/50">
+          <Box className="flex-1 relative">
+            <TextField
+              placeholder="Search by Business Name, Trade Name or BID..."
+              variant="outlined"
+              fullWidth
+              size="small"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              className="dark:bg-slate-700 dark:text-slate-200 rounded-lg shadow-sm"
+              InputLabelProps={{ className: "dark:text-slate-300" }}
+              InputProps={{
+                className: "dark:text-slate-200",
+                startAdornment: (
+                  <HiSearch className="mr-2 text-gray-400" size={20} />
+                ),
+              }}
+            />
+          </Box>
 
-      {/* Table */}
-      {paginatedBusinesses.length === 0 ? (
-        <Typography className="text-gray-500 mt-10 text-center">
-          No data found.
-        </Typography>
-      ) : (
-        <TableContainer component={Paper} className="dark:bg-slate-800">
-          <Table>
-            <TableHead>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableCell
-                    key={col.key}
+          <FormControl size="small" sx={{ width: 140 }}>
+            <InputLabel className="dark:text-slate-300">Show Rows</InputLabel>
+            <Select
+              value={limit}
+              label="Show Rows"
+              onChange={(e) => setLimit(Number(e.target.value))}
+              className="dark:text-slate-200 dark:border-slate-600 rounded-lg shadow-sm"
+            >
+              {[10, 20, 50].map((n) => (
+                <MenuItem key={n} value={n}>
+                  {n} rows
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Box className="flex items-center justify-between mb-4">
+          <Typography
+            variant="body2"
+            className="dark:text-slate-400 text-gray-500 font-medium flex items-center gap-2"
+          >
+            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+            Showing{" "}
+            <strong className="text-gray-900 dark:text-white">
+              {startIndex + 1}
+            </strong>
+            –
+            <strong className="text-gray-900 dark:text-white">
+              {Math.min(startIndex + limit, total)}
+            </strong>{" "}
+            of{" "}
+            <strong className="text-gray-900 dark:text-white">{total}</strong>{" "}
+            items
+          </Typography>
+        </Box>
+
+        {/* Table */}
+        {paginatedBusinesses.length === 0 ? (
+          <Typography className="text-gray-500 mt-10 text-center">
+            No data found.
+          </Typography>
+        ) : (
+          <TableContainer component={Paper} className="dark:bg-slate-800">
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {columns.map((col) => (
+                    <TableCell
+                      key={col.key}
+                      sx={{
+                        cursor: col.key !== "actions" ? "pointer" : "default",
+                        fontWeight: "bold",
+                      }}
+                      onClick={() => handleSort(col.key)}
+                      className="dark:bg-slate-700 dark:text-slate-200 border-b dark:border-slate-600"
+                    >
+                      {col.key !== "actions" ? (
+                        <TableSortLabel
+                          active={sortConfig.key === col.key}
+                          direction={
+                            sortConfig.key === col.key
+                              ? sortConfig.direction
+                              : "asc"
+                          }
+                          className="dark:text-slate-200 dark:hover:text-slate-100"
+                          sx={{
+                            "&.Mui-active": { color: "inherit" },
+                            "& .MuiTableSortLabel-icon": {
+                              color: "inherit !important",
+                            },
+                          }}
+                        >
+                          {col.label}
+                        </TableSortLabel>
+                      ) : (
+                        col.label
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {paginatedBusinesses.map((business) => (
+                  <TableRow
+                    key={business._id}
+                    hover
+                    className="dark:hover:bg-slate-700 cursor-pointer"
+                    onClick={() => setSelectedBusinessId(business.bidNumber)}
                     sx={{
-                      cursor: col.key !== "actions" ? "pointer" : "default",
-                      fontWeight: "bold",
+                      "&:hover": {
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.04)",
+                      },
                     }}
-                    onClick={() => handleSort(col.key)}
-                    className="dark:bg-slate-700 dark:text-slate-200 border-b dark:border-slate-600"
                   >
-                    {col.key !== "actions" ? (
-                      <TableSortLabel
-                        active={sortConfig.key === col.key}
-                        direction={
-                          sortConfig.key === col.key
-                            ? sortConfig.direction
-                            : "asc"
+                    <TableCell className="dark:text-slate-300 dark:border-slate-600">
+                      <Chip
+                        label={business.bidNumber || "No BID"}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        className="font-semibold"
+                      />
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-600 font-medium">
+                      {business.businessName || "—"}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-600">
+                      {business.businessNickname || "—"}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-600">
+                      {business.businessType || "—"}
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-600">
+                      {business.businessAddress || "—"}
+                    </TableCell>
+                    <TableCell className="dark:border-slate-600">
+                      <Chip
+                        label={
+                          business.status === "submitted"
+                            ? "Pending"
+                            : business.status === "pending"
+                              ? "Verifications"
+                              : business.status === "pending2"
+                                ? "Compliance"
+                                : business.status === "pending3"
+                                  ? "Approval"
+                                  : business.status || "Unknown"
                         }
-                        className="dark:text-slate-200 dark:hover:text-slate-100"
-                        sx={{
-                          "&.Mui-active": { color: "inherit" },
-                          "& .MuiTableSortLabel-icon": {
-                            color: "inherit !important",
-                          },
+                        size="small"
+                        color={
+                          business.status === "completed"
+                            ? "success"
+                            : "default"
+                        }
+                        className="capitalize"
+                      />
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-600">
+                      {business.createdAt
+                        ? new Date(business.createdAt).toLocaleDateString(
+                            "en-PH",
+                          )
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="dark:border-slate-600">
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedBusinessId(business.bidNumber);
                         }}
                       >
-                        {col.label}
-                      </TableSortLabel>
-                    ) : (
-                      col.label
-                    )}
-                  </TableCell>
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </TableRow>
-            </TableHead>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-            <TableBody>
-              {paginatedBusinesses.map((business) => (
-                <TableRow
-                  key={business._id}
-                  hover
-                  className="dark:hover:bg-slate-700 cursor-pointer"
-                  onClick={() => setSelectedBusinessId(business.bidNumber)}
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.05)"
-                          : "rgba(0,0,0,0.04)",
-                    },
-                  }}
-                >
-                  <TableCell className="dark:text-slate-300 dark:border-slate-600">
-                    <Chip
-                      label={business.bidNumber || "No BID"}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      className="font-semibold"
-                    />
-                  </TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-600 font-medium">
-                    {business.businessName || "—"}
-                  </TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-600">
-                    {business.businessNickname || "—"}
-                  </TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-600">
-                    {business.businessType || "—"}
-                  </TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-600">
-                    {business.businessAddress || "—"}
-                  </TableCell>
-                  <TableCell className="dark:border-slate-600">
-                    <Chip
-                      label={
-                        business.status === "submitted"
-                          ? "Pending"
-                          : business.status === "pending"
-                            ? "Verifications"
-                            : business.status === "pending2"
-                              ? "Compliance"
-                              : business.status === "pending3"
-                                ? "Approval"
-                                : business.status || "Unknown"
-                      }
-                      size="small"
-                      color={
-                        business.status === "completed" ? "success" : "default"
-                      }
-                      className="capitalize"
-                    />
-                  </TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-600">
-                    {business.createdAt
-                      ? new Date(business.createdAt).toLocaleDateString("en-PH")
-                      : "N/A"}
-                  </TableCell>
-                  <TableCell className="dark:border-slate-600">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedBusinessId(business.bidNumber);
-                      }}
-                    >
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      {/* Pagination */}
-      <Stack
-        direction="row"
-        spacing={2}
-        justifyContent="flex-end"
-        sx={{ mt: 4 }}
-      >
-        <Button
-          variant="outlined"
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
+        {/* Pagination */}
+        <Stack
+          direction="row"
+          spacing={2}
+          justifyContent="flex-end"
+          sx={{ mt: 4 }}
         >
-          Prev
-        </Button>
-        <Button
-          variant="outlined"
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-        </Button>
-      </Stack>
+          <Button
+            variant="outlined"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            Prev
+          </Button>
+          <Button
+            variant="outlined"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </Stack>
+      </Box>
 
       {/* Modal */}
       <Dialog
@@ -521,13 +561,10 @@ export default function WorkbenchList({ title, filterStatus }) {
             <DialogContent className="py-6">
               <Stack spacing={4}>
                 {/* Section 1: Business Info */}
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    className="font-bold mb-2 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
-                  >
-                    Business Information
-                  </Typography>
+                <CollapsibleSection
+                  title="Business Information"
+                  initialOpen={true}
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Typography
@@ -611,16 +648,13 @@ export default function WorkbenchList({ title, filterStatus }) {
                       </Typography>
                     </div>
                   </div>
-                </Box>
+                </CollapsibleSection>
 
                 {/* Section 2: Permits & Certificates */}
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    className="font-bold mb-2 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
-                  >
-                    Permits & Certificates
-                  </Typography>
+                <CollapsibleSection
+                  title="Permits & Certificates"
+                  initialOpen={true}
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Typography
@@ -732,16 +766,13 @@ export default function WorkbenchList({ title, filterStatus }) {
                       </div>
                     </div>
                   </div>
-                </Box>
+                </CollapsibleSection>
 
                 {/* Section 3: Personnel */}
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    className="font-bold mb-2 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
-                  >
-                    Personnel & Health Certificates
-                  </Typography>
+                <CollapsibleSection
+                  title="Personnel & Health Certificates"
+                  initialOpen={true}
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Typography
@@ -788,11 +819,11 @@ export default function WorkbenchList({ title, filterStatus }) {
                       </Typography>
                     </div>
                   </div>
-                </Box>
+                </CollapsibleSection>
 
                 {/* Section 3.5: Minimum Sanitary Requirements (MSR) */}
                 <CollapsibleSection
-                  title="C. Minimum Sanitary Requirements"
+                  title="Minimum Sanitary Requirements"
                   count={msrEdits?.length || 0}
                 >
                   {(() => {
@@ -880,13 +911,10 @@ export default function WorkbenchList({ title, filterStatus }) {
                 </CollapsibleSection>
 
                 {/* Section 4: Inspection & Penalty Records */}
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    className="font-bold mb-2 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
-                  >
-                    Inspection & Penalty Records
-                  </Typography>
+                <CollapsibleSection
+                  title="Inspection & Penalty Records"
+                  count={businessDetail.inspectionRecords?.length || 0}
+                >
                   {businessDetail.inspectionRecords?.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
@@ -939,7 +967,7 @@ export default function WorkbenchList({ title, filterStatus }) {
                       No inspection history found.
                     </Typography>
                   )}
-                </Box>
+                </CollapsibleSection>
 
                 {/* Section 5: Uploaded Documents */}
                 <Box>
@@ -989,11 +1017,35 @@ export default function WorkbenchList({ title, filterStatus }) {
               >
                 Close
               </Button>
+
+              {/* Status Confirmation Modal */}
+              <ConfirmationModal
+                open={!!confirmStatusData}
+                title={`Move to ${confirmStatusData?.label}?`}
+                message={`Are you sure you want to proceed? This will move the business request to the ${confirmStatusData?.label} stage.`}
+                onConfirm={() => {
+                  handleUpdateStatus(
+                    confirmStatusData.id,
+                    confirmStatusData.nextStatus,
+                    {
+                      officerInCharge: loggedUserId,
+                    },
+                  );
+                  setConfirmStatusData(null);
+                }}
+                onCancel={() => setConfirmStatusData(null)}
+                confirmText={`Yes, Move to ${confirmStatusData?.label}`}
+                type="success"
+                isLoading={mutation.isPending}
+              />
+
               {businessDetail.status === "submitted" && (
                 <Button
                   onClick={() =>
-                    handleUpdateStatus(businessDetail.bidNumber, "pending", {
-                      officerInCharge: loggedUserId,
+                    setConfirmStatusData({
+                      id: businessDetail.bidNumber,
+                      nextStatus: "pending",
+                      label: "Verification",
                     })
                   }
                   variant="contained"
@@ -1008,8 +1060,10 @@ export default function WorkbenchList({ title, filterStatus }) {
               {businessDetail.status === "pending" && (
                 <Button
                   onClick={() =>
-                    handleUpdateStatus(businessDetail.bidNumber, "pending2", {
-                      officerInCharge: loggedUserId,
+                    setConfirmStatusData({
+                      id: businessDetail.bidNumber,
+                      nextStatus: "pending2",
+                      label: "Compliance",
                     })
                   }
                   variant="contained"
@@ -1024,8 +1078,10 @@ export default function WorkbenchList({ title, filterStatus }) {
               {businessDetail.status === "pending2" && (
                 <Button
                   onClick={() =>
-                    handleUpdateStatus(businessDetail.bidNumber, "pending3", {
-                      officerInCharge: loggedUserId,
+                    setConfirmStatusData({
+                      id: businessDetail.bidNumber,
+                      nextStatus: "pending3",
+                      label: "Permit Approval",
                     })
                   }
                   variant="contained"
@@ -1040,8 +1096,10 @@ export default function WorkbenchList({ title, filterStatus }) {
               {businessDetail.status === "pending3" && (
                 <Button
                   onClick={() =>
-                    handleUpdateStatus(businessDetail.bidNumber, "completed", {
-                      officerInCharge: loggedUserId,
+                    setConfirmStatusData({
+                      id: businessDetail.bidNumber,
+                      nextStatus: "completed",
+                      label: "Release",
                     })
                   }
                   variant="contained"

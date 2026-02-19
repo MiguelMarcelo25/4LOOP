@@ -769,7 +769,7 @@ export default function BusinesslistForm() {
                       {/* MSR Checklist */}
                       <div>
                         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-                          C. Minimum Sanitary Requirements
+                          Minimum Sanitary Requirements
                         </h3>
                         {business.msrChecklist?.length > 0 ? (
                           <ul className="space-y-2">

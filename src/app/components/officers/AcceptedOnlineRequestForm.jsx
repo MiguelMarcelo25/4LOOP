@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CollapsibleDocList } from "@/app/components/ui/DocViewer";
 import CollapsibleSection from "@/app/components/ui/CollapsibleSection";
+import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
 import TextField from "@mui/material/TextField";
 import {
   Typography,
@@ -19,6 +20,8 @@ export default function AcceptedOnlineRequestForm() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const [remark, setRemark] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -39,6 +42,7 @@ export default function AcceptedOnlineRequestForm() {
   });
 
   const handleUpdate = async () => {
+    setIsUpdating(true);
     try {
       const res = await fetch(`/api/business/${id}`, {
         method: "PUT",
@@ -63,6 +67,8 @@ export default function AcceptedOnlineRequestForm() {
       router.push("/officers/workbench/onlinerequest");
     } catch (err) {
       console.error("❌ Update failed:", err);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -107,57 +113,60 @@ export default function AcceptedOnlineRequestForm() {
         <Divider className="my-3 dark:border-slate-700" />
       </div>
 
-      <div className="w-full max-w-4xl mx-auto space-y-6 mb-10 px-6">
-        {/* Reusable Row */}
-        {[
-          ["BID Number", business.bidNumber],
-          ["Business Name", business.businessName],
-          ["Trade Name", business.businessNickname],
-          ["Business Type", business.businessType],
-          ["Business Address", business.businessAddress],
-          ["Request Type", business.requestType || "Sanitation"],
-          ["Status", business.status],
-          ["Contact Person", business.contactPerson],
-          ["Contact Number", business.contactNumber],
-          ["Landmark", business.landmark],
-          ["Created", new Date(business.createdAt).toLocaleString("en-PH")],
-          [
-            "Latest Update",
-            new Date(business.updatedAt).toLocaleString("en-PH"),
-          ],
-        ]
-          .reduce((rows, [label, value]) => {
-            const pair = (
-              <div key={label} className="flex items-start gap-2">
+      <div className="w-full max-w-4xl mx-auto space-y-4 mb-10 px-6">
+        <CollapsibleSection title="Business Details" initialOpen={true}>
+          <div className="space-y-6 mt-4">
+            {[
+              ["BID Number", business.bidNumber],
+              ["Business Name", business.businessName],
+              ["Trade Name", business.businessNickname],
+              ["Business Type", business.businessType],
+              ["Business Address", business.businessAddress],
+              ["Request Type", business.requestType || "Sanitation"],
+              ["Status", business.status],
+              ["Contact Person", business.contactPerson],
+              ["Contact Number", business.contactNumber],
+              ["Landmark", business.landmark],
+              ["Created", new Date(business.createdAt).toLocaleString("en-PH")],
+              [
+                "Latest Update",
+                new Date(business.updatedAt).toLocaleString("en-PH"),
+              ],
+            ]
+              .reduce((rows, [label, value]) => {
+                const pair = (
+                  <div key={label} className="flex items-start gap-2">
+                    <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">
+                      {label}:
+                    </span>
+                    <span className="flex-1 min-h-[48px] bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
+                      {value}
+                    </span>
+                  </div>
+                );
+                const lastRow = rows[rows.length - 1];
+                if (!lastRow || lastRow.length === 2) rows.push([pair]);
+                else lastRow.push(pair);
+                return rows;
+              }, [])
+              .map((row, i) => (
+                <div key={i} className="grid grid-cols-2 gap-6">
+                  {row}
+                </div>
+              ))}
+
+            <div className="grid grid-cols-1">
+              <div className="flex items-start gap-2">
                 <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">
-                  {label}:
+                  Remarks:
                 </span>
-                <span className="flex-1 min-h-[48px] bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
-                  {value}
+                <span className="flex-1 min-h-[120px] whitespace-pre-line bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
+                  {business.remarks || "None"}
                 </span>
               </div>
-            );
-            const lastRow = rows[rows.length - 1];
-            if (!lastRow || lastRow.length === 2) rows.push([pair]);
-            else lastRow.push(pair);
-            return rows;
-          }, [])
-          .map((row, i) => (
-            <div key={i} className="grid grid-cols-2 gap-6">
-              {row}
             </div>
-          ))}
-
-        <div className="grid grid-cols-1">
-          <div className="flex items-start gap-2">
-            <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">
-              Remarks:
-            </span>
-            <span className="flex-1 min-h-[120px] whitespace-pre-line bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
-              {business.remarks || "None"}
-            </span>
           </div>
-        </div>
+        </CollapsibleSection>
       </div>
 
       <Divider className="my-10 dark:border-slate-700">
@@ -175,14 +184,17 @@ export default function AcceptedOnlineRequestForm() {
         <CollapsibleDocList
           label="Business Documents"
           docs={business.businessDocuments}
+          initialOpen={true}
         />
         <CollapsibleDocList
           label="Permit Documents"
           docs={business.permitDocuments}
+          initialOpen={true}
         />
         <CollapsibleDocList
           label="Personnel & Health Docs"
           docs={business.personnelDocuments}
+          initialOpen={true}
         />
       </div>
 
@@ -201,6 +213,7 @@ export default function AcceptedOnlineRequestForm() {
         <CollapsibleSection
           title="A. Sanitary Permit Checklist"
           count={business.sanitaryPermitChecklist?.length || 0}
+          initialOpen={true}
         >
           {business.sanitaryPermitChecklist?.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -223,6 +236,7 @@ export default function AcceptedOnlineRequestForm() {
         <CollapsibleSection
           title="B. Health Certificate Checklist"
           count={business.healthCertificateChecklist?.length || 0}
+          initialOpen={true}
         >
           {business.healthCertificateChecklist?.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -243,7 +257,7 @@ export default function AcceptedOnlineRequestForm() {
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="C. Minimum Sanitary Requirements (MSR)"
+          title="Minimum Sanitary Requirements (MSR)"
           count={business.msrChecklist?.length || 0}
         >
           {business.msrChecklist?.length > 0 ? (
@@ -368,9 +382,32 @@ export default function AcceptedOnlineRequestForm() {
         />
       </div>
 
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        open={showConfirm}
+        title="Move to Verification?"
+        message="Are you sure you want to proceed? This will move the business request to the Verification stage."
+        onConfirm={() => {
+          setShowConfirm(false);
+          handleUpdate();
+        }}
+        onCancel={() => setShowConfirm(false)}
+        confirmText="Yes, Proceed"
+        type="primary"
+        isLoading={isUpdating}
+      />
+
       <div className="flex justify-center gap-4 mt-10 mb-6">
-        <Button variant="contained" color="primary" onClick={handleUpdate}>
-          Proceed
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setShowConfirm(true)}
+          disabled={isUpdating}
+          startIcon={
+            isUpdating && <CircularProgress size={16} color="inherit" />
+          }
+        >
+          {isUpdating ? "Processing..." : "Proceed"}
         </Button>
         <Button
           variant="outlined"

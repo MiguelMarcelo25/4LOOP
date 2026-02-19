@@ -626,7 +626,7 @@ export default function BusinessesForm() {
 
                       {/* MSR Checklist */}
                       <CollapsibleSection
-                        title="C. Minimum Sanitary Requirements"
+                        title="Minimum Sanitary Requirements"
                         count={biz.msrChecklist?.length || 0}
                       >
                         {biz.msrChecklist?.length > 0 ? (

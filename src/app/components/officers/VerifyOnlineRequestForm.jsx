@@ -2,6 +2,7 @@
 
 import DocList, { CollapsibleDocList } from "@/app/components/ui/DocViewer";
 import CollapsibleSection from "@/app/components/ui/CollapsibleSection";
+import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -21,6 +22,7 @@ export default function VerifyOnlineRequestForm() {
   const id = searchParams?.get("id");
   const [remark, setRemark] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch business data
@@ -112,53 +114,56 @@ export default function VerifyOnlineRequestForm() {
         <Divider className="my-3" />
       </div>
 
-      {/* Business Info */}
-      <div className="w-full max-w-4xl mx-auto space-y-6 mb-10">
-        {[
-          ["BID Number", business.bidNumber],
-          ["Business Name", business.businessName],
-          ["Trade Name", business.businessNickname],
-          ["Business Type", business.businessType],
-          ["Business Address", business.businessAddress],
-          ["Request Type", business.requestType || "Sanitation"],
-          ["Status", business.status],
-          ["Contact Person", business.contactPerson],
-          ["Contact Number", business.contactNumber],
-          ["Landmark", business.landmark],
-          [
-            "Created",
-            business.createdAt
-              ? new Date(business.createdAt).toLocaleString("en-PH")
-              : "—",
-          ],
-          [
-            "Latest Update",
-            business.updatedAt
-              ? new Date(business.updatedAt).toLocaleString("en-PH")
-              : "—",
-          ],
-        ]
-          .reduce((rows, [label, value]) => {
-            const pair = (
-              <div key={label} className="flex items-start gap-2">
-                <span className="min-w-[140px] text-sm font-semibold text-gray-700">
-                  {label}:
-                </span>
-                <span className="flex-1 min-h-[48px] bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300">
-                  {renderValue(value)}
-                </span>
-              </div>
-            );
-            const lastRow = rows[rows.length - 1];
-            if (!lastRow || lastRow.length === 2) rows.push([pair]);
-            else lastRow.push(pair);
-            return rows;
-          }, [])
-          .map((row, i) => (
-            <div key={i} className="grid grid-cols-2 gap-6">
-              {row}
-            </div>
-          ))}
+      <div className="w-full max-w-4xl mx-auto space-y-4 mb-10 px-6">
+        <CollapsibleSection title="Business Details" initialOpen={true}>
+          <div className="space-y-6 mt-4">
+            {[
+              ["BID Number", business.bidNumber],
+              ["Business Name", business.businessName],
+              ["Trade Name", business.businessNickname],
+              ["Business Type", business.businessType],
+              ["Business Address", business.businessAddress],
+              ["Request Type", business.requestType || "Sanitation"],
+              ["Status", business.status],
+              ["Contact Person", business.contactPerson],
+              ["Contact Number", business.contactNumber],
+              ["Landmark", business.landmark],
+              [
+                "Created",
+                business.createdAt
+                  ? new Date(business.createdAt).toLocaleString("en-PH")
+                  : "—",
+              ],
+              [
+                "Latest Update",
+                business.updatedAt
+                  ? new Date(business.updatedAt).toLocaleString("en-PH")
+                  : "—",
+              ],
+            ]
+              .reduce((rows, [label, value]) => {
+                const pair = (
+                  <div key={label} className="flex items-start gap-2">
+                    <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">
+                      {label}:
+                    </span>
+                    <span className="flex-1 min-h-[48px] bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
+                      {renderValue(value)}
+                    </span>
+                  </div>
+                );
+                const lastRow = rows[rows.length - 1];
+                if (!lastRow || lastRow.length === 2) rows.push([pair]);
+                else lastRow.push(pair);
+                return rows;
+              }, [])
+              .map((row, i) => (
+                <div key={i} className="grid grid-cols-2 gap-6">
+                  {row}
+                </div>
+              ))}
+          </div>
+        </CollapsibleSection>
       </div>
 
       <Divider className="my-10">
@@ -171,14 +176,17 @@ export default function VerifyOnlineRequestForm() {
         <CollapsibleDocList
           label="Business Documents"
           docs={business.businessDocuments}
+          initialOpen={true}
         />
         <CollapsibleDocList
           label="Permit Documents"
           docs={business.permitDocuments}
+          initialOpen={true}
         />
         <CollapsibleDocList
           label="Personnel & Health Docs"
           docs={business.personnelDocuments}
+          initialOpen={true}
         />
       </div>
 
@@ -193,6 +201,7 @@ export default function VerifyOnlineRequestForm() {
         <CollapsibleSection
           title="A. Sanitary Permit Checklist"
           count={business.sanitaryPermitChecklist?.length || 0}
+          initialOpen={true}
         >
           {business.sanitaryPermitChecklist?.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -215,6 +224,7 @@ export default function VerifyOnlineRequestForm() {
         <CollapsibleSection
           title="B. Health Certificate Checklist"
           count={business.healthCertificateChecklist?.length || 0}
+          initialOpen={true}
         >
           {business.healthCertificateChecklist?.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -235,7 +245,7 @@ export default function VerifyOnlineRequestForm() {
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="C. Minimum Sanitary Requirements (MSR)"
+          title="Minimum Sanitary Requirements (MSR)"
           count={business.msrChecklist?.length || 0}
         >
           {business.msrChecklist?.length > 0 ? (
@@ -271,55 +281,66 @@ export default function VerifyOnlineRequestForm() {
       </Divider>
 
       {/* Other Fields */}
-      <div className="w-full max-w-4xl mx-auto space-y-6 mb-10 mt-10">
-        {[
-          ["Health Cert Fee", business.healthCertFee],
-          ["Health Cert Sanitary Fee", business.healthCertSanitaryFee],
-          [
-            "OR Date (Health Cert)",
-            business.orDateHealthCert
-              ? new Date(business.orDateHealthCert).toLocaleDateString("en-PH")
-              : "—",
-          ],
-          ["OR Number (Health Cert)", business.orNumberHealthCert],
-          ["Inspection Status", business.inspectionStatus],
-          ["Inspection Count This Year", business.inspectionCountThisYear ?? 0],
-          ["Recorded Violation", business.recordedViolation],
-          ["Permit Status", business.permitStatus],
-        ]
-          .reduce((rows, [label, value]) => {
-            const pair = (
-              <div key={label} className="flex items-start gap-2">
-                <span className="min-w-[180px] text-sm font-semibold text-gray-700">
-                  {label}:
-                </span>
-                <span className="flex-1 bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded-md border border-gray-300">
-                  {renderValue(value)}
-                </span>
-              </div>
-            );
-            const lastRow = rows[rows.length - 1];
-            if (!lastRow || lastRow.length === 2) rows.push([pair]);
-            else lastRow.push(pair);
-            return rows;
-          }, [])
-          .map((row, i) => (
-            <div key={i} className="grid grid-cols-2 gap-6">
-              {row}
-            </div>
-          ))}
+      <div className="w-full max-w-4xl mx-auto space-y-4 mb-10 mt-10 px-6">
+        <CollapsibleSection title="Inspection & Finance Details">
+          <div className="space-y-6 mt-4">
+            {[
+              ["Health Cert Fee", business.healthCertFee],
+              ["Health Cert Sanitary Fee", business.healthCertSanitaryFee],
+              [
+                "OR Date (Health Cert)",
+                business.orDateHealthCert
+                  ? new Date(business.orDateHealthCert).toLocaleDateString(
+                      "en-PH",
+                    )
+                  : "—",
+              ],
+              ["OR Number (Health Cert)", business.orNumberHealthCert],
+              ["Inspection Status", business.inspectionStatus],
+              [
+                "Inspection Count This Year",
+                business.inspectionCountThisYear ?? 0,
+              ],
+              ["Recorded Violation", business.recordedViolation],
+              ["Permit Status", business.permitStatus],
+            ]
+              .reduce((rows, [label, value]) => {
+                const pair = (
+                  <div key={label} className="flex items-start gap-2">
+                    <span className="min-w-[180px] text-sm font-semibold text-gray-700 dark:text-slate-300">
+                      {label}:
+                    </span>
+                    <span className="flex-1 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
+                      {renderValue(value)}
+                    </span>
+                  </div>
+                );
+                const lastRow = rows[rows.length - 1];
+                if (!lastRow || lastRow.length === 2) rows.push([pair]);
+                else lastRow.push(pair);
+                return rows;
+              }, [])
+              .map((row, i) => (
+                <div key={i} className="grid grid-cols-2 gap-6">
+                  {row}
+                </div>
+              ))}
+          </div>
+        </CollapsibleSection>
       </div>
 
       {/* Previous Remarks */}
-      <div className="w-full max-w-4xl mx-auto mt-10">
-        <div className="flex items-start gap-2">
-          <span className="min-w-[140px] text-sm font-semibold text-gray-700">
-            Previous Remarks:
-          </span>
-          <span className="flex-1 min-h-[120px] whitespace-pre-line bg-gray-100 text-gray-800 px-3 py-2 rounded-md border border-gray-300 w-full">
-            {business.remarks || "None"}
-          </span>
-        </div>
+      <div className="w-full max-w-4xl mx-auto mt-4 px-6 mb-10">
+        <CollapsibleSection title="Previous Remarks">
+          <div className="flex items-start gap-2 mt-4">
+            <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">
+              Remarks Log:
+            </span>
+            <span className="flex-1 min-h-[120px] whitespace-pre-line bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600 w-full text-sm">
+              {business.remarks || "No previous remarks recorded."}
+            </span>
+          </div>
+        </CollapsibleSection>
       </div>
 
       {/* Officer Remarks Input */}
@@ -343,11 +364,26 @@ export default function VerifyOnlineRequestForm() {
         />
       </div>
 
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        open={showConfirm}
+        title="Move to Compliance?"
+        message="Are you sure you want to proceed? This will move the business request to the Compliance stage."
+        onConfirm={() => {
+          setShowConfirm(false);
+          handleUpdate();
+        }}
+        onCancel={() => setShowConfirm(false)}
+        confirmText="Yes, Proceed"
+        type="primary"
+        isLoading={isUpdating}
+      />
+
       {/* Buttons */}
       <div className="flex justify-center gap-4 mt-10">
         <Button
           variant="contained"
-          onClick={handleUpdate}
+          onClick={() => setShowConfirm(true)}
           disabled={isUpdating}
           startIcon={
             isUpdating && <CircularProgress size={16} color="inherit" />
