@@ -128,6 +128,31 @@ export async function POST(request) {
     personnelDocuments = [],
   } = await request.json();
 
+  const isBlankValue = (value) =>
+    value === null || value === undefined || value === "";
+  const toNullableNumber = (value) => {
+    if (isBlankValue(value)) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const toNullableDate = (value) => {
+    if (isBlankValue(value)) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const sanitaryPermitIssuedDate = toNullableDate(sanitaryPermitIssuedAt);
+  const orDateHealthCertValue = toNullableDate(orDateHealthCert);
+  const healthCertSanitaryFeeValue = toNullableNumber(healthCertSanitaryFee);
+  const healthCertFeeValue = toNullableNumber(healthCertFee);
+  const declaredPersonnelValue = toNullableNumber(declaredPersonnel);
+  const declaredPersonnelDueDateValue = toNullableDate(declaredPersonnelDueDate);
+  const healthCertificatesValue = toNullableNumber(healthCertificates);
+  const healthCertBalanceToComplyValue = toNullableNumber(
+    healthCertBalanceToComply,
+  );
+  const healthCertDueDateValue = toNullableDate(healthCertDueDate);
+
 
   const noRequestStatus = status || "draft";
 
@@ -172,7 +197,8 @@ export async function POST(request) {
   if (remarks) businessQuery.remarks = remarks;
   if (noRequestStatus) businessQuery.status = noRequestStatus;
   if (requirements) businessQuery.requirements = requirements;
-  if (sanitaryPermitIssuedAt) businessQuery.sanitaryPermitIssuedAt = new Date(sanitaryPermitIssuedAt);
+  if (sanitaryPermitIssuedDate)
+    businessQuery.sanitaryPermitIssuedAt = sanitaryPermitIssuedDate;
 
   if (sanitaryPermitChecklist?.length > 0)
     businessQuery.sanitaryPermitChecklist = sanitaryPermitChecklist;
@@ -184,16 +210,21 @@ export async function POST(request) {
     businessQuery.msrChecklist = msrChecklist;
 
 
-  if (orDateHealthCert) businessQuery.orDateHealthCert = new Date(orDateHealthCert);
+  if (orDateHealthCertValue) businessQuery.orDateHealthCert = orDateHealthCertValue;
   if (orNumberHealthCert) businessQuery.orNumberHealthCert = orNumberHealthCert;
-  if (typeof healthCertSanitaryFee === "number") businessQuery.healthCertSanitaryFee = healthCertSanitaryFee;
-  if (typeof healthCertFee === "number") businessQuery.healthCertFee = healthCertFee;
+  if (healthCertSanitaryFeeValue !== null)
+    businessQuery.healthCertSanitaryFee = healthCertSanitaryFeeValue;
+  if (healthCertFeeValue !== null) businessQuery.healthCertFee = healthCertFeeValue;
 
-  if (declaredPersonnel !== null) businessQuery.declaredPersonnel = declaredPersonnel;
-  if (declaredPersonnelDueDate) businessQuery.declaredPersonnelDueDate = new Date(declaredPersonnelDueDate);
-  if (healthCertificates !== null) businessQuery.healthCertificates = healthCertificates;
-  if (healthCertBalanceToComply !== null) businessQuery.healthCertBalanceToComply = healthCertBalanceToComply;
-  if (healthCertDueDate) businessQuery.healthCertDueDate = new Date(healthCertDueDate);
+  if (declaredPersonnelValue !== null)
+    businessQuery.declaredPersonnel = declaredPersonnelValue;
+  if (declaredPersonnelDueDateValue)
+    businessQuery.declaredPersonnelDueDate = declaredPersonnelDueDateValue;
+  if (healthCertificatesValue !== null)
+    businessQuery.healthCertificates = healthCertificatesValue;
+  if (healthCertBalanceToComplyValue !== null)
+    businessQuery.healthCertBalanceToComply = healthCertBalanceToComplyValue;
+  if (healthCertDueDateValue) businessQuery.healthCertDueDate = healthCertDueDateValue;
 
   if (businessDocuments?.length > 0) businessQuery.businessDocuments = businessDocuments;
   if (permitDocuments?.length > 0) businessQuery.permitDocuments = permitDocuments;

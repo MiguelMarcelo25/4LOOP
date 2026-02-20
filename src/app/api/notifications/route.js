@@ -2,8 +2,6 @@ import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import Notification from "@/models/Notification";
 import { getSession } from "@/lib/Auth";
-import Ticket from "@/models/Ticket";
-import Business from "@/models/Business";
 
 // 🔵 POST — create a new notification (used by officer actions)
 export async function POST(request) {
@@ -81,11 +79,41 @@ export async function GET() {
 export async function PATCH(request) {
   await connectMongoDB();
 
-  try {
-    const { id } = await request.json();
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    const notif = await Notification.findByIdAndUpdate(
-      id,
+  const { role, id: userId } = session.user;
+  if (role !== "business") {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { id, all = false } = body;
+
+    if (all) {
+      const result = await Notification.updateMany(
+        { user: userId, isDeleted: false, isRead: false },
+        { $set: { isRead: true } }
+      );
+
+      return NextResponse.json(
+        {
+          msg: "All notifications marked as read",
+          modifiedCount: result.modifiedCount,
+        },
+        { status: 200 }
+      );
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing notification ID" }, { status: 400 });
+    }
+
+    const notif = await Notification.findOneAndUpdate(
+      { _id: id, user: userId, isDeleted: false },
       { isRead: true },
       { new: true }
     );
@@ -125,7 +153,24 @@ export async function DELETE(request) {
   }
 
   try {
-    const { id } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const { id, all = false } = body;
+
+    if (all) {
+      const result = await Notification.updateMany(
+        { user: userId, isDeleted: false },
+        { $set: { isDeleted: true } }
+      );
+
+      return NextResponse.json(
+        {
+          msg: "All notifications deleted successfully",
+          modifiedCount: result.modifiedCount,
+        },
+        { status: 200 }
+      );
+    }
+
     if (!id) {
       return NextResponse.json({ error: "Missing notification ID" }, { status: 400 });
     }

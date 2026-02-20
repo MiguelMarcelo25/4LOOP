@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as yup from "yup";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -215,6 +215,7 @@ const fileToBase64 = (file) =>
 
 export default function NewSanitationForm({ initialData, readOnly = false }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [warningMessage, setWarningMessage] = useState("");
   const [sanitaryPermitChecklistState, setSanitaryPermitChecklistState] =
@@ -226,6 +227,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   const [canSubmit, setCanSubmit] = useState(true);
   const [isPersonnelCountLocked, setIsPersonnelCountLocked] = useState(false);
   const [submitReady, setSubmitReady] = useState(false);
+  const [isDraftLoading, setIsDraftLoading] = useState(false);
 
   // Multi-step wizard state
   const [activeStep, setActiveStep] = useState(0);
@@ -269,6 +271,89 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   // 🧹 Clear form + reset state whenever bidNumber changes or is cleared
   const prevBidNumber = useRef(null);
   const isResettingRef = useRef(false);
+  const draftLoadedRef = useRef(false);
+
+  // 📝 Load draft data when ?draft=ID is present in the URL
+  useEffect(() => {
+    const draftId = searchParams?.get("draft");
+    if (!draftId || draftLoadedRef.current) return;
+
+    const loadDraft = async () => {
+      setIsDraftLoading(true);
+      try {
+        const res = await fetch("/api/officer");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const all = await res.json();
+        const draft = Array.isArray(all)
+          ? all.find((r) => r._id === draftId)
+          : null;
+
+        if (!draft) {
+          console.warn("🟡 Draft not found:", draftId);
+          return;
+        }
+
+        draftLoadedRef.current = true;
+        isResettingRef.current = true; // prevent the bidNumber change effect from clearing the form
+
+        // ✅ Set bidNumber first (this triggers businessData fetch)
+        setValue("bidNumber", draft.bidNumber || "");
+        prevBidNumber.current = draft.bidNumber || "";
+
+        // ✅ Fill base fields
+        if (draft.requestType) setValue("requestType", draft.requestType);
+        if (draft.businessName) setValue("businessName", draft.businessName);
+        if (draft.businessNickname) setValue("businessNickname", draft.businessNickname);
+        if (draft.businessType) setValue("businessType", draft.businessType);
+        if (draft.businessAddress) setValue("businessAddress", draft.businessAddress);
+        if (draft.businessEstablishment) setValue("businessEstablishment", draft.businessEstablishment);
+        if (draft.landmark) setValue("landmark", draft.landmark);
+        if (draft.contactPerson) setValue("contactPerson", draft.contactPerson);
+        if (draft.contactNumber) setValue("contactNumber", draft.contactNumber);
+        if (draft.remarks) setValue("remarks", draft.remarks);
+
+        // ✅ Personnel & health cert fields
+        if (draft.declaredPersonnel != null) setValue("declaredPersonnel", draft.declaredPersonnel);
+        if (draft.declaredPersonnelDueDate) setValue("declaredPersonnelDueDate", formatDateForInput(draft.declaredPersonnelDueDate));
+        if (draft.healthCertificates != null) setValue("healthCertificates", draft.healthCertificates);
+        if (draft.healthCertBalanceToComply != null) setValue("healthCertBalanceToComply", draft.healthCertBalanceToComply);
+        if (draft.healthCertDueDate) setValue("healthCertDueDate", formatDateForInput(draft.healthCertDueDate));
+        if (draft.orNumberHealthCert) setValue("orNumberHealthCert", draft.orNumberHealthCert);
+        if (draft.orDateHealthCert) setValue("orDateHealthCert", formatDateForInput(draft.orDateHealthCert));
+        if (draft.healthCertFee != null) setValue("healthCertFee", draft.healthCertFee);
+        if (draft.healthCertSanitaryFee != null) setValue("healthCertSanitaryFee", draft.healthCertSanitaryFee);
+
+        // ✅ Checklists
+        if (draft.sanitaryPermitChecklist?.length > 0) {
+          setSanitaryPermitChecklistState(draft.sanitaryPermitChecklist.map((i) => i.id));
+        }
+        if (draft.healthCertificateChecklist?.length > 0) {
+          setHealthCertificateChecklistState(draft.healthCertificateChecklist[0]?.id || "");
+        }
+        if (draft.msrChecklist?.length > 0) {
+          setMsrChecklistState(draft.msrChecklist.map((i) => i.id));
+          draft.msrChecklist.forEach((item) => {
+            setValue(`msrChecklist.${item.id}.selected`, true);
+            setValue(`msrChecklist.${item.id}.label`, item.label || "");
+            if (item.dueDate) setValue(`msrChecklist.${item.id}.dueDate`, formatDateForInput(item.dueDate));
+          });
+        }
+
+        // ✅ Documents
+        if (Array.isArray(draft.businessDocuments)) setValue("businessDocs", draft.businessDocuments);
+        if (Array.isArray(draft.permitDocuments)) setValue("permitDocs", draft.permitDocuments);
+        if (Array.isArray(draft.personnelDocuments)) setValue("personnelDocs", draft.personnelDocuments);
+
+        console.log("✅ Draft loaded and form pre-filled:", draft.bidNumber);
+      } catch (err) {
+        console.error("❌ Failed to load draft:", err);
+      } finally {
+        setIsDraftLoading(false);
+      }
+    };
+
+    loadDraft();
+  }, [searchParams, setValue, setSanitaryPermitChecklistState, setHealthCertificateChecklistState, setMsrChecklistState]);
 
   useEffect(() => {
     // Skip initial render
@@ -492,10 +577,16 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
   // Structured error throwing
   const updateBusinessRequest = async (data) => {
+    const toNullableNumber = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
     // 🔄 Convert File objects to Base64; pass through already-saved docs as-is
     const convertDocs = async (docs) =>
       Promise.all(
-        (docs || []).map(async (f) => {
+        (Array.isArray(docs) ? docs : []).map(async (f) => {
           if (f instanceof File) {
             // New file selected by user — convert to Base64
             return { name: f.name, url: await fileToBase64(f) };
@@ -512,33 +603,37 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         convertDocs(data.personnelDocs),
       ]);
 
+    const requestPayload = {
+      newBidNumber: data.bidNumber,
+      newRequestType: data.requestType,
+      newBusinessName: data.businessName,
+      newBusinessAddress: data.businessAddress,
+      newBusinessEstablishment: data.businessEstablishment,
+      newStatus: data.status,
+      orDateHealthCert: data.orDateHealthCert || null,
+      orNumberHealthCert: data.orNumberHealthCert || null,
+      healthCertSanitaryFee: toNullableNumber(data.healthCertSanitaryFee),
+      healthCertFee: toNullableNumber(data.healthCertFee),
+      sanitaryPermitChecklist: data.sanitaryPermitChecklist,
+      healthCertificateChecklist: data.healthCertificateChecklist,
+      msrChecklist: data.msrChecklist,
+      declaredPersonnel: toNullableNumber(data.declaredPersonnel),
+      declaredPersonnelDueDate: data.declaredPersonnelDueDate || null,
+      healthCertificates: toNullableNumber(data.healthCertificates),
+      healthCertBalanceToComply: toNullableNumber(
+        data.healthCertBalanceToComply,
+      ),
+      healthCertDueDate: data.healthCertDueDate || null,
+      newRemarks: data.remarks || "",
+      businessDocuments,
+      permitDocuments,
+      personnelDocuments,
+    };
+
     const res = await fetch(`/api/business/${data.bidNumber}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        newBidNumber: data.bidNumber,
-        newRequestType: data.requestType,
-        newBusinessName: data.businessName,
-        newBusinessAddress: data.businessAddress,
-        newBusinessEstablishment: data.businessEstablishment,
-        newStatus: data.status,
-        orDateHealthCert: data.orDateHealthCert || null,
-        orNumberHealthCert: data.orNumberHealthCert || null,
-        healthCertSanitaryFee: data.healthCertSanitaryFee || null,
-        healthCertFee: data.healthCertFee || null,
-        sanitaryPermitChecklist: data.sanitaryPermitChecklist,
-        healthCertificateChecklist: data.healthCertificateChecklist,
-        msrChecklist: data.msrChecklist,
-        declaredPersonnel: data.declaredPersonnel || null,
-        declaredPersonnelDueDate: data.declaredPersonnelDueDate || null,
-        healthCertificates: data.healthCertificates || null,
-        healthCertBalanceToComply: data.healthCertBalanceToComply || null,
-        healthCertDueDate: data.healthCertDueDate || null,
-        newRemarks: data.remarks || "",
-        businessDocuments,
-        permitDocuments,
-        personnelDocuments,
-      }),
+      body: JSON.stringify(requestPayload),
     });
 
     const payload = await res.json();
@@ -555,7 +650,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   const { mutate, isLoading } = useMutation({
     mutationFn: updateBusinessRequest,
 
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries(["business", data.business.bidNumber]);
       reset();
       setSanitaryPermitChecklistState([]);
@@ -564,7 +659,11 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       clearMsrSelectionsButKeepDueDates(msrChecklist, setValue); // ✅ keep due dates intact
       setWarningMessage("");
 
-      router.push("/businessaccount/businesses/businesslist");
+      if (variables?.status === "draft") {
+        router.push("/businessaccount/request/draftrequests");
+      } else {
+        router.push("/businessaccount/businesses/businesslist");
+      }
     },
 
     onError: (err) => {
@@ -607,6 +706,42 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     }
   };
 
+  const buildChecklistPayloads = (formData) => {
+    const sanitaryPermitChecklistPayload = sanitaryPermitChecklistState.map(
+      (id) => {
+        const def = sanitaryPermitChecklist.find((item) => item.id === id);
+        return { id, label: def?.label || id };
+      },
+    );
+
+    const healthCertificateChecklistPayload = healthCertificateChecklistState
+      ? (() => {
+          const def = healthCertificateChecklist.find(
+            (item) => item.id === healthCertificateChecklistState,
+          );
+          return [
+            {
+              id: def?.id,
+              label: def?.label || healthCertificateChecklistState,
+            },
+          ];
+        })()
+      : [];
+
+    const msrChecklistPayload = Object.entries(formData.msrChecklist || {})
+      .filter(([_, val]) => val.selected)
+      .map(([id, val]) => {
+        const def = msrChecklist.find((item) => item.id === id);
+        return { id, label: def?.label || id, dueDate: val.dueDate || null };
+      });
+
+    return {
+      sanitaryPermitChecklistPayload,
+      healthCertificateChecklistPayload,
+      msrChecklistPayload,
+    };
+  };
+
   const onSubmit = async (data) => {
     // Prevent accidental submission on earlier steps (e.g. Enter key)
     if (activeStep !== steps.length - 1) {
@@ -631,33 +766,11 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       );
     }
 
-    const sanitaryPermitChecklistPayload = sanitaryPermitChecklistState.map(
-      (id) => {
-        const def = sanitaryPermitChecklist.find((item) => item.id === id);
-        return { id, label: def?.label || id };
-      },
-    );
-
-    const healthCertificateChecklistPayload = healthCertificateChecklistState
-      ? (() => {
-          const def = healthCertificateChecklist.find(
-            (item) => item.id === healthCertificateChecklistState,
-          );
-          return [
-            {
-              id: def?.id,
-              label: def?.label || healthCertificateChecklistState,
-            },
-          ];
-        })()
-      : [];
-
-    const msrChecklistPayload = Object.entries(data.msrChecklist || {})
-      .filter(([_, val]) => val.selected)
-      .map(([id, val]) => {
-        const def = msrChecklist.find((item) => item.id === id);
-        return { id, label: def?.label || id, dueDate: val.dueDate || null };
-      });
+    const {
+      sanitaryPermitChecklistPayload,
+      healthCertificateChecklistPayload,
+      msrChecklistPayload,
+    } = buildChecklistPayloads(data);
 
     mutate({
       ...data,
@@ -680,7 +793,20 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
   };
 
   const handleSaveDraft = () => {
-    mutate({ ...getValues(), status: "draft" });
+    const values = getValues();
+    const {
+      sanitaryPermitChecklistPayload,
+      healthCertificateChecklistPayload,
+      msrChecklistPayload,
+    } = buildChecklistPayloads(values);
+
+    mutate({
+      ...values,
+      status: "draft",
+      sanitaryPermitChecklist: sanitaryPermitChecklistPayload,
+      healthCertificateChecklist: healthCertificateChecklistPayload,
+      msrChecklist: msrChecklistPayload,
+    });
   };
 
   const handleClear = () => {
@@ -1084,6 +1210,17 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      {/* Draft loading overlay */}
+      <Backdrop
+        open={isDraftLoading}
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1, flexDirection: "column", gap: 2 }}
+      >
+        <CircularProgress color="inherit" />
+        <Typography variant="body1" sx={{ color: "white", fontWeight: 600 }}>
+          Loading draft...
+        </Typography>
+      </Backdrop>
+
       {warningMessage && (
         <Collapse in={!!warningMessage}>
           <Alert
@@ -1656,14 +1793,28 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-6 border border-blue-100 dark:border-blue-800/30">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                          <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                            Total Declared Personnel
-                          </label>
-                          <input
+                          <RHFTextField
+                            control={control}
+                            name="declaredPersonnel"
                             type="number"
-                            {...register("declaredPersonnel")}
-                            className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            variant="outlined"
+                            label="Total Declared Personnel"
                             placeholder="0"
+                            fullWidth
+                            size="small"
+                            InputLabelProps={{ className: "dark:text-slate-300" }}
+                            InputProps={{
+                              className:
+                                "dark:text-slate-200 dark:bg-slate-700/50",
+                            }}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val))
+                                setValue("declaredPersonnel", val, {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                });
+                            }}
                           />
                         </div>
                         <div className="space-y-2">
@@ -1672,6 +1823,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                             name="declaredPersonnelDueDate"
                             label="Due Date to Comply"
                             fullWidth
+                            size="small"
                             placeholder="Select due date"
                           />
                         </div>
@@ -1683,33 +1835,54 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                     {/* Section 2: Health Certificates */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase h-8 flex items-end">
-                          Total with Health Certs
-                        </label>
-                        <input
+                        <RHFTextField
+                          control={control}
+                          name="healthCertificates"
                           type="number"
-                          {...register("healthCertificates")}
-                          className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          variant="outlined"
+                          label="Total with Health Certs"
                           placeholder="0"
+                          fullWidth
+                          size="small"
+                          InputLabelProps={{ className: "dark:text-slate-300" }}
+                          InputProps={{
+                            className:
+                              "dark:text-slate-200 dark:bg-slate-700/50",
+                          }}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val))
+                              setValue("healthCertificates", val, {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              });
+                          }}
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase h-8 flex items-end">
-                          Balance to Comply
-                        </label>
-                        <input
-                          type="text"
-                          {...register("healthCertBalanceToComply")}
-                          className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        <RHFTextField
+                          control={control}
+                          name="healthCertBalanceToComply"
+                          type="number"
+                          variant="outlined"
+                          label="Balance to Comply"
                           placeholder="0.00"
+                          fullWidth
+                          size="small"
+                          InputLabelProps={{ className: "dark:text-slate-300" }}
+                          InputProps={{
+                            className:
+                              "dark:text-slate-200 dark:bg-slate-700/50",
+                          }}
+                          inputProps={{ step: "0.01" }}
                           onBlur={(e) => {
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val))
                               setValue(
                                 "healthCertBalanceToComply",
-                                val.toFixed(2),
-                                { shouldValidate: true },
+                                Number(val.toFixed(2)),
+                                { shouldValidate: true, shouldDirty: true },
                               );
                           }}
                         />

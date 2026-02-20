@@ -100,51 +100,49 @@ export default function OfficerDashboardForm() {
   return (  
     <Box className="animate-in fade-in duration-700">
       {/* Header Section */}
-      <Box mb={6}>
-        <div className="font-black tracking-tight text-2xl text-slate-800 dark:text-white mb-2">
+      <Box mb={3}>
+        <div className="font-black tracking-tight text-xl text-slate-800 dark:text-white mb-1">
           Dashboard
         </div>
-        <div className="text-slate-500 text-2xl dark:text-slate-400 font-medium">
+        <div className="text-slate-500 text-base dark:text-slate-400 font-medium">
           Welcome back, <span className="text-blue-600 dark:text-blue-400 font-bold">{loggedUser?.fullName || 'Officer'}</span>. 
-          Here's what's happening today.
         </div>
       </Box>
 
       {/* Hero Stats Summary */}
       <Box 
-        mb={8} 
-        p={4} 
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-2xl shadow-blue-500/20"
+        mb={4} 
+        p={3} 
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl shadow-blue-500/10"
       >
-        <div className="absolute top-0 right-0 -m-12 opacity-10">
-          <MdWork size={300} className="text-white" />
+        <div className="absolute top-0 right-0 -m-8 opacity-10">
+          <MdWork size={200} className="text-white" />
         </div>
-        <Stack  direction={{ xs: 'column', md: 'row' }} spacing={4} alignItems="center" justifyContent="space-between">
+        <Stack direction={{ xs: 'row', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
            <Box>
-              <Typography variant="h4" className="text-white font-bold mb-1">
+              <Typography variant="h5" className="text-white font-bold mb-0.5">
                 {activeCount} Active Requests
               </Typography>
-              <Typography variant="body1" className="text-blue-100/80 font-medium">
-                You have pending tasks requiring your immediate attention.
+              <Typography variant="body2" className="text-blue-100/80 font-medium">
+                Tasks requiring attention.
               </Typography>
            </Box>
-           {/* <button className="px-8 py-3 bg-white text-blue-700 rounded-2xl font-bold shadow-xl hover:scale-105 transition-transform">
-              View All Tasks
-           </button> */}
         </Stack>
       </Box>
     
       {/* Detailed Stats Grid */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
+      <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3'>
         {stats.map((stat, index) => (
           <div key={index} className='flex w-full'>
             <Card 
               elevation={0} 
               sx={{ 
                 width: '100%',
+                maxWidth: '280px',
+                mx: 'auto',
                 display: 'flex',
                 flexDirection: "column",
-                borderRadius: 6,
+                borderRadius: 4,
                 backgroundColor: (theme) => 
                   theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.6)' : 'rgba(255, 255, 255, 0.7)',
                 backdropFilter: 'blur(12px)',
@@ -153,11 +151,11 @@ export default function OfficerDashboardForm() {
                   theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': { 
-                  transform: 'translateY(-10px)',
+                  transform: 'translateY(-5px)',
                   boxShadow: (theme) => 
                     theme.palette.mode === 'dark' 
-                      ? `0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2)`
-                      : `0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)`,
+                      ? `0 10px 15px -3px rgba(0, 0, 0, 0.4)`
+                      : `0 10px 15px -3px rgba(0, 0, 0, 0.1)`,
                   borderColor: stat.color,
                   backgroundColor: (theme) => 
                     theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
@@ -165,28 +163,33 @@ export default function OfficerDashboardForm() {
               }}
             >
               <CardActionArea onClick={() => router.push(stat.path)} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                <CardContent sx={{ p: 4, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <Stack spacing={3}>
+                <CardContent sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Stack spacing={1.5}>
                   <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                     <Box sx={{ 
                       color: stat.color, 
-                      p: 1.5, 
+                      p: 1, 
                       backgroundColor: stat.bg, 
-                      borderRadius: 4,
-                      boxShadow: `0 8px 16px -4px ${stat.color}40`
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}>
-                      {stat.icon}
+                      {/* Scale icon size for mobile */}
+                      <Box sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                        {stat.icon}
+                      </Box>
                     </Box>
                     <Box textAlign="right">
-                      <Typography variant="h3" className="font-black text-slate-800 dark:text-white leading-none">
+                      <Typography variant="h5" className="font-black text-slate-800 dark:text-white leading-none">
                         {stat.count}
                       </Typography>
-                      <Typography variant="caption" className="text-slate-400 font-bold uppercase tracking-tighter">
+                      <Typography variant="caption" className="text-slate-400 font-bold uppercase tracking-tighter" sx={{ fontSize: '0.65rem' }}>
                         Total
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="body1" className="font-bold text-slate-600 dark:text-slate-300">
+                  <Typography variant="body2" className="font-bold text-slate-600 dark:text-slate-300 line-clamp-1">
                     {stat.label}
                   </Typography>
                 </Stack>

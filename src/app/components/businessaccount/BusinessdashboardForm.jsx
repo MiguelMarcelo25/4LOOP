@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   HiBell,
@@ -102,6 +102,17 @@ const statusLabels = {
   completed: "Approved",
 };
 
+function sameNotificationList(prev, next) {
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i++) {
+    if (prev[i]?._id !== next[i]?._id) return false;
+    if (prev[i]?.isRead !== next[i]?.isRead) return false;
+    if (prev[i]?.isDeleted !== next[i]?.isDeleted) return false;
+    if (prev[i]?.updatedAt !== next[i]?.updatedAt) return false;
+  }
+  return true;
+}
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 export default function DashboardForm() {
@@ -109,9 +120,30 @@ export default function DashboardForm() {
   const [error, setError] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [notificationFilter, setNotificationFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const open = Boolean(anchorEl);
+
+  const fetchNotifications = useCallback(async ({ showLoader = false } = {}) => {
+    try {
+      if (showLoader) setLoading(true);
+      const res = await fetch("/api/notifications");
+      const data = await res.json();
+      if (res.ok) {
+        const nextNotifications = (data.notifications || []).sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        );
+        setNotifications((prev) =>
+          sameNotificationList(prev, nextNotifications) ? prev : nextNotifications,
+        );
+      }
+    } catch (err) {
+      console.error("Notification fetch error:", err);
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  }, []);
 
   // ── fetch user ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -140,35 +172,30 @@ export default function DashboardForm() {
     })();
   }, []);
 
-  // ── fetch notifications ───────────────────────────────────────────────────
+  // ── initial notification fetch ────────────────────────────────────────────
   useEffect(() => {
     const userId =
       sessionStorage.getItem("userId") || localStorage.getItem("loggedUserId");
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-    const fetchNotifications = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/notifications");
-        const data = await res.json();
-        if (res.ok) {
-          setNotifications(
-            (data.notifications || []).sort(
-              (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-            ),
-          );
-        }
-      } catch (err) {
-        console.error("Notification fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchNotifications({ showLoader: true });
+  }, [fetchNotifications]);
 
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000);
+  // ── background polling (paused while menu is open) ───────────────────────
+  useEffect(() => {
+    const userId =
+      sessionStorage.getItem("userId") || localStorage.getItem("loggedUserId");
+    if (!userId || open) return;
+
+    const interval = setInterval(
+      () => fetchNotifications({ showLoader: false }),
+      10000,
+    );
     return () => clearInterval(interval);
-  }, []);
+  }, [open, fetchNotifications]);
 
   // ── fetch businesses ──────────────────────────────────────────────────────
   const {
@@ -195,12 +222,58 @@ export default function DashboardForm() {
     valid: businesses.filter((b) => b.status === "released").length,
     expired: businesses.filter((b) => b.status === "expired").length,
   };
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const readCount = notifications.length - unreadCount;
+  const filteredNotifications = notifications.filter((notif) => {
+    if (notificationFilter === "read") return notif.isRead;
+    if (notificationFilter === "unread") return !notif.isRead;
+    return true;
+  });
 
   // ── notification handlers ─────────────────────────────────────────────────
-  const handleBellClick = (e) => setAnchorEl(e.currentTarget);
+  const handleBellClick = async (e) => {
+    setAnchorEl(e.currentTarget);
+    await fetchNotifications({ showLoader: false });
+  };
   const handleMenuClose = () => setAnchorEl(null);
 
-  const handleNotificationClick = (notif) => {
+  const handleMarkAsRead = async (id) => {
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
+        );
+      }
+    } catch (err) {
+      console.error("Mark as read error:", err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      });
+      if (res.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      }
+    } catch (err) {
+      console.error("Mark all as read error:", err);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) {
+      await handleMarkAsRead(notif._id);
+    }
+
     handleMenuClose();
     if (notif.link) {
       router.push(notif.link);
@@ -224,6 +297,19 @@ export default function DashboardForm() {
       if (res.ok) setNotifications((prev) => prev.filter((n) => n._id !== id));
     } catch (err) {
       console.error("Delete error:", err);
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      });
+      if (res.ok) setNotifications([]);
+    } catch (err) {
+      console.error("Delete all error:", err);
     }
   };
 
@@ -252,7 +338,7 @@ export default function DashboardForm() {
             sx={{ transform: "scale(1.2)" }}
             className="dark:text-blue-400"
           >
-            <Badge badgeContent={notifications.length} color="error">
+            <Badge badgeContent={unreadCount} color="error">
               <HiBell size={30} />
             </Badge>
           </IconButton>
@@ -272,49 +358,158 @@ export default function DashboardForm() {
               </MenuItem>
             ) : notifications.length === 0 ? (
               <MenuItem className="dark:text-slate-200 text-sm">
-                No new notifications
+                No notifications
               </MenuItem>
             ) : (
-              notifications.map((notif, i) => (
+              [
                 <MenuItem
-                  key={i}
+                  key="notification-categories"
+                  disableRipple
+                  onClick={(e) => e.stopPropagation()}
                   sx={{
-                    whiteSpace: "normal",
-                    lineHeight: 1.5,
-                    fontSize: "0.9rem",
-                    py: 1.5,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
+                    py: 1,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
                   }}
-                  className="hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
-                  <div
-                    className="flex-1 cursor-pointer"
-                    onClick={() => handleNotificationClick(notif)}
-                  >
-                    {notif.business?.businessName && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
-                        {notif.business.businessName}
-                      </div>
-                    )}
-                    <strong className="block mb-0.5 text-gray-800 dark:text-gray-200">
-                      {statusLabels[notif.status] || "Notification"}
-                    </strong>
-                    <span className="text-gray-700 dark:text-gray-300 text-sm">
-                      {notif.message || "New update available"}
-                    </span>
+                  <div className="w-full flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNotificationFilter("all")}
+                      className={`px-2 py-1 text-xs rounded border ${
+                        notificationFilter === "all"
+                          ? "bg-slate-100 border-slate-300 text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
+                      }`}
+                    >
+                      All ({notifications.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNotificationFilter("unread")}
+                      className={`px-2 py-1 text-xs rounded border ${
+                        notificationFilter === "unread"
+                          ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300"
+                          : "border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                      }`}
+                    >
+                      Unread ({unreadCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNotificationFilter("read")}
+                      className={`px-2 py-1 text-xs rounded border ${
+                        notificationFilter === "read"
+                          ? "bg-green-50 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300"
+                          : "border-green-200 text-green-600 hover:bg-green-50 dark:border-green-900 dark:text-green-300 dark:hover:bg-green-900/20"
+                      }`}
+                    >
+                      Read ({readCount})
+                    </button>
                   </div>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDeleteNotification(notif._id)}
-                    sx={{ ml: 1 }}
-                    className="dark:text-gray-400 dark:hover:text-white"
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </MenuItem>
-              ))
+                </MenuItem>,
+                <MenuItem
+                  key="notification-actions"
+                  disableRipple
+                  onClick={(e) => e.stopPropagation()}
+                  sx={{
+                    py: 1,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <div className="w-full flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleMarkAllAsRead}
+                      disabled={unreadCount === 0}
+                      className="px-2 py-1 text-xs rounded border border-blue-200 text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                    >
+                      Mark all read
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteAllNotifications}
+                      disabled={notifications.length === 0}
+                      className="px-2 py-1 text-xs rounded border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20"
+                    >
+                      Delete all
+                    </button>
+                  </div>
+                </MenuItem>,
+                ...(filteredNotifications.length === 0
+                  ? [
+                      <MenuItem
+                        key="no-filtered-notifications"
+                        className="dark:text-slate-200 text-sm"
+                      >
+                        No {notificationFilter} notifications
+                      </MenuItem>,
+                    ]
+                  : filteredNotifications.map((notif) => (
+                      <MenuItem
+                        key={notif._id}
+                        sx={{
+                          whiteSpace: "normal",
+                          lineHeight: 1.5,
+                          fontSize: "0.9rem",
+                          py: 1.5,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                        }}
+                        className={`hover:bg-gray-100 dark:hover:bg-slate-700 ${
+                          notif.isRead ? "opacity-80" : ""
+                        }`}
+                      >
+                        <div
+                          className="flex-1 cursor-pointer"
+                          onClick={() => handleNotificationClick(notif)}
+                        >
+                          {notif.business?.businessName && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                              {notif.business.businessName}
+                            </div>
+                          )}
+                          <strong className="block mb-0.5 text-gray-800 dark:text-gray-200">
+                            {!notif.isRead && (
+                              <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />
+                            )}
+                            {notif.title ||
+                              statusLabels[notif.status] ||
+                              "Notification"}
+                          </strong>
+                          <span className="text-gray-700 dark:text-gray-300 text-sm">
+                            {notif.message || "New update available"}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 ml-2">
+                          {!notif.isRead && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkAsRead(notif._id);
+                              }}
+                              className="text-[11px] text-blue-600 hover:underline dark:text-blue-300"
+                            >
+                              Mark read
+                            </button>
+                          )}
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteNotification(notif._id);
+                            }}
+                            className="dark:text-gray-400 dark:hover:text-white"
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </div>
+                      </MenuItem>
+                    ))),
+              ]
             )}
           </Menu>
         </div>

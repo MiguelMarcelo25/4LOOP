@@ -50,10 +50,10 @@ export async function GET(request, { params }) {
 
     // ✅ Populate officer info if assigned
     // ✅ Populate both officer and business owner info (email + name)
-let populatedBusiness = await Business.populate(business, [
-  { path: "officerInCharge", select: "fullName email" },
-  { path: "businessAccount", select: "email" },
-]);
+    let populatedBusiness = await Business.populate(business, [
+      { path: "officerInCharge", select: "fullName email" },
+      { path: "businessAccount", select: "email" },
+    ]);
 
 
     const currentYear = new Date().getFullYear();
@@ -113,8 +113,8 @@ let populatedBusiness = await Business.populate(business, [
       { status: 500 }
     );
   }
-  
-} 
+
+}
 export async function PUT(request, { params }) {
   await connectMongoDB();
 
@@ -126,10 +126,34 @@ export async function PUT(request, { params }) {
   const { id } = await params;
   const { id: userId, role } = session.user;
   const body = await request.json();
+  const updateFields = {};
+  const hasBodyKey = (key) => Object.prototype.hasOwnProperty.call(body, key);
+  const isBlankValue = (value) =>
+    value === null || value === undefined || value === "";
+  const toNullableNumber = (value) => {
+    if (isBlankValue(value)) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const toNullableDate = (value) => {
+    if (isBlankValue(value)) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const assignNullableNumber = (sourceKey, targetKey = sourceKey) => {
+    if (!hasBodyKey(sourceKey)) return;
+    const raw = body[sourceKey];
+    const parsed = toNullableNumber(raw);
+    if (parsed !== null || isBlankValue(raw)) updateFields[targetKey] = parsed;
+  };
+  const assignNullableDate = (sourceKey, targetKey = sourceKey) => {
+    if (!hasBodyKey(sourceKey)) return;
+    const raw = body[sourceKey];
+    const parsed = toNullableDate(raw);
+    if (parsed || isBlankValue(raw)) updateFields[targetKey] = parsed;
+  };
 
   console.log("🧾 PUT BODY RECEIVED:", JSON.stringify(body, null, 2));
-
-  const updateFields = {};
 
   // 🔹 Basic business info
   if (body.newRequestType) updateFields.requestType = body.newRequestType;
@@ -151,19 +175,21 @@ export async function PUT(request, { params }) {
   if (body.officerInCharge) updateFields.officerInCharge = body.officerInCharge;
 
   // 🔹 Fee & date fields
-  if (body.orDateHealthCert) updateFields.orDateHealthCert = new Date(body.orDateHealthCert);
-  if (body.orNumberHealthCert) updateFields.orNumberHealthCert = body.orNumberHealthCert;
-  if (typeof body.healthCertSanitaryFee === "number") updateFields.healthCertSanitaryFee = body.healthCertSanitaryFee;
-  if (typeof body.healthCertFee === "number") updateFields.healthCertFee = body.healthCertFee;
-  if (typeof body.declaredPersonnel === "number") updateFields.declaredPersonnel = body.declaredPersonnel;
-  if (body.declaredPersonnelDueDate) updateFields.declaredPersonnelDueDate = new Date(body.declaredPersonnelDueDate);
-  if (typeof body.healthCertificates === "number") updateFields.healthCertificates = body.healthCertificates;
-  if (typeof body.healthCertBalanceToComply === "number") updateFields.healthCertBalanceToComply = body.healthCertBalanceToComply;
-  if (body.healthCertDueDate) updateFields.healthCertDueDate = new Date(body.healthCertDueDate);
+  assignNullableDate("orDateHealthCert");
+  if (hasBodyKey("orNumberHealthCert"))
+    updateFields.orNumberHealthCert = body.orNumberHealthCert || null;
+  assignNullableNumber("healthCertSanitaryFee");
+  assignNullableNumber("healthCertFee");
+  assignNullableNumber("declaredPersonnel");
+  assignNullableDate("declaredPersonnelDueDate");
+  assignNullableNumber("healthCertificates");
+  assignNullableNumber("healthCertBalanceToComply");
+  assignNullableDate("healthCertDueDate");
 
-  // 🔹 Normalize checklist items
-  const normalize = (arr) =>
-    (arr || [])
+  // 🔹 Normalize checklist items (handles both arrays and objects from form state)
+  const normalize = (arr) => {
+    const list = Array.isArray(arr) ? arr : [];
+    return list
       .filter((i) => i && i.label)
       .map((i, idx) => ({
         id:
@@ -173,6 +199,7 @@ export async function PUT(request, { params }) {
         label: i.label.trim(),
         ...(i.dueDate ? { dueDate: new Date(i.dueDate) } : {}),
       }));
+  };
 
   try {
     // ✅ Check role-based access
@@ -228,8 +255,8 @@ export async function PUT(request, { params }) {
 
       // 📧 Send Email
       try {
-       const baseUrl =
-  process.env.NEXT_PUBLIC_URL_AND_PORT || "http://localhost:3000";
+        const baseUrl =
+          process.env.NEXT_PUBLIC_URL_AND_PORT || "http://localhost:3000";
 
 
         console.log("📧 Sending approval email to:", email);

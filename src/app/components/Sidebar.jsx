@@ -224,6 +224,7 @@ export default function Sidebar() {
           path: '/request',
           submenu: [
             { label: 'New Sanitation Permit Request', path: '/request/newbusiness', icon: 'newrequest' },
+            { label: 'Draft Requests', path: '/request/draftrequests', icon: 'draftrequest' },
             { label: 'Check Your Request', path: '/request/requestsent', icon: 'checkrequest' }
           ]
         },
@@ -258,6 +259,7 @@ export default function Sidebar() {
       list: <MdList size={20} />,
       add: <MdAdd size={20} />,
       newrequest: <MdDescription size={20} />,
+      draftrequest: <MdDescription size={20} />,
       checkrequest: <MdSearch size={20} />,
       createofficer: <MdPersonAdd size={20} />,
       verification: <MdFactCheck size={20} />,
