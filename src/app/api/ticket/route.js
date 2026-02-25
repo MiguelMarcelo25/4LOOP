@@ -6,6 +6,9 @@ import Business from "@/models/Business";
 import Notification from "@/models/Notification"; // 🟢 NEW
 import { getSession } from "@/lib/Auth";
 import mongoose from "mongoose";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // =========================
 // GET /api/ticket
@@ -128,10 +131,7 @@ export async function POST(request) {
     });
     const ticketNumber = `TKT-${currentYear}-${String(count + 1).padStart(3, "0")}`;
 
-    const inspectionNumber =
-      inspectionStatus === "completed"
-        ? completedInspectionsThisYear + 1
-        : completedInspectionsThisYear;
+    const inspectionNumber = completedInspectionsThisYear + 1;
 
     const typeToUse = inspectionNumber === 1 ? "routine" : "reinspection";
 
@@ -169,23 +169,68 @@ export async function POST(request) {
     });
 
     // ✅ Populate for response
-    const populatedTicket = await ticket.populate(
-      "business",
-      "businessName bidNumber businessType contactPerson businessAddress requestType"
-    );
+    const populatedTicket = await ticket.populate([
+      {
+        path: "business",
+        select: "businessName bidNumber businessType contactPerson businessAddress requestType"
+      },
+      {
+        path: "businessAccount",
+        select: "email fullName"
+      }
+    ]);
+
+    const biz = populatedTicket.business;
+    const account = populatedTicket.businessAccount;
+    const formattedDate = new Date(ticket.inspectionDate).toLocaleDateString("en-PH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
     // ✅ Create Notification for business owner
     try {
       await Notification.create({
-        user: business.businessAccount, // recipient
-        business: business._id,
+        user: biz.businessAccount || account?._id, // recipient
+        business: biz._id,
         ticket: ticket._id,
-        message: `A new inspection (${ticketNumber}) has been created for your business "${business.businessName}".`,
+        title: "Inspection Scheduled",
+        message: `A new inspection (${ticketNumber}) has been scheduled for your business "${biz.businessName}" on ${formattedDate}.`,
         type: "inspection_created",
         link: `/businessaccount/tickets/${ticket._id}`,
       });
     } catch (notifErr) {
       console.error("⚠️ Notification creation failed:", notifErr);
+    }
+
+    // ✅ Send Email Notification
+    if (account?.email) {
+      try {
+        await resend.emails.send({
+          from: "Pasig Sanitation <noreply@pasigsanitation-project.site>",
+          to: account.email,
+          subject: `Scheduled Inspection for ${biz.businessName}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 8px; padding: 20px;">
+              <h2 style="color: #004AAD; margin-bottom: 10px;">Inspection Scheduled</h2>
+              <p>Dear ${biz.contactPerson || "Business Owner"},</p>
+              <p>
+                A new inspection has been scheduled for your business
+                <strong>${biz.businessName}</strong> on
+                <strong>${formattedDate}</strong>.
+              </p>
+              <p>Please ensure that your premises and relevant documents are ready for inspection.</p>
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+              <p style="font-size: 13px; color: #777;">
+                This is an automated message from <strong>Pasig Sanitation</strong>. Please do not reply to this email.
+              </p>
+            </div>
+          `,
+        });
+        console.log(`✅ Email sent to ${account.email}`);
+      } catch (emailErr) {
+        console.error("⚠️ Email sending failed:", emailErr);
+      }
     }
 
     return NextResponse.json(

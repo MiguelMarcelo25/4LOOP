@@ -247,7 +247,7 @@ export async function PUT(request, { params }) {
         user: userId,
         title: "Permit Approved 🎉",
         message: `Your permit for "${businessName}" has been approved. You may now access it in your dashboard.`,
-        category: "approval",
+        type: "permit_released",
         business: updated._id,
         isRead: false,
         isDeleted: false,

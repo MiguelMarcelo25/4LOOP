@@ -46,7 +46,6 @@ export default function VerificationOfRequestForm() {
   });
 
   const [requests, setRequests] = useState([]);
-  const [searchField, setSearchField] = useState("businessName");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
     key: "createdAt",
@@ -73,19 +72,7 @@ export default function VerificationOfRequestForm() {
       console.error("❌ Failed to update status:", err);
       setIsVerifying(false);
     }
-
-    // setRequests((prev) => prev.filter((req) => req._id !== _id));
-    // queryClient.invalidateQueries(['online-requests']);
   };
-
-  const searchFields = [
-    { value: "businessName", label: "Business Name" },
-    { value: "bidNumber", label: "BID Number" },
-    { value: "requestType", label: "Request Type" },
-    { value: "businessNickname", label: "Trade Name" },
-    { value: "businessType", label: "Business Type" },
-    { value: "businessAddress", label: "Address" },
-  ];
 
   const columns = [
     { key: "requestType", label: "Request Type" },
@@ -94,6 +81,7 @@ export default function VerificationOfRequestForm() {
     { key: "businessNickname", label: "Trade Name" },
     { key: "businessType", label: "Business Type" },
     { key: "businessAddress", label: "Address" },
+    { key: "remarks", label: "Remarks" },
     { key: "createdAt", label: "Submitted On" },
     { key: "actions", label: "Action" },
   ];
@@ -102,13 +90,35 @@ export default function VerificationOfRequestForm() {
   const filteredRequests = useMemo(() => {
     let result = [...requests];
     if (searchTerm) {
+      const q = searchTerm.toLowerCase();
       result = result.filter((req) => {
-        const value = req?.[searchField]?.toString().toLowerCase() ?? "";
-        return value.includes(searchTerm.toLowerCase());
+        return (
+          String(req.businessName || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(req.bidNumber || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(req.businessNickname || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(req.businessType || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(req.businessAddress || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(req.contactPerson || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(req.requestType || "")
+            .toLowerCase()
+            .includes(q)
+        );
       });
     }
     return result;
-  }, [requests, searchField, searchTerm]);
+  }, [requests, searchTerm]);
 
   // 🔽 Sort
   const sortedRequests = useMemo(() => {
@@ -175,31 +185,7 @@ export default function VerificationOfRequestForm() {
       {/* 🔍 Search + Rows per page */}
       <Stack direction="row" spacing={2} mb={3}>
         <TextField
-          select
-          label="Search Field"
-          value={searchField}
-          onChange={(e) => setSearchField(e.target.value)}
-          sx={{ width: 220 }}
-          className="dark:bg-slate-800 rounded"
-          InputLabelProps={{ className: "dark:text-slate-300" }}
-          InputProps={{ className: "dark:text-slate-200" }}
-          SelectProps={{
-            MenuProps: {
-              PaperProps: {
-                className: "dark:bg-slate-800 dark:text-slate-200",
-              },
-            },
-          }}
-        >
-          {searchFields.map((f) => (
-            <MenuItem key={f.value} value={f.value}>
-              {f.label}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          label={`Search by ${searchFields.find((f) => f.value === searchField)?.label}`}
+          label="Search requests (Name, BID, Trade Name, etc.)..."
           variant="outlined"
           value={searchTerm}
           onChange={(e) => {
@@ -330,6 +316,14 @@ export default function VerificationOfRequestForm() {
                       {req.businessAddress}
                     </TableCell>
                     <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                      <Typography
+                        variant="caption"
+                        className="line-clamp-2 max-w-[200px]"
+                      >
+                        {req.remarks || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell className="dark:text-slate-300 dark:border-slate-700 text-nowrap">
                       {req.createdAt
                         ? new Date(req.createdAt).toLocaleString("en-PH")
                         : "N/A"}

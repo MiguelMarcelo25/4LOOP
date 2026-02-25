@@ -128,6 +128,7 @@ export default function ComplianceForm() {
     { key: "businessNickname", label: "Trade Name" },
     { key: "businessType", label: "Business Type" },
     { key: "businessAddress", label: "Address" },
+    { key: "remarks", label: "Remarks" },
     { key: "createdAt", label: "Submitted On" },
     { key: "actions", label: "Action" },
   ];
@@ -258,6 +259,14 @@ export default function ComplianceForm() {
                     <TableCell>{req.businessType}</TableCell>
                     <TableCell>{req.businessAddress}</TableCell>
                     <TableCell>
+                      <Typography
+                        variant="caption"
+                        className="line-clamp-2 max-w-[200px]"
+                      >
+                        {req.remarks || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
                       {req.createdAt
                         ? new Date(req.createdAt).toLocaleString("en-PH")
                         : "N/A"}
@@ -276,7 +285,7 @@ export default function ComplianceForm() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={9} align="center">
                     No pending verification requests found.
                   </TableCell>
                 </TableRow>

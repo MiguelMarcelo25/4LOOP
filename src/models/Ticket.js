@@ -87,6 +87,8 @@ const TicketSchema = new Schema(
       default: "none",
     },
 
+    inspectionNumber: { type: Number, default: 1 },
+
     createdAt: { type: Date },
     updatedAt: { type: Date },
   },

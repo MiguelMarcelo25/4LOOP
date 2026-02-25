@@ -158,13 +158,70 @@ export default function AcceptedOnlineRequestForm() {
             <div className="grid grid-cols-1">
               <div className="flex items-start gap-2">
                 <span className="min-w-[140px] text-sm font-semibold text-gray-700 dark:text-slate-300">
-                  Remarks:
+                  Owner's Notes:
                 </span>
-                <span className="flex-1 min-h-[120px] whitespace-pre-line bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-gray-300 dark:border-slate-600">
-                  {business.remarks || "None"}
+                <span className="flex-1 min-h-[120px] whitespace-pre-line bg-blue-50/30 dark:bg-slate-800/50 text-gray-800 dark:text-slate-200 px-3 py-2 rounded-md border border-blue-100 dark:border-slate-700 italic">
+                  {business.remarks || "No instructions provided by owner."}
                 </span>
               </div>
             </div>
+
+            {/* Officer Remarks Input (On Page) */}
+            <div className="grid grid-cols-1 mt-6">
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tight">
+                  Officer Remarks:
+                </span>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={4}
+                  variant="outlined"
+                  value={remark}
+                  onChange={(e) => setRemark(e.target.value)}
+                  placeholder="Type your notes or feedback for the business owner here..."
+                  className="bg-gray-50 dark:bg-slate-800 rounded-lg"
+                  InputProps={{
+                    className: "dark:text-slate-200",
+                  }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": { borderColor: "#d1d5db" },
+                      "&:hover fieldset": { borderColor: "#9ca3af" },
+                      "&.Mui-focused fieldset": { borderColor: "#3b82f6" },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Review History */}
+            {business.history?.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                  Officer Review History
+                </h3>
+                <ul className="space-y-4">
+                  {business.history.map((h, i) => (
+                    <li
+                      key={i}
+                      className="bg-gray-50 dark:bg-slate-800/80 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm relative overflow-hidden"
+                    >
+                      <div className="absolute left-0 top-0 w-1 h-full bg-blue-400"></div>
+                      <div className="text-[10px] text-gray-400 dark:text-slate-500 mb-2 font-mono uppercase">
+                        {h.date
+                          ? new Date(h.date).toLocaleString("en-PH")
+                          : "—"}
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-line font-medium leading-relaxed">
+                        {h.remarks}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </CollapsibleSection>
       </div>
@@ -339,49 +396,6 @@ export default function AcceptedOnlineRequestForm() {
             ))}
         </div>
       </div>
-      {/* Officer Remarks Input */}
-      <div className="w-full max-w-4xl mx-auto mt-10 px-6">
-        <Typography
-          variant="h6"
-          fontWeight="bold"
-          color="primary"
-          gutterBottom
-          className="mb-3 dark:text-blue-300"
-        >
-          Remarks
-        </Typography>
-        <TextField
-          fullWidth
-          multiline
-          minRows={5} // taller box
-          label="Enter remarks"
-          variant="outlined"
-          value={remark}
-          onChange={(e) => setRemark(e.target.value)}
-          placeholder="Type your remarks or notes here..."
-          className="bg-gray-50 dark:bg-slate-800 rounded-lg"
-          InputProps={{
-            className: "dark:text-slate-200",
-          }}
-          InputLabelProps={{
-            className: "dark:text-slate-400",
-          }}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              "& fieldset": {
-                borderColor: "#d1d5db",
-              },
-              "&:hover fieldset": {
-                borderColor: "#9ca3af",
-              },
-              "&.Mui-focused fieldset": {
-                borderColor: "#3b82f6",
-              },
-            },
-          }}
-        />
-      </div>
-
       {/* Confirmation Modal */}
       <ConfirmationModal
         open={showConfirm}
@@ -395,27 +409,44 @@ export default function AcceptedOnlineRequestForm() {
         confirmText="Yes, Proceed"
         type="primary"
         isLoading={isUpdating}
-      />
+      >
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          className="text-left mb-2 text-gray-700 dark:text-slate-300"
+        >
+          Add Officer Remarks (Optional)
+        </Typography>
+        <TextField
+          fullWidth
+          multiline
+          minRows={4}
+          variant="outlined"
+          value={remark}
+          onChange={(e) => setRemark(e.target.value)}
+          placeholder="Enter notes or feedback for the business owner..."
+          className="bg-gray-50 dark:bg-slate-900 rounded-lg"
+          InputProps={{ className: "dark:text-slate-200" }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { borderColor: "#d1d5db" },
+              "&:hover fieldset": { borderColor: "#9ca3af" },
+              "&.Mui-focused fieldset": { borderColor: "#3b82f6" },
+            },
+          }}
+        />
+      </ConfirmationModal>
 
-      <div className="flex justify-center gap-4 mt-10 mb-6">
+      <div className="flex justify-center gap-4 mt-10 mb-6 font-bold uppercase">
         <Button
           variant="contained"
+          size="large"
           color="primary"
           onClick={() => setShowConfirm(true)}
           disabled={isUpdating}
-          startIcon={
-            isUpdating && <CircularProgress size={16} color="inherit" />
-          }
+          sx={{ px: 6, py: 1.5, borderRadius: "10px", fontWeight: "bold" }}
         >
-          {isUpdating ? "Processing..." : "Proceed"}
-        </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          onClick={() => router.back()}
-          className="dark:text-slate-200 dark:border-slate-600"
-        >
-          Back
+          {isUpdating ? "Moving..." : "✅ Move to Verification"}
         </Button>
       </div>
     </Box>

@@ -116,7 +116,6 @@ export default function BusinessesForm() {
   });
 
   const [businesses, setBusinesses] = useState([]);
-  const [searchField, setSearchField] = useState("businessName");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("createdAt");
   const [sortDir, setSortDir] = useState("desc");
@@ -129,25 +128,35 @@ export default function BusinessesForm() {
     setBusinesses(list);
   }, [data]);
 
-  const searchFields = [
-    { label: "Business Name", field: "businessName" },
-    { label: "BID Number", field: "bidNumber" },
-    { label: "Trade Name", field: "businessNickname" },
-    { label: "Line of Business", field: "businessType" },
-    { label: "Address", field: "businessAddress" },
-    { label: "Contact Person", field: "contactPerson" },
-    { label: "Status", field: "status" },
-  ];
-
   const filtered = useMemo(() => {
     let list = [...businesses];
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
-      list = list.filter((b) =>
-        String(b[searchField] || "")
-          .toLowerCase()
-          .includes(q),
-      );
+      list = list.filter((b) => {
+        return (
+          String(b.businessName || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.bidNumber || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.businessNickname || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.businessType || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.businessAddress || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.contactPerson || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.status || "")
+            .toLowerCase()
+            .includes(q)
+        );
+      });
     }
     if (sortField) {
       list.sort((a, b) => {
@@ -163,7 +172,7 @@ export default function BusinessesForm() {
       });
     }
     return list;
-  }, [businesses, searchTerm, searchField, sortField, sortDir]);
+  }, [businesses, searchTerm, sortField, sortDir]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -198,36 +207,6 @@ export default function BusinessesForm() {
 
       {/* Search / Filter / Sort bar */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-4 mb-6 flex flex-col md:flex-row gap-4 items-center flex-wrap">
-        {/* Search field selector */}
-        <div className="w-full md:w-auto min-w-[180px]">
-          <TextField
-            select
-            label="Search By"
-            value={searchField}
-            onChange={(e) => {
-              setSearchField(e.target.value);
-              setPage(1);
-            }}
-            size="small"
-            fullWidth
-            InputLabelProps={{ className: "dark:text-slate-400" }}
-            InputProps={{ className: "dark:text-slate-200" }}
-            SelectProps={{
-              MenuProps: {
-                PaperProps: {
-                  className: "dark:bg-slate-800 dark:text-slate-200",
-                },
-              },
-            }}
-          >
-            {searchFields.map(({ label, field }) => (
-              <MenuItem key={field} value={field}>
-                {label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </div>
-
         {/* Search input */}
         <div className="flex-1 w-full relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -235,7 +214,7 @@ export default function BusinessesForm() {
           </div>
           <input
             type="text"
-            placeholder={`Search by ${searchFields.find((f) => f.field === searchField)?.label}...`}
+            placeholder="Search businesses (Name, BID, Trade Name, etc.)..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);

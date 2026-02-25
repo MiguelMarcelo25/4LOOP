@@ -152,8 +152,8 @@ export default function AddbusinessForm() {
         <form onSubmit={handleSubmit(onSubmit)} className="p-8">
           <div className="space-y-10">
             {/* === BUSINESS DETAILS SECTION === */}
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-700/50">
-              <div className="flex items-center gap-3 mb-6">
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl ">
+              <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -176,7 +176,7 @@ export default function AddbusinessForm() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
+                <div className="">
                   <Controller
                     name="bidNumber"
                     control={control}
@@ -358,29 +358,7 @@ export default function AddbusinessForm() {
             </div>
 
             {/* === CONTACT INFORMATION SECTION === */}
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-700/50">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                    />
-                  </svg>
-                </div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                  Contact Information
-                </h2>
-              </div>
-
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <RHFTextField
                   control={control}
@@ -446,8 +424,8 @@ export default function AddbusinessForm() {
             </div>
 
             {/* === DOCUMENT UPLOADS SECTION === */}
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-700/50">
-              <div className="flex items-center gap-3 mb-6">
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -468,9 +446,9 @@ export default function AddbusinessForm() {
                   <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
                     Supporting Documents
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {/* <p className="text-sm text-slate-500 dark:text-slate-400">
                     Upload relevant business documents (optional)
-                  </p>
+                  </p> */}
                 </div>
               </div>
 

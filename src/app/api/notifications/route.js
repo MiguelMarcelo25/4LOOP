@@ -21,7 +21,7 @@ export async function POST(request) {
       user,
       title,
       message,
-      category,
+      type: category || "general",
       business,
       isRead: false,
       isDeleted: false,

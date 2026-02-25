@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { getSanitationOnlineRequest } from '@/app/services/OnlineRequest';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { getSanitationOnlineRequest } from "@/app/services/OnlineRequest";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Box,
@@ -20,7 +20,7 @@ import {
   TableSortLabel,
   TextField,
   MenuItem,
-} from '@mui/material';
+} from "@mui/material";
 
 export default function PermitApprovalForm() {
   const router = useRouter();
@@ -28,13 +28,13 @@ export default function PermitApprovalForm() {
 
   // 🧾 Fetch all requests
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['permitapproval-requests'],
+    queryKey: ["permitapproval-requests"],
     queryFn: async () => {
       const onlinerequest = await getSanitationOnlineRequest();
       const allRequests = [...(onlinerequest?.data || [])];
-      const pending = allRequests.filter((req) => req.status === 'pending3');
+      const pending = allRequests.filter((req) => req.status === "pending3");
       const uniqueRequests = Array.from(
-        new Map(pending.map((req) => [req._id, req])).values()
+        new Map(pending.map((req) => [req._id, req])).values(),
       );
       return uniqueRequests;
     },
@@ -42,11 +42,11 @@ export default function PermitApprovalForm() {
   });
 
   const [requests, setRequests] = useState([]);
-  const [searchField, setSearchField] = useState('businessName');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState("businessName");
+  const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
-    key: 'createdAt',
-    direction: 'desc',
+    key: "createdAt",
+    direction: "desc",
   });
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -61,30 +61,30 @@ export default function PermitApprovalForm() {
     if (!approvalRequest) return;
 
     try {
-      localStorage.setItem('permitapprovalRequestId', _id);
+      localStorage.setItem("permitapprovalRequestId", _id);
       router.push(`/officers/workbench/pendingpermitapproval?id=${_id}`);
     } catch (err) {
-      console.error('❌ Failed to navigate for permit approval:', err);
+      console.error("❌ Failed to navigate for permit approval:", err);
     }
 
     setRequests((prev) => prev.filter((req) => req._id !== _id));
-    queryClient.invalidateQueries(['permitapproval-requests']);
+    queryClient.invalidateQueries(["permitapproval-requests"]);
   };
 
   // 🔽 Sorting logic
   const handleSort = (key) => {
-    if (key === 'actions') return;
+    if (key === "actions") return;
     setSortConfig((prev) =>
       prev.key === key
-        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { key, direction: 'asc' }
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
     );
   };
 
   // 🔍 Filter + search
   const filteredRequests = useMemo(() => {
     return requests.filter((req) => {
-      const value = req?.[searchField]?.toString().toLowerCase() ?? '';
+      const value = req?.[searchField]?.toString().toLowerCase() ?? "";
       return value.includes(searchTerm.toLowerCase());
     });
   }, [requests, searchField, searchTerm]);
@@ -97,16 +97,16 @@ export default function PermitApprovalForm() {
       let aValue = a?.[sortConfig.key];
       let bValue = b?.[sortConfig.key];
 
-      if (sortConfig.key === 'createdAt') {
+      if (sortConfig.key === "createdAt") {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       } else {
-        aValue = aValue?.toString().toLowerCase() ?? '';
-        bValue = bValue?.toString().toLowerCase() ?? '';
+        aValue = aValue?.toString().toLowerCase() ?? "";
+        bValue = bValue?.toString().toLowerCase() ?? "";
       }
 
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredRequests, sortConfig]);
@@ -115,28 +115,32 @@ export default function PermitApprovalForm() {
   const total = sortedRequests.length;
   const totalPages = Math.ceil(total / limit);
   const startIndex = (page - 1) * limit;
-  const paginatedRequests = sortedRequests.slice(startIndex, startIndex + limit);
+  const paginatedRequests = sortedRequests.slice(
+    startIndex,
+    startIndex + limit,
+  );
 
   // 📋 Search field options
   const searchFields = [
-    { value: 'businessName', label: 'Business Name' },
-    { value: 'bidNumber', label: 'BID Number' },
-    { value: 'requestType', label: 'Request Type' },
-    { value: 'businessNickname', label: 'Trade Name' },
-    { value: 'businessType', label: 'Business Type' },
-    { value: 'businessAddress', label: 'Address' },
+    { value: "businessName", label: "Business Name" },
+    { value: "bidNumber", label: "BID Number" },
+    { value: "requestType", label: "Request Type" },
+    { value: "businessNickname", label: "Trade Name" },
+    { value: "businessType", label: "Business Type" },
+    { value: "businessAddress", label: "Address" },
   ];
 
   // 🧱 Table columns
   const columns = [
-    { key: 'requestType', label: 'Request Type' },
-    { key: 'bidNumber', label: 'BID Number' },
-    { key: 'businessName', label: 'Business Name' },
-    { key: 'businessNickname', label: 'Trade Name' },
-    { key: 'businessType', label: 'Business Type' },
-    { key: 'businessAddress', label: 'Address' },
-    { key: 'createdAt', label: 'Submitted On' },
-    { key: 'actions', label: 'Action' },
+    { key: "requestType", label: "Request Type" },
+    { key: "bidNumber", label: "BID Number" },
+    { key: "businessName", label: "Business Name" },
+    { key: "businessNickname", label: "Trade Name" },
+    { key: "businessType", label: "Business Type" },
+    { key: "businessAddress", label: "Address" },
+    { key: "remarks", label: "Remarks" },
+    { key: "createdAt", label: "Submitted On" },
+    { key: "actions", label: "Action" },
   ];
 
   return (
@@ -145,13 +149,18 @@ export default function PermitApprovalForm() {
       <Button
         variant="outlined"
         color="secondary"
-        onClick={() => router.push('/officers/workbench')}
+        onClick={() => router.push("/officers/workbench")}
         sx={{ mb: 2 }}
       >
         ← Back to Workbench
       </Button>
 
-      <Typography variant="h6" fontWeight="bold" mb={3} className="dark:text-white">
+      <Typography
+        variant="h6"
+        fontWeight="bold"
+        mb={3}
+        className="dark:text-white"
+      >
         🧾 Requests Awaiting Permit Approval
       </Typography>
 
@@ -171,8 +180,10 @@ export default function PermitApprovalForm() {
           InputProps={{ className: "dark:text-slate-200" }}
           SelectProps={{
             MenuProps: {
-              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
-            }
+              PaperProps: {
+                className: "dark:bg-slate-800 dark:text-slate-200",
+              },
+            },
           }}
         >
           {searchFields.map((f) => (
@@ -212,8 +223,10 @@ export default function PermitApprovalForm() {
           InputProps={{ className: "dark:text-slate-200" }}
           SelectProps={{
             MenuProps: {
-              PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
-            }
+              PaperProps: {
+                className: "dark:bg-slate-800 dark:text-slate-200",
+              },
+            },
           }}
         >
           {[10, 20, 30, 50].map((num) => (
@@ -235,7 +248,7 @@ export default function PermitApprovalForm() {
       {/* ❌ Error */}
       {isError && (
         <Typography color="error" mt={2}>
-          Error loading requests: {error?.message || 'Unknown error'}
+          Error loading requests: {error?.message || "Unknown error"}
         </Typography>
       )}
 
@@ -247,55 +260,81 @@ export default function PermitApprovalForm() {
               <TableHead>
                 <TableRow>
                   {columns.map((col) => (
-                  <TableCell
-                    key={col.key}
-                    sx={{
-                      fontWeight: 'bold',
-                      cursor: col.key === 'actions' ? 'default' : 'pointer',
-                    }}
-                    onClick={
-                      col.key === 'actions'
-                        ? undefined
-                        : () => handleSort(col.key)
-                    }
-                    className="dark:bg-slate-800 dark:text-slate-200 border-b dark:border-slate-700"
-                  >
-                    {col.key !== 'actions' ? (
-                      <TableSortLabel
-                        active={sortConfig.key === col.key}
-                        direction={
-                          sortConfig.key === col.key
-                            ? sortConfig.direction
-                            : 'asc'
-                        }
-                        className="dark:text-slate-200 dark:hover:text-slate-100"
-                        sx={{
-                          '&.Mui-active': { color: 'inherit' },
-                          '& .MuiTableSortLabel-icon': { color: 'inherit !important' },
-                        }}
-                      >
-                        {col.label}
-                      </TableSortLabel>
-                    ) : (
-                      col.label
-                    )}
-                  </TableCell>
-                ))}
+                    <TableCell
+                      key={col.key}
+                      sx={{
+                        fontWeight: "bold",
+                        cursor: col.key === "actions" ? "default" : "pointer",
+                      }}
+                      onClick={
+                        col.key === "actions"
+                          ? undefined
+                          : () => handleSort(col.key)
+                      }
+                      className="dark:bg-slate-800 dark:text-slate-200 border-b dark:border-slate-700"
+                    >
+                      {col.key !== "actions" ? (
+                        <TableSortLabel
+                          active={sortConfig.key === col.key}
+                          direction={
+                            sortConfig.key === col.key
+                              ? sortConfig.direction
+                              : "asc"
+                          }
+                          className="dark:text-slate-200 dark:hover:text-slate-100"
+                          sx={{
+                            "&.Mui-active": { color: "inherit" },
+                            "& .MuiTableSortLabel-icon": {
+                              color: "inherit !important",
+                            },
+                          }}
+                        >
+                          {col.label}
+                        </TableSortLabel>
+                      ) : (
+                        col.label
+                      )}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
 
               <TableBody>
                 {paginatedRequests.length > 0 ? (
                   paginatedRequests.map((req) => (
-                    <TableRow key={req._id} hover className="dark:hover:bg-slate-700">
-                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.requestType}</TableCell>
-                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.bidNumber}</TableCell>
-                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessName}</TableCell>
-                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessNickname}</TableCell>
-                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessType}</TableCell>
-                      <TableCell className="dark:text-slate-300 dark:border-slate-700">{req.businessAddress}</TableCell>
+                    <TableRow
+                      key={req._id}
+                      hover
+                      className="dark:hover:bg-slate-700"
+                    >
                       <TableCell className="dark:text-slate-300 dark:border-slate-700">
-                        {new Date(req.createdAt).toLocaleString('en-PH')}
+                        {req.requestType}
+                      </TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                        {req.bidNumber}
+                      </TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                        {req.businessName}
+                      </TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                        {req.businessNickname}
+                      </TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                        {req.businessType}
+                      </TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                        {req.businessAddress}
+                      </TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                        <Typography
+                          variant="caption"
+                          className="line-clamp-2 max-w-[200px]"
+                        >
+                          {req.remarks || "—"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell className="dark:text-slate-300 dark:border-slate-700">
+                        {new Date(req.createdAt).toLocaleString("en-PH")}
                       </TableCell>
                       <TableCell className="dark:border-slate-700">
                         <Button
@@ -311,7 +350,11 @@ export default function PermitApprovalForm() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} align="center" className="dark:text-slate-400 dark:border-slate-700">
+                    <TableCell
+                      colSpan={columns.length}
+                      align="center"
+                      className="dark:text-slate-400 dark:border-slate-700"
+                    >
                       No pending requests awaiting permit approval.
                     </TableCell>
                   </TableRow>
@@ -329,11 +372,7 @@ export default function PermitApprovalForm() {
               alignItems="center"
               sx={{ mt: 2 }}
             >
-              <Typography
-                component="span"
-                variant="body2"
-                sx={{ mr: 2 }}
-              >
+              <Typography component="span" variant="body2" sx={{ mr: 2 }}>
                 Page {page} of {totalPages || 1}
               </Typography>
 

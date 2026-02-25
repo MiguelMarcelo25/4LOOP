@@ -684,6 +684,7 @@ export default function BusinesslistForm() {
                       <div className="space-y-3">
                         {[
                           ["BID Number", business.bidNumber],
+                          ["Request Type", business.requestType],
                           ["Trade Name", business.businessNickname],
                           ["Business Type", business.businessType],
                           ["Address", business.businessAddress],
@@ -801,13 +802,35 @@ export default function BusinesslistForm() {
                     </div>
                   </div>
 
-                  {/* Inspection & Fees */}
+                  {/* Personnel & Health Certificates */}
                   <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
-                      Inspection & Penalty Records
+                      Personnel & Health Certificates
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {[
+                        ["Total Personnel", business.declaredPersonnel],
+                        [
+                          "Personnel Due Date",
+                          business.declaredPersonnelDueDate
+                            ? new Date(
+                                business.declaredPersonnelDueDate,
+                              ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
+                        ["Health Certificates", business.healthCertificates],
+                        [
+                          "Balance to Comply",
+                          business.healthCertBalanceToComply || 0,
+                        ],
+                        [
+                          "Health Cert Due",
+                          business.healthCertDueDate
+                            ? new Date(
+                                business.healthCertDueDate,
+                              ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
                         [
                           "Health Cert Fee",
                           typeof business.healthCertFee === "number"
@@ -821,6 +844,27 @@ export default function BusinesslistForm() {
                             : null,
                         ],
                         ["OR Number", business.orNumberHealthCert],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-center"
+                        >
+                          <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">
+                            {label}
+                          </div>
+                          <div className="font-semibold text-gray-800 dark:text-slate-200 text-sm">
+                            {value ?? "—"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Inspection & Penalty Records */}
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 mt-8">
+                      Inspection & Penalty Records
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
                         [
                           "OR Date",
                           business.orDateHealthCert

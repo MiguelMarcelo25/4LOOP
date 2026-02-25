@@ -111,6 +111,7 @@ export default function WorkbenchList({ title, filterStatus }) {
   const [msrEdits, setMsrEdits] = useState([]);
   const [isSavingMsr, setIsSavingMsr] = useState(false);
   const [confirmStatusData, setConfirmStatusData] = useState(null); // { id, nextStatus, label }
+  const [remark, setRemark] = useState("");
 
   const [sortConfig, setSortConfig] = useState({
     key: "createdAt",
@@ -131,6 +132,7 @@ export default function WorkbenchList({ title, filterStatus }) {
       queryClient.invalidateQueries(["workbench-list"]);
       queryClient.invalidateQueries(["business-detail", variables.id]);
       setSelectedBusinessId(null);
+      setRemark("");
     },
     onError: (error) => {
       console.error("Error updating status:", error);
@@ -212,7 +214,10 @@ export default function WorkbenchList({ title, filterStatus }) {
       result = result.filter(
         (b) =>
           b.businessName?.toLowerCase().includes(lowerTerm) ||
-          b.bidNumber?.toLowerCase().includes(lowerTerm),
+          b.bidNumber?.toLowerCase().includes(lowerTerm) ||
+          b.businessNickname?.toLowerCase().includes(lowerTerm) ||
+          b.businessType?.toLowerCase().includes(lowerTerm) ||
+          b.businessAddress?.toLowerCase().includes(lowerTerm),
       );
     }
 
@@ -525,7 +530,10 @@ export default function WorkbenchList({ title, filterStatus }) {
       {/* Modal */}
       <Dialog
         open={Boolean(selectedBusinessId)}
-        onClose={() => setSelectedBusinessId(null)}
+        onClose={() => {
+          setSelectedBusinessId(null);
+          setRemark("");
+        }}
         maxWidth="md"
         fullWidth
         PaperProps={{
@@ -999,15 +1007,79 @@ export default function WorkbenchList({ title, filterStatus }) {
                     variant="subtitle1"
                     className="font-bold mb-2 text-gray-600 dark:text-slate-400 border-b dark:border-slate-700 pb-1"
                   >
-                    Owner Remarks
+                    Owner's Submitted Notes
                   </Typography>
                   <Typography
                     variant="body2"
                     className="bg-gray-50 dark:bg-slate-900/50 p-2 rounded italic font-medium"
                   >
-                    "{businessDetail.remarks || "No remarks provided."}"
+                    "{businessDetail.remarks || "No notes provided."}"
                   </Typography>
                 </Box>
+
+                {/* Officers Remarks */}
+                <Box>
+                  <Typography
+                    variant="subtitle1"
+                    className="font-bold mb-2 text-blue-600 dark:text-blue-400 border-b dark:border-slate-700 pb-1"
+                  >
+                    Officer's Remarks
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={4}
+                    variant="outlined"
+                    value={remark}
+                    onChange={(e) => setRemark(e.target.value)}
+                    placeholder="Enter notes or feedback for the business owner..."
+                    className="bg-gray-50 dark:bg-slate-900/50 rounded-lg"
+                    InputProps={{ className: "dark:text-slate-200" }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": { borderColor: "#d1d5db" },
+                        "&:hover fieldset": { borderColor: "#9ca3af" },
+                        "&.Mui-focused fieldset": { borderColor: "#3b82f6" },
+                      },
+                    }}
+                  />
+                </Box>
+
+                {/* Review History */}
+                {businessDetail.history?.length > 0 && (
+                  <Box className="mt-4">
+                    <Typography
+                      variant="subtitle1"
+                      className="font-bold mb-2 text-blue-900 dark:text-blue-300 border-b dark:border-slate-700 pb-1"
+                    >
+                      Officer's Remarks History
+                    </Typography>
+                    <Stack spacing={2} className="mt-2">
+                      {businessDetail.history.map((h, i) => (
+                        <Box
+                          key={i}
+                          className="p-3 bg-blue-50/30 dark:bg-slate-800/30 rounded border-l-4 border-blue-400"
+                        >
+                          <Typography
+                            variant="caption"
+                            color="textSecondary"
+                            className="font-mono block mb-1"
+                          >
+                            {h.date
+                              ? new Date(h.date).toLocaleString("en-PH")
+                              : "—"}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            className="text-gray-700 dark:text-slate-300 whitespace-pre-line"
+                          >
+                            {h.remarks}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
               </Stack>
             </DialogContent>
             <DialogActions className="p-4 border-t dark:border-slate-700">
@@ -1029,6 +1101,7 @@ export default function WorkbenchList({ title, filterStatus }) {
                     confirmStatusData.nextStatus,
                     {
                       officerInCharge: loggedUserId,
+                      newRemarks: remark,
                     },
                   );
                   setConfirmStatusData(null);
@@ -1037,7 +1110,27 @@ export default function WorkbenchList({ title, filterStatus }) {
                 confirmText={`Yes, Move to ${confirmStatusData?.label}`}
                 type="success"
                 isLoading={mutation.isPending}
-              />
+              >
+                <Box className="mt-4">
+                  <Typography
+                    variant="subtitle2"
+                    className="font-bold mb-2 text-gray-700 dark:text-slate-300"
+                  >
+                    Confirm Officer's Remarks (Optional)
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    variant="outlined"
+                    value={remark}
+                    onChange={(e) => setRemark(e.target.value)}
+                    placeholder="Enter notes or feedback for the business owner..."
+                    className="bg-gray-50 dark:bg-slate-900 rounded-lg"
+                    InputProps={{ className: "dark:text-slate-200" }}
+                  />
+                </Box>
+              </ConfirmationModal>
 
               {businessDetail.status === "submitted" && (
                 <Button

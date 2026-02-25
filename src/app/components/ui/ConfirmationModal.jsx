@@ -25,6 +25,7 @@ export default function ConfirmationModal({
   onCancel,
   type = "primary",
   isLoading = false,
+  children,
 }) {
   if (!open) return null;
 
@@ -73,6 +74,8 @@ export default function ConfirmationModal({
             <p className="text-gray-600 dark:text-slate-400 mb-8 leading-relaxed">
               {message}
             </p>
+
+            {children && <div className="w-full mb-8">{children}</div>}
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 w-full">

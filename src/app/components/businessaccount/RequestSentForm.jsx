@@ -51,6 +51,14 @@ const getProgressStep = (status) => {
   }
 };
 
+function formatViolationCode(code) {
+  if (!code) return "—";
+  return code
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export default function RequestSentForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -74,7 +82,69 @@ export default function RequestSentForm() {
 
   const [requests, setRequests] = useState([]);
   useEffect(() => {
-    if (data) setRequests(data);
+    async function fetchInspectionDetails() {
+      if (!data) return;
+      try {
+        const res = await fetch("/api/ticket");
+        if (!res.ok) {
+          setRequests(data);
+          return;
+        }
+        const allTickets = await res.json();
+
+        const updated = data.map((req) => {
+          const bizId = req.business?._id || req.business;
+          const bizTickets = allTickets.filter(
+            (t) => (t.business === bizId || t.business?._id === bizId) && bizId,
+          );
+          const finalBizTickets =
+            bizTickets.length > 0
+              ? bizTickets
+              : allTickets.filter(
+                  (t) =>
+                    t.business?.bidNumber === req.bidNumber ||
+                    t.bidNumber === req.bidNumber,
+                );
+
+          const latestTicket = finalBizTickets.length
+            ? finalBizTickets.sort(
+                (a, b) =>
+                  new Date(b.inspectionDate) - new Date(a.inspectionDate),
+              )[0]
+            : null;
+          const violations = latestTicket?.violations || [];
+          const recordedViolation =
+            violations.length > 0
+              ? violations.map((v) => v.code).join(", ")
+              : "—";
+          const penaltyFee = violations.reduce(
+            (sum, v) => sum + (v.penalty || 0),
+            0,
+          );
+          const inspectionCountThisYear = finalBizTickets.filter(
+            (t) =>
+              new Date(t.inspectionDate).getFullYear() ===
+              new Date().getFullYear(),
+          ).length;
+
+          return {
+            ...req,
+            inspectionStatus: latestTicket?.inspectionStatus || "—",
+            resolutionStatus: latestTicket?.resolutionStatus || "—",
+            violations,
+            recordedViolation,
+            penaltyFee,
+            inspectionCountThisYear,
+          };
+        });
+
+        setRequests(updated);
+      } catch (err) {
+        console.error("Failed to fetch inspection details:", err);
+        setRequests(data);
+      }
+    }
+    fetchInspectionDetails();
   }, [data]);
 
   const filteredRequests = useMemo(() => {
@@ -380,11 +450,11 @@ export default function RequestSentForm() {
                       <div className="space-y-3">
                         {[
                           ["Trade Name", req.businessNickname],
+                          ["Request Type", req.requestType],
                           ["Business Type", req.businessType],
                           ["Landmark", req.landmark],
                           ["Contact Person", req.contactPerson],
                           ["Contact Number", req.contactNumber],
-                          ["Request Type", req.requestType],
                           [
                             "Submitted On",
                             req.createdAt
@@ -415,6 +485,33 @@ export default function RequestSentForm() {
                           {req.remarks || "No remarks provided."}
                         </p>
                       </div>
+
+                      {/* Review History */}
+                      {req.history?.length > 0 && (
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                            Officer's Remarks History
+                          </h3>
+                          <ul className="space-y-3">
+                            {req.history.map((h, i) => (
+                              <li
+                                key={i}
+                                className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-100 dark:border-slate-700"
+                              >
+                                <div className="text-[10px] text-gray-400 dark:text-slate-500 mb-1 font-mono">
+                                  {h.date
+                                    ? new Date(h.date).toLocaleString("en-PH")
+                                    : "—"}
+                                </div>
+                                <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-line font-medium leading-relaxed">
+                                  {h.remarks}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
 
                     {/* Right: Checklists */}
@@ -517,7 +614,10 @@ export default function RequestSentForm() {
                             : null,
                         ],
                         ["Health Certificates", req.healthCertificates],
-                        ["Balance to Comply", req.healthCertBalanceToComply],
+                        [
+                          "Balance to Comply",
+                          req.healthCertBalanceToComply || 0,
+                        ],
                         [
                           "Health Cert Due",
                           req.healthCertDueDate
@@ -529,13 +629,13 @@ export default function RequestSentForm() {
                         [
                           "Health Cert Fee",
                           req.healthCertFee
-                            ? `₱${Number(req.healthCertFee).toLocaleString()}`
+                            ? `₱${Number(req.healthCertFee).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
                             : null,
                         ],
                         [
                           "Sanitary Fee",
                           req.healthCertSanitaryFee
-                            ? `₱${Number(req.healthCertSanitaryFee).toLocaleString()}`
+                            ? `₱${Number(req.healthCertSanitaryFee).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
                             : null,
                         ],
                         ["OR Number", req.orNumberHealthCert],
@@ -553,6 +653,60 @@ export default function RequestSentForm() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Inspection & Penalty Records */}
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 mt-8">
+                      Inspection & Penalty Records
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        ["Inspection Status", req.inspectionStatus],
+                        ["Inspections This Year", req.inspectionCountThisYear],
+                        [
+                          "Penalty Fee",
+                          `₱${(req.penaltyFee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
+                        ],
+                        ["Recorded Violations", req.recordedViolation],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-center"
+                        >
+                          <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">
+                            {label}
+                          </div>
+                          <div className="font-semibold text-gray-800 dark:text-slate-200 text-sm">
+                            {value ?? "—"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Violations detail */}
+                    {req.violations?.length > 0 && (
+                      <div className="mt-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg p-4">
+                        <span className="text-xs font-bold text-red-500 dark:text-red-400 uppercase">
+                          Violation Details
+                        </span>
+                        <ul className="mt-2 space-y-1">
+                          {req.violations.map((v, i) => (
+                            <li
+                              key={i}
+                              className="text-sm text-gray-700 dark:text-slate-300 flex justify-between"
+                            >
+                              <span>{formatViolationCode(v.code)}</span>
+                              <span className="text-red-600 dark:text-red-400 font-medium">
+                                ₱
+                                {v.penalty?.toLocaleString("en-PH", {
+                                  minimumFractionDigits: 2,
+                                })}{" "}
+                                ({v.status})
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* Uploaded Documents */}

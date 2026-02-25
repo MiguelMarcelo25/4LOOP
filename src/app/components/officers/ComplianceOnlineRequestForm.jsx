@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { AddCircle, Delete, Edit, Save } from "@mui/icons-material";
 import { useEffect, useState } from "react";
+import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
 
 export default function ComplianceOnlineRequestForm() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function ComplianceOnlineRequestForm() {
   const [healthItems, setHealthItems] = useState([]);
   const [msrItems, setMsrItems] = useState([]);
   const [loadingSave, setLoadingSave] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // ✅ Dropdown options
   const sanitaryPermitOptions = [
@@ -752,61 +754,65 @@ export default function ComplianceOnlineRequestForm() {
         </div>
       </div>
 
-      {/* Officer Remarks */}
-      <div className="w-full max-w-4xl mx-auto mt-10">
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        open={showConfirm}
+        title="Move to Permit Approval?"
+        message="Are you sure you want to proceed? This will move the business request to the Permit Approval stage."
+        onConfirm={() => {
+          setShowConfirm(false);
+          handleUpdate();
+        }}
+        onCancel={() => setShowConfirm(false)}
+        confirmText="Yes, Proceed"
+        type="primary"
+        isLoading={loadingSave}
+      >
         <Typography
-          variant="h6"
+          variant="subtitle1"
           fontWeight="bold"
-          color="primary"
-          gutterBottom
-          className="mb-3"
+          className="text-left mb-2 text-gray-700 dark:text-slate-300"
         >
-          Officer Remarks
+          Add Compliance Remarks (Optional)
         </Typography>
         <TextField
           fullWidth
           multiline
-          minRows={5}
-          label="Enter remarks"
+          minRows={4}
           variant="outlined"
           value={remark}
           onChange={(e) => setRemark(e.target.value)}
-          placeholder="Type your remarks or notes here..."
+          placeholder="Enter notes or feedback for the business owner..."
+          className="bg-gray-50 dark:bg-slate-900 rounded-lg"
+          InputProps={{ className: "dark:text-slate-200" }}
           sx={{
-            "& .MuiInputBase-root": {
-              backgroundColor: "#f9fafb",
-              borderRadius: "8px",
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { borderColor: "#d1d5db" },
+              "&:hover fieldset": { borderColor: "#9ca3af" },
+              "&.Mui-focused fieldset": { borderColor: "#3b82f6" },
             },
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d1d5db" },
           }}
         />
-      </div>
+      </ConfirmationModal>
 
       {/* Submit Button (only active when not editing) */}
-      <div className="flex justify-center mt-10">
+      <div className="flex justify-center mt-10 mb-6 font-bold uppercase">
         <Button
           variant="contained"
+          size="large"
           color="primary"
-          onClick={async () => {
-            if (editing) return; // do nothing if editing mode is active
-
-            setLoadingSave(true);
-            try {
-              await handleUpdate(); // only submit remarks + status (NOT checklists)
-              console.log("✅ Form successfully submitted!");
-            } catch (err) {
-              console.error("❌ Submission failed:", err);
-            } finally {
-              setLoadingSave(false);
-            }
-          }}
+          onClick={() => setShowConfirm(true)}
           disabled={editing || loadingSave} // disable when editing or submitting
           sx={{
+            px: 6,
+            py: 1.5,
+            borderRadius: "10px",
+            fontWeight: "bold",
             opacity: editing ? 0.5 : 1,
             pointerEvents: editing ? "none" : "auto",
           }}
         >
-          {loadingSave ? "Submitting..." : "Submit"}
+          {loadingSave ? "Submitting..." : "✅ Move to Permit Approval"}
         </Button>
       </div>
     </Box>

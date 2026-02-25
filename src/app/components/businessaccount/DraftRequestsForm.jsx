@@ -1,7 +1,13 @@
 "use client";
 
 import DocList from "@/app/components/ui/DocViewer";
-import { HiChevronDown, HiChevronUp, HiSearch, HiTrash, HiPencil } from "react-icons/hi";
+import {
+  HiChevronDown,
+  HiChevronUp,
+  HiSearch,
+  HiTrash,
+  HiPencil,
+} from "react-icons/hi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -139,7 +145,8 @@ export default function DraftRequestsForm() {
             Draft Requests
           </h1>
           <p className="text-gray-500 dark:text-slate-400 mt-1">
-            These requests have been saved as drafts. Continue editing and submit when ready.
+            These requests have been saved as drafts. Continue editing and
+            submit when ready.
           </p>
         </div>
         <span className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm font-semibold rounded-full border border-amber-200 dark:border-amber-800">
@@ -197,11 +204,17 @@ export default function DraftRequestsForm() {
           <div className="text-6xl mb-4">📝</div>
           <p className="text-lg font-medium">No draft requests found.</p>
           <p className="text-sm mt-1">
-            Start a new sanitation permit request and save it as a draft to see it here.
+            Start a new sanitation permit request and save it as a draft to see
+            it here.
           </p>
           <Button
             variant="contained"
-            sx={{ mt: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}
+            sx={{
+              mt: 3,
+              borderRadius: 2,
+              textTransform: "none",
+              fontWeight: 600,
+            }}
             onClick={() => router.push("/businessaccount/request/newbusiness")}
           >
             New Request
@@ -264,7 +277,9 @@ export default function DraftRequestsForm() {
                       variant="contained"
                       color="warning"
                       onClick={() =>
-                        router.push(`/businessaccount/request/newbusiness?draft=${req._id}`)
+                        router.push(
+                          `/businessaccount/request/newbusiness?draft=${req._id}`,
+                        )
                       }
                       startIcon={<HiPencil />}
                       sx={{
@@ -345,6 +360,33 @@ export default function DraftRequestsForm() {
                           <p className="text-gray-700 dark:text-slate-300 text-sm mt-1 whitespace-pre-line">
                             {req.remarks}
                           </p>
+                        </div>
+                      )}
+
+                      {/* Review History */}
+                      {req.history?.length > 0 && (
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                            Officer's Remarks History
+                          </h3>
+                          <ul className="space-y-3">
+                            {req.history.map((h, i) => (
+                              <li
+                                key={i}
+                                className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-100 dark:border-slate-700"
+                              >
+                                <div className="text-[10px] text-gray-400 dark:text-slate-500 mb-1 font-mono">
+                                  {h.date
+                                    ? new Date(h.date).toLocaleString("en-PH")
+                                    : "—"}
+                                </div>
+                                <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-line font-medium leading-relaxed">
+                                  {h.remarks}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -449,25 +491,28 @@ export default function DraftRequestsForm() {
                             : null,
                         ],
                         ["Health Certificates", req.healthCertificates],
-                        ["Balance to Comply", req.healthCertBalanceToComply],
+                        [
+                          "Balance to Comply",
+                          req.healthCertBalanceToComply || 0,
+                        ],
                         [
                           "Health Cert Due",
                           req.healthCertDueDate
-                            ? new Date(req.healthCertDueDate).toLocaleDateString(
-                                "en-PH",
-                              )
+                            ? new Date(
+                                req.healthCertDueDate,
+                              ).toLocaleDateString("en-PH")
                             : null,
                         ],
                         [
                           "Health Cert Fee",
                           req.healthCertFee
-                            ? `₱${Number(req.healthCertFee).toLocaleString()}`
+                            ? `₱${Number(req.healthCertFee).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
                             : null,
                         ],
                         [
                           "Sanitary Fee",
                           req.healthCertSanitaryFee
-                            ? `₱${Number(req.healthCertSanitaryFee).toLocaleString()}`
+                            ? `₱${Number(req.healthCertSanitaryFee).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
                             : null,
                         ],
                         ["OR Number", req.orNumberHealthCert],
@@ -488,9 +533,9 @@ export default function DraftRequestsForm() {
                   </div>
 
                   {/* Uploaded Documents */}
-                  {(req.businessDocuments?.length ||
-                    req.permitDocuments?.length ||
-                    req.personnelDocuments?.length) ? (
+                  {req.businessDocuments?.length ||
+                  req.permitDocuments?.length ||
+                  req.personnelDocuments?.length ? (
                     <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
                       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
                         Uploaded Documents
@@ -532,11 +577,7 @@ export default function DraftRequestsForm() {
         <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 1 }}>
           <div className="flex flex-col items-center gap-2">
             <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-4xl">
-              {isDeleting ? (
-                <CircularProgress size={32} color="error" />
-              ) : (
-                "🗑️"
-              )}
+              {isDeleting ? <CircularProgress size={32} color="error" /> : "🗑️"}
             </div>
             <span className="text-xl font-bold text-gray-800 dark:text-slate-100 mt-1">
               {isDeleting ? "Deleting…" : "Delete Draft?"}
@@ -592,9 +633,7 @@ export default function DraftRequestsForm() {
               minWidth: 120,
             }}
             startIcon={
-              isDeleting ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : null
+              isDeleting ? <CircularProgress size={16} color="inherit" /> : null
             }
           >
             {isDeleting ? "Deleting…" : "Yes, Delete"}

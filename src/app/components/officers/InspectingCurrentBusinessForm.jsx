@@ -30,6 +30,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Backdrop,
 } from "@mui/material";
 import {
   MdBusiness,
@@ -108,13 +109,22 @@ export default function InspectingCurrentBusinessForm() {
   const [remarks, setRemarks] = useState("");
   const [dateReinspected, setDateReinspected] = useState("");
   const [validationModalOpen, setValidationModalOpen] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [missingFieldsList, setMissingFieldsList] = useState([]);
 
   useEffect(() => {
-    if (currentTicket?.inspectionChecklist) {
-      setScores(currentTicket.inspectionChecklist);
+    if (currentTicket) {
+      if (currentTicket.inspectionChecklist) {
+        setScores(currentTicket.inspectionChecklist);
+      }
       setRemarks(currentTicket.remarks || "");
-      setDateReinspected(currentTicket.dateReinspected || "");
+      // Fallback to inspectionDate (from modal) if dateReinspected isn't set yet
+      const initialDate =
+        currentTicket.dateReinspected ||
+        (currentTicket.inspectionDate
+          ? currentTicket.inspectionDate.split("T")[0]
+          : "");
+      setDateReinspected(initialDate);
     }
   }, [currentTicket]);
 
@@ -194,6 +204,7 @@ export default function InspectingCurrentBusinessForm() {
       return;
     }
 
+    setIsCompleting(true);
     try {
       // ✅ 1. Get all previous inspections for the same business this year
       const res = await axios.get(
@@ -210,6 +221,7 @@ export default function InspectingCurrentBusinessForm() {
 
       if (completedCount >= 2) {
         alert("Only 2 inspections are allowed per year.");
+        setIsCompleting(false);
         return;
       }
 
@@ -248,13 +260,8 @@ export default function InspectingCurrentBusinessForm() {
         officerInCharge,
       };
 
-      // ✅ 3. Save ticket (POST for first, PUT for reinspection)
-      const ticketRes =
-        inspectionNumber === 1
-          ? await axios.post(`/api/ticket`, { businessId, ...ticketPayload })
-          : await axios.put(`/api/ticket/${currentTicket._id}`, ticketPayload);
-
-      const ticketId = ticketRes.data?._id || currentTicket._id;
+      // ✅ 3. Save ticket (Always PUT since ticket is pre-created as pending)
+      await axios.put(`/api/ticket/${currentTicket._id}`, ticketPayload);
 
       // ✅ 4. Detect violations based on checklist
       const detectedViolations = [];
@@ -329,7 +336,7 @@ export default function InspectingCurrentBusinessForm() {
 
             await axios.post(`/api/violation`, {
               ...v,
-              ticketId,
+              ticketId: currentTicket._id,
               businessId,
               offenseCount,
               penaltyAmount: amount,
@@ -362,6 +369,8 @@ export default function InspectingCurrentBusinessForm() {
       router.push("/officers/inspections/pendinginspections");
     } catch (err) {
       console.error("❌ Ticket error:", err.response?.data || err);
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -391,10 +400,13 @@ export default function InspectingCurrentBusinessForm() {
       </Typography>
     );
 
-  const sortedTickets = tickets.sort(
+  const sortedTickets = [...tickets].sort(
     (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
   );
-  const activeTicket = sortedTickets.find((t) => t._id === id);
+  const activeIndex = sortedTickets.findIndex((t) => t._id === id);
+  const activeNum =
+    currentTicket?.inspectionNumber ||
+    (activeIndex !== -1 ? activeIndex + 1 : 1);
 
   return (
     <Box className="animate-in fade-in duration-700 max-w-7xl mx-auto py-8 px-4 ">
@@ -418,7 +430,7 @@ export default function InspectingCurrentBusinessForm() {
         <Stack direction="row" spacing={2} alignItems="center">
           <Chip
             icon={<MdInfo />}
-            label={`${formatOrdinal(currentTicket.inspectionNumber || 1)} Inspection for ${year}`}
+            label={`${formatOrdinal(activeNum)} Inspection for ${year}`}
             color="primary"
             variant="outlined"
             sx={{ fontWeight: "bold", borderRadius: "8px" }}
@@ -591,7 +603,9 @@ export default function InspectingCurrentBusinessForm() {
                 }}
               >
                 <Typography variant="h6" className="font-bold">
-                  {isReadOnly ? "Inspection Record" : "Current Inspection Form"}
+                  {isReadOnly
+                    ? `${formatOrdinal(activeNum)} Inspection Record`
+                    : `${formatOrdinal(activeNum)} Inspection Form`}
                 </Typography>
               </Box>
               <CardContent sx={{ p: 4 }}>
@@ -902,10 +916,7 @@ export default function InspectingCurrentBusinessForm() {
                         Scheduled Re-inspection Date
                       </Typography>
                       <DateInput
-                        value={
-                          dateReinspected ||
-                          new Date().toISOString().split("T")[0]
-                        }
+                        value={dateReinspected}
                         disabled
                         className="max-w-[300px]"
                       />
@@ -998,101 +1009,360 @@ export default function InspectingCurrentBusinessForm() {
               </CardContent>
             </Card>
 
-            {/* 🕰️ Inspection History */}
+            {/* 🕰️ Detailed Comparison Timeline */}
             <Box>
-              <Typography
-                variant="h6"
-                className="font-bold mb-4 flex items-center gap-2 dark:text-white"
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={3}
               >
-                <MdHistory className="text-slate-400 dark:text-slate-500" />{" "}
-                Inspection History
-              </Typography>
-              <Stack spacing={2}>
-                {sortedTickets
-                  .filter(
-                    (t) => t._id !== id && t.inspectionStatus === "completed",
-                  )
-                  .map((t, idx) => (
-                    <Card
+                <Typography
+                  variant="h6"
+                  className="font-bold flex items-center gap-2 dark:text-white"
+                >
+                  <MdHistory className="text-slate-400 dark:text-slate-500" />{" "}
+                  Comparative Inspection History
+                </Typography>
+                <Typography
+                  variant="caption"
+                  className="text-slate-500 font-medium bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"
+                >
+                  {sortedTickets.length} Record(s) Found
+                </Typography>
+              </Box>
+
+              <Grid container spacing={3}>
+                {sortedTickets.map((t, idx) => {
+                  const isCurrent = t._id === id;
+                  const num = t.inspectionNumber || idx + 1;
+                  const checklist = t.inspectionChecklist || {};
+                  const isRoutine = num === 1;
+
+                  return (
+                    <Grid
+                      item
+                      xs={12}
+                      md={sortedTickets.length > 1 ? 6 : 12}
                       key={t._id}
-                      elevation={0}
-                      sx={{
-                        borderRadius: 4,
-                        border: "1px solid",
-                        borderColor: (theme) =>
-                          theme.palette.mode === "dark"
-                            ? "rgba(255,255,255,0.05)"
-                            : "rgba(0,0,0,0.05)",
-                        backgroundColor: (theme) =>
-                          theme.palette.mode === "dark"
-                            ? "rgba(30, 41, 59, 0.4)"
-                            : "rgba(255,255,255,0.5)",
-                      }}
                     >
-                      <CardContent sx={{ p: 2 }}>
-                        <Stack
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
+                      <Card
+                        elevation={0}
+                        sx={{
+                          height: "100%",
+                          borderRadius: 6,
+                          border: "2px solid",
+                          borderColor: (theme) =>
+                            isCurrent
+                              ? "#0ea5e9"
+                              : theme.palette.mode === "dark"
+                                ? "rgba(255,255,255,0.08)"
+                                : "rgba(0,0,0,0.06)",
+                          backgroundColor: (theme) =>
+                            isCurrent
+                              ? theme.palette.mode === "dark"
+                                ? "rgba(14, 165, 233, 0.08)"
+                                : "rgba(14, 165, 233, 0.02)"
+                              : theme.palette.mode === "dark"
+                                ? "rgba(30, 41, 59, 0.4)"
+                                : "#fff",
+                          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                          position: "relative",
+                          overflow: "visible",
+                        }}
+                      >
+                        {/* Status Ribbon */}
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: -12,
+                            right: 20,
+                            px: 2,
+                            py: 0.5,
+                            borderRadius: "10px",
+                            backgroundColor:
+                              t.inspectionStatus === "completed"
+                                ? "#10b981"
+                                : "#f59e0b",
+                            color: "#fff",
+                            fontSize: "0.65rem",
+                            fontWeight: "bold",
+                            letterSpacing: "0.05em",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                            zIndex: 1,
+                          }}
                         >
+                          {t.inspectionStatus.toUpperCase()}
+                        </Box>
+
+                        <CardContent sx={{ p: 4 }}>
+                          {/* Header: Number & Date */}
                           <Stack
                             direction="row"
-                            spacing={3}
+                            spacing={2.5}
                             alignItems="center"
+                            mb={3}
                           >
                             <Box
                               sx={{
-                                p: 1,
-                                backgroundColor: "rgba(14, 165, 233, 0.05)",
-                                borderRadius: "10px",
+                                width: 56,
+                                height: 56,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                backgroundColor: isRoutine
+                                  ? "#0ea5e9"
+                                  : "#a855f7",
+                                color: "#fff",
+                                borderRadius: "18px",
+                                fontWeight: "bold",
+                                fontSize: "1.25rem",
+                                boxShadow: isRoutine
+                                  ? "0 8px 20px rgba(14, 165, 233, 0.2)"
+                                  : "0 8px 20px rgba(168, 85, 247, 0.2)",
                               }}
                             >
-                              <MdNumbers className="text-blue-500" />
+                              {num}
                             </Box>
                             <Box>
                               <Typography
-                                variant="body2"
-                                className="font-bold text-slate-700 dark:text-slate-200"
+                                variant="h6"
+                                sx={{ fontWeight: 800, lineHeight: 1.2 }}
                               >
-                                {formatOrdinal(t.inspectionNumber || idx + 1)}{" "}
-                                Inspection
+                                {isRoutine ? "Routine" : "Re-inspection"}
                               </Typography>
                               <Typography
                                 variant="caption"
-                                className="text-slate-500 dark:text-slate-400"
+                                className="text-slate-500 font-medium flex items-center gap-1 mt-0.5"
                               >
-                                Performed on{" "}
-                                {new Date(t.createdAt).toLocaleDateString()}
+                                <MdCalendarToday size={14} />
+                                {new Date(t.createdAt).toLocaleDateString(
+                                  "en-PH",
+                                  {
+                                    month: "long",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )}
                               </Typography>
                             </Box>
                           </Stack>
-                          <Button
-                            size="small"
-                            variant="text"
-                            className="dark:text-blue-400"
-                            onClick={() =>
-                              router.push(
-                                `/officers/inspections/pendinginspections/inspectingcurrentbusiness?id=${t._id}`,
-                              )
-                            }
-                          >
-                            View Summary
-                          </Button>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  ))}
-                {sortedTickets.filter(
-                  (t) => t._id !== id && t.inspectionStatus === "completed",
-                ).length === 0 && (
-                  <Typography
-                    variant="body2"
-                    className="text-slate-500 dark:text-slate-400 italic px-2"
-                  >
-                    No previous inspection records for this year.
-                  </Typography>
-                )}
-              </Stack>
+
+                          {/* Quick Summary Section */}
+                          <Box mb={3}>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 700,
+                                color: "text.secondary",
+                                textTransform: "uppercase",
+                                mb: 1.5,
+                                display: "block",
+                              }}
+                            >
+                              Compliance Overview
+                            </Typography>
+                            {t.inspectionStatus === "completed" ? (
+                              <Grid container spacing={1}>
+                                {[
+                                  {
+                                    label: "Permit",
+                                    val:
+                                      checklist.sanitaryPermit === "with"
+                                        ? "Passed"
+                                        : "Missing",
+                                    ok: checklist.sanitaryPermit === "with",
+                                  },
+                                  {
+                                    label: "Water",
+                                    val:
+                                      checklist.certificateOfPotability ===
+                                      "check"
+                                        ? "OK"
+                                        : "Error",
+                                    ok:
+                                      checklist.certificateOfPotability ===
+                                      "check",
+                                  },
+                                  {
+                                    label: "Pest",
+                                    val:
+                                      checklist.pestControl === "check"
+                                        ? "OK"
+                                        : "Error",
+                                    ok: checklist.pestControl === "check",
+                                  },
+                                  {
+                                    label: "Staff",
+                                    val: `${checklist.healthCertificates?.withCert || 0}/${checklist.healthCertificates?.actualCount || 0}`,
+                                    ok:
+                                      (checklist.healthCertificates
+                                        ?.withoutCert || 0) === 0,
+                                  },
+                                ].map((item, i) => (
+                                  <Grid item xs={6} key={i}>
+                                    <Box
+                                      sx={{
+                                        p: 1.5,
+                                        borderRadius: 3,
+                                        border: "1px solid",
+                                        borderColor: item.ok
+                                          ? "rgba(16, 185, 129, 0.1)"
+                                          : "rgba(239, 68, 68, 0.1)",
+                                        backgroundColor: item.ok
+                                          ? "rgba(16, 185, 129, 0.03)"
+                                          : "rgba(239, 68, 68, 0.03)",
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          color: "text.secondary",
+                                          fontWeight: 600,
+                                          display: "block",
+                                          fontSize: "0.6rem",
+                                        }}
+                                      >
+                                        {item.label}
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          fontWeight: 700,
+                                          color: item.ok
+                                            ? "#059669"
+                                            : "#dc2626",
+                                        }}
+                                      >
+                                        {item.val}
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                ))}
+                              </Grid>
+                            ) : (
+                              <Box
+                                sx={{
+                                  p: 2,
+                                  borderRadius: 3,
+                                  backgroundColor: "rgba(0,0,0,0.03)",
+                                  textAlign: "center",
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {isCurrent
+                                    ? "📋 Results being recorded..."
+                                    : "⌛ Pending Inspection"}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Box>
+
+                          {/* Remarks Snippet */}
+                          <Box mb={3}>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 700,
+                                color: "text.secondary",
+                                textTransform: "uppercase",
+                                mb: 1,
+                                display: "block",
+                              }}
+                            >
+                              Officer Remarks & Findings
+                            </Typography>
+                            <Paper
+                              variant="outlined"
+                              sx={{
+                                p: 2,
+                                borderRadius: 3,
+                                backgroundColor: (theme) =>
+                                  theme.palette.mode === "dark"
+                                    ? "rgba(0,0,0,0.2)"
+                                    : "rgba(0,0,0,0.01)",
+                                border: "1px dashed rgba(0,0,0,0.1)",
+                                minHeight: "80px",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  lineHeight: 1.6,
+                                  color: t.remarks
+                                    ? "text.primary"
+                                    : "text.secondary",
+                                  fontStyle: t.remarks ? "normal" : "italic",
+                                }}
+                              >
+                                {t.remarks ||
+                                  "No specific detailed remarks provided for this record."}
+                              </Typography>
+                            </Paper>
+                          </Box>
+
+                          {/* Footer Action */}
+                          {!isCurrent && (
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              size="small"
+                              startIcon={<MdInfo />}
+                              onClick={() =>
+                                router.push(
+                                  `/officers/inspections/pendinginspections/inspectingcurrentbusiness?id=${t._id}`,
+                                )
+                              }
+                              sx={{
+                                borderRadius: 3,
+                                textTransform: "none",
+                                fontWeight: "bold",
+                                py: 1,
+                                borderColor: "#0ea5e9",
+                                color: "#0ea5e9",
+                                "&:hover": {
+                                  backgroundColor: "rgba(14, 165, 233, 0.05)",
+                                  borderColor: "#0284c7",
+                                },
+                              }}
+                            >
+                              View Summary
+                            </Button>
+                          )}
+                          {isCurrent && (
+                            <Box
+                              sx={{
+                                width: "100%",
+                                py: 1,
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                gap: 1,
+                                color: "#0ea5e9",
+                              }}
+                            >
+                              {isReadOnly ? (
+                                <MdCheckCircle />
+                              ) : (
+                                <MdRadioButtonChecked className="animate-pulse" />
+                              )}
+                              <Typography variant="caption" fontWeight="bold">
+                                {isReadOnly
+                                  ? "Viewing this Record"
+                                  : "Currently Editing"}
+                              </Typography>
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                })}
+              </Grid>
             </Box>
           </Stack>
         </Grid>
@@ -1180,6 +1450,27 @@ export default function InspectingCurrentBusinessForm() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Submitting Backdrop ── */}
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 9999,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)",
+        }}
+        open={isCompleting}
+      >
+        <CircularProgress color="inherit" size={60} thickness={4} />
+        <Typography variant="h6" fontWeight="bold">
+          Completing Inspection
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          Detecting violations and finalising record...
+        </Typography>
+      </Backdrop>
     </Box>
   );
 }

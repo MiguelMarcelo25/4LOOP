@@ -265,117 +265,55 @@ export default function CreateTicketInspectionForm() {
     page * limit,
   );
 
-  const handleOpenConfirm = (business) => {
-    setSelectedBusiness(business);
-    setOpenConfirm(true);
-    setInspectionDate(new Date().toISOString().split("T")[0]);
-  };
-
   const handleCloseConfirm = () => {
-    setSelectedBusiness(null);
     setOpenConfirm(false);
+    setSelectedBusiness(null);
     setInspectionDate("");
   };
+
+  const handleOpenConfirm = (business) => {
+    setSelectedBusiness(business);
+    setInspectionDate(new Date().toISOString().split("T")[0]);
+    setOpenConfirm(true);
+  };
+
   const handleSaveInspection = async () => {
     if (!selectedBusiness || !inspectionDate) return;
 
     setIsSaving(true);
     try {
-      console.log(
-        "📧 Checking businessAccount:",
-        selectedBusiness.businessAccount,
-      );
-
-      let populatedBusiness = selectedBusiness;
-
-      // 🧠 Auto-fetch if businessAccount is not populated
-      if (
-        populatedBusiness &&
-        typeof populatedBusiness.businessAccount === "string"
-      ) {
-        console.log(
-          "🔍 businessAccount is just an ID, fetching populated business...",
-        );
-        try {
-          const res = await axios.get(
-            `/api/business/${populatedBusiness._id}`,
-            {
-              withCredentials: true,
-            },
-          );
-          populatedBusiness = res.data;
-          console.log("📩 Populated business fetched:", populatedBusiness);
-        } catch (fetchErr) {
-          console.warn("⚠️ Failed to fetch populated business:", fetchErr);
-        }
-      }
-
       // 1️⃣ Create inspection ticket
-      await axios.post(
+      const res = await axios.post(
         "/api/ticket",
         {
-          businessId: populatedBusiness._id,
+          businessId: selectedBusiness._id,
           inspectionDate,
           inspectionStatus: "pending",
         },
         { withCredentials: true },
       );
-      await fetchInspectionInfoForBusiness(populatedBusiness._id); // refresh count immediately
 
-      // 2️⃣ Create notification
-      await axios.post("/api/notifications", {
-        user:
-          populatedBusiness.businessAccount?._id ||
-          populatedBusiness.businessAccount,
-        business: populatedBusiness._id,
-        title: "New Inspection Scheduled",
-        message: `A new inspection has been scheduled for your business "${populatedBusiness.businessName}" on ${new Date(
-          inspectionDate,
-        ).toLocaleDateString()}.`,
-        category: "inspection",
-      });
+      const newTicketId = res.data.ticket?._id;
 
-      // ✅ 3️⃣ Send email safely
-      const userEmail =
-        populatedBusiness?.businessAccount?.email ||
-        populatedBusiness?.businessAccountEmail ||
-        populatedBusiness?.email;
-
-      console.log("📧 Sending email to:", userEmail || "❌ No email found");
-
-      if (userEmail) {
-        await fetch("/api/notifications/email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: userEmail,
-            subject: `Scheduled Inspection for ${populatedBusiness.businessName}`,
-            body: `
-            <p>Dear ${populatedBusiness.contactPerson || populatedBusiness.businessName},</p>
-            <p>
-              A new inspection has been scheduled for your business
-              <strong>${populatedBusiness.businessName}</strong> on
-              <strong>${new Date(inspectionDate).toLocaleDateString()}</strong>.
-            </p>
-            <p>Please ensure that your premises and relevant documents are ready for inspection.</p>
-            <p>Thank you,<br><strong>Pasig Sanitation Office</strong></p>
-          `,
-          }),
-        });
-      } else {
-        console.warn("❌ No valid email found for this business.");
-      }
-
-      alert("✅ Inspection ticket created and notifications sent!");
+      console.log("✅ Inspection ticket created and notifications sent!");
       handleCloseConfirm();
 
-      delete inspectionCache.current[populatedBusiness._id];
-      await fetchInspectionInfoForBusiness(populatedBusiness._id);
+      // Refresh data
+      delete inspectionCache.current[selectedBusiness._id];
+      await fetchInspectionInfoForBusiness(selectedBusiness._id);
       await refetch();
-      sessionStorage.removeItem("inspectionCache");
+
+      // 🎯 Redirect to the actual inspection form directly
+      if (newTicketId) {
+        router.push(
+          `/officers/inspections/pendinginspections/inspectingcurrentbusiness?id=${newTicketId}`,
+        );
+      }
     } catch (error) {
       console.error("❌ Error saving inspection:", error);
-      alert("❌ Failed to save inspection.");
+      const errorMsg =
+        error.response?.data?.error || "Failed to save inspection.";
+      alert(`❌ ${errorMsg}`);
     } finally {
       setIsSaving(false);
     }
@@ -520,18 +458,20 @@ export default function CreateTicketInspectionForm() {
                       <Button
                         variant="contained"
                         size="small"
-                        color={pending ? "inherit" : "primary"}
+                        color={pending ? "info" : "primary"}
                         onClick={() => {
                           if (pending) handleViewStatus(business);
                           else if (!maxed) handleOpenConfirm(business);
                         }}
-                        disabled={maxed || pending}
+                        disabled={maxed}
                       >
                         {pending
-                          ? "Pending Inspection"
+                          ? "Continue"
                           : maxed
-                            ? "Max Inspections"
-                            : "Create Inspection"}
+                            ? "Maxed"
+                            : completed === 0
+                              ? "1st Inspection"
+                              : "2nd Inspection"}
                       </Button>
                       <Button
                         variant="outlined"
@@ -549,6 +489,73 @@ export default function CreateTicketInspectionForm() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* ── Confirmation & Date Selection Dialog ── */}
+      <Dialog
+        open={openConfirm}
+        onClose={handleCloseConfirm}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 4, p: 1 },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: "bold", textAlign: "center", pb: 1 }}>
+          Schedule Inspection
+        </DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={3} mt={1}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              textAlign="center"
+            >
+              Please select the date for the inspection of{" "}
+              <strong>{selectedBusiness?.businessName}</strong>.
+            </Typography>
+
+            <Box>
+              <Typography
+                variant="caption"
+                fontWeight="bold"
+                color="primary"
+                sx={{ mb: 1, display: "block", textTransform: "uppercase" }}
+              >
+                Inspection Date
+              </Typography>
+              <DateInput
+                value={inspectionDate}
+                onChange={(val) => setInspectionDate(val)}
+                fullWidth
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: "center", gap: 2 }}>
+          <Button
+            onClick={handleCloseConfirm}
+            fullWidth
+            variant="outlined"
+            sx={{ borderRadius: 3, textTransform: "none", fontWeight: "bold" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveInspection}
+            loading={isSaving}
+            fullWidth
+            variant="contained"
+            sx={{
+              borderRadius: 3,
+              textTransform: "none",
+              fontWeight: "bold",
+              background: "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)",
+            }}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Pagination */}
       <Box display="flex" justifyContent="space-between" mt={2}>
@@ -570,39 +577,6 @@ export default function CreateTicketInspectionForm() {
           Next →
         </Button>
       </Box>
-
-      {/* Dialog */}
-      <Dialog open={!!selectedBusiness} onClose={handleCloseConfirm}>
-        <DialogTitle>
-          Inspection Form for {selectedBusiness?.businessName}
-        </DialogTitle>
-        <DialogContent>
-          <div className="pt-2">
-            <DateInput
-              label="Inspection Date"
-              value={inspectionDate}
-              onChange={setInspectionDate}
-              fullWidth
-              placeholder="Select inspection date"
-            />
-          </div>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirm} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveInspection}
-            disabled={!inspectionDate || isSaving}
-            startIcon={
-              isSaving && <MuiCircularProgress size={16} color="inherit" />
-            }
-          >
-            {isSaving ? "Saving..." : "Save Inspection"}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* ── Loading Backdrop ── */}
       <Backdrop
