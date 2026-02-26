@@ -135,7 +135,7 @@ export default function AddbusinessForm() {
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700">
         {/* Modern Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-5 relative overflow-hidden">
+        <div className="bg-linear-to-r from-blue-600 to-indigo-700 px-8 py-5 relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
 
@@ -517,11 +517,10 @@ export default function AddbusinessForm() {
               <button
                 type="submit"
                 disabled={isPending}
-                className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all ${
-                  isPending
-                    ? "bg-slate-400 cursor-not-allowed shadow-none"
-                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5"
-                }`}
+                className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all ${isPending
+                  ? "bg-slate-400 cursor-not-allowed shadow-none"
+                  : "bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5"
+                  }`}
               >
                 {isPending ? (
                   <>

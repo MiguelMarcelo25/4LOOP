@@ -122,18 +122,17 @@ function MsrUploadSection({ business, onUploadSuccess }) {
           return (
             <div
               key={item.id}
-              className={`flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border ${
-                alreadyDone
+              className={`flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border ${alreadyDone
                   ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
                   : "bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800"
-              }`}
+                }`}
             >
               {/* Status icon + label */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {alreadyDone ? (
-                  <HiCheckCircle className="text-green-500 text-lg flex-shrink-0" />
+                  <HiCheckCircle className="text-green-500 text-lg shrink-0" />
                 ) : (
-                  <HiExclamationCircle className="text-orange-400 text-lg flex-shrink-0" />
+                  <HiExclamationCircle className="text-orange-400 text-lg shrink-0" />
                 )}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate">
@@ -154,7 +153,7 @@ function MsrUploadSection({ business, onUploadSuccess }) {
 
               {/* Upload controls */}
               {!alreadyDone && (
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <label className="cursor-pointer">
                     <input
                       type="file"
@@ -168,7 +167,7 @@ function MsrUploadSection({ business, onUploadSuccess }) {
                       📎{" "}
                       {file
                         ? file.name.slice(0, 20) +
-                          (file.name.length > 20 ? "…" : "")
+                        (file.name.length > 20 ? "…" : "")
                         : "Choose file"}
                     </span>
                   </label>
@@ -194,7 +193,7 @@ function MsrUploadSection({ business, onUploadSuccess }) {
 
               {/* Re-upload option for already-done items */}
               {alreadyDone && (
-                <label className="cursor-pointer flex-shrink-0">
+                <label className="cursor-pointer shrink-0">
                   <input
                     type="file"
                     accept="image/*,application/pdf"
@@ -390,9 +389,9 @@ export default function BusinesslistForm() {
           );
           const latestTicket = bizTickets.length
             ? bizTickets.sort(
-                (a, b) =>
-                  new Date(b.inspectionDate) - new Date(a.inspectionDate),
-              )[0]
+              (a, b) =>
+                new Date(b.inspectionDate) - new Date(a.inspectionDate),
+            )[0]
             : null;
           const violations = latestTicket?.violations || [];
           const recordedViolation =
@@ -557,7 +556,7 @@ export default function BusinesslistForm() {
                         {business.businessName || "Unnamed Business"}
                       </h2>
                       <span
-                        className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide border flex-shrink-0 ${badge.cls}`}
+                        className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide border shrink-0 ${badge.cls}`}
                       >
                         {badge.label}
                       </span>
@@ -592,10 +591,9 @@ export default function BusinesslistForm() {
                                 key={idx}
                                 className="flex items-center flex-1"
                               >
-                                <div className="flex flex-col items-center flex-shrink-0">
+                                <div className="flex flex-col items-center shrink-0">
                                   <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                                      isExpired
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${isExpired
                                         ? isDone || isCurrent
                                           ? "bg-red-100 border-red-400 text-red-600"
                                           : "bg-gray-100 border-gray-300 text-gray-400"
@@ -604,13 +602,12 @@ export default function BusinesslistForm() {
                                           : isCurrent
                                             ? "bg-blue-500 border-blue-500 text-white ring-2 ring-blue-200 dark:ring-blue-700"
                                             : "bg-gray-100 border-gray-300 text-gray-400 dark:bg-slate-700 dark:border-slate-600"
-                                    }`}
+                                      }`}
                                   >
                                     {isDone && !isExpired ? "✓" : step.icon}
                                   </div>
                                   <span
-                                    className={`text-[9px] mt-1 text-center leading-tight font-semibold ${
-                                      isExpired
+                                    className={`text-[9px] mt-1 text-center leading-tight font-semibold ${isExpired
                                         ? isDone || isCurrent
                                           ? "text-red-500"
                                           : "text-gray-400"
@@ -619,22 +616,21 @@ export default function BusinesslistForm() {
                                           : isCurrent
                                             ? "text-blue-600 dark:text-blue-400"
                                             : "text-gray-400 dark:text-slate-500"
-                                    }`}
+                                      }`}
                                   >
                                     {step.label}
                                   </span>
                                 </div>
                                 {!isLast && (
                                   <div
-                                    className={`flex-1 h-0.5 mx-1 mb-4 rounded ${
-                                      isExpired
+                                    className={`flex-1 h-0.5 mx-1 mb-4 rounded ${isExpired
                                         ? isDone
                                           ? "bg-red-300"
                                           : "bg-gray-200"
                                         : isDone
                                           ? "bg-green-400 dark:bg-green-600"
                                           : "bg-gray-200 dark:bg-slate-700"
-                                    }`}
+                                      }`}
                                   />
                                 )}
                               </div>
@@ -646,7 +642,7 @@ export default function BusinesslistForm() {
                   </div>
 
                   {/* Right: action buttons */}
-                  <div className="flex flex-col gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-2 shrink-0">
                     <Button
                       variant={isExpanded ? "contained" : "outlined"}
                       color="primary"
@@ -814,8 +810,8 @@ export default function BusinesslistForm() {
                           "Personnel Due Date",
                           business.declaredPersonnelDueDate
                             ? new Date(
-                                business.declaredPersonnelDueDate,
-                              ).toLocaleDateString("en-PH")
+                              business.declaredPersonnelDueDate,
+                            ).toLocaleDateString("en-PH")
                             : null,
                         ],
                         ["Health Certificates", business.healthCertificates],
@@ -827,8 +823,8 @@ export default function BusinesslistForm() {
                           "Health Cert Due",
                           business.healthCertDueDate
                             ? new Date(
-                                business.healthCertDueDate,
-                              ).toLocaleDateString("en-PH")
+                              business.healthCertDueDate,
+                            ).toLocaleDateString("en-PH")
                             : null,
                         ],
                         [
@@ -869,8 +865,8 @@ export default function BusinesslistForm() {
                           "OR Date",
                           business.orDateHealthCert
                             ? new Date(
-                                business.orDateHealthCert,
-                              ).toLocaleDateString("en-PH")
+                              business.orDateHealthCert,
+                            ).toLocaleDateString("en-PH")
                             : null,
                         ],
                         ["Inspection Status", business.inspectionStatus],
