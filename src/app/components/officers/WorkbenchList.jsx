@@ -41,6 +41,7 @@ import {
   HiExclamationCircle,
   HiSave,
   HiSearch,
+  HiPrinter,
 } from "react-icons/hi";
 import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
 
@@ -89,6 +90,7 @@ const MSR_OPTIONS = [
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
 import axios from "axios";
+import { saveAs } from "file-saver";
 
 // Fetch function
 const fetchBusinesses = async () => {
@@ -112,6 +114,45 @@ export default function WorkbenchList({ title, filterStatus }) {
   const [isSavingMsr, setIsSavingMsr] = useState(false);
   const [confirmStatusData, setConfirmStatusData] = useState(null); // { id, nextStatus, label }
   const [remark, setRemark] = useState("");
+  const [isPrintingWair, setIsPrintingWair] = useState(false);
+  const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
+
+  const handleDownloadFile = async (format) => {
+    if (!businessDetail) return;
+
+    if (format === "pdf") setIsPrintingWair(true);
+    if (format === "docx") setIsDownloadingDocx(true);
+
+    try {
+      const response = await fetch(`/api/print-wair?format=${format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(businessDetail),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate WAIR ${format.toUpperCase()}`);
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `WAIR_${businessDetail.bidNumber}.${format}`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch && filenameMatch.length > 1) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      saveAs(blob, filename);
+    } catch (error) {
+      console.error(error);
+      alert(`An error occurred while downloading the ${format.toUpperCase()}.`);
+    } finally {
+      if (format === "pdf") setIsPrintingWair(false);
+      if (format === "docx") setIsDownloadingDocx(false);
+    }
+  };
 
   const [sortConfig, setSortConfig] = useState({
     key: "createdAt",
@@ -1083,6 +1124,36 @@ export default function WorkbenchList({ title, filterStatus }) {
               </Stack>
             </DialogContent>
             <DialogActions className="p-4 border-t dark:border-slate-700">
+              <Button
+                onClick={() => handleDownloadFile("pdf")}
+                variant="contained"
+                disabled={isPrintingWair || isDownloadingDocx}
+                startIcon={
+                  isPrintingWair ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <HiPrinter />
+                  )
+                }
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {isPrintingWair ? "Generating PDF..." : "Download PDF"}
+              </Button>
+              <Button
+                onClick={() => handleDownloadFile("docx")}
+                variant="outlined"
+                color="secondary"
+                disabled={isDownloadingDocx || isPrintingWair}
+                startIcon={
+                  isDownloadingDocx ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <HiPrinter />
+                  )
+                }
+              >
+                {isDownloadingDocx ? "Generating DOCX..." : "Download DOCX"}
+              </Button>
               <Button
                 onClick={() => setSelectedBusinessId(null)}
                 variant="outlined"
