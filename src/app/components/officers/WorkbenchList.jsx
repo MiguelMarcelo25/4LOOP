@@ -114,29 +114,27 @@ export default function WorkbenchList({ title, filterStatus }) {
   const [isSavingMsr, setIsSavingMsr] = useState(false);
   const [confirmStatusData, setConfirmStatusData] = useState(null); // { id, nextStatus, label }
   const [remark, setRemark] = useState("");
-  const [isPrintingWair, setIsPrintingWair] = useState(false);
-  const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
+  const [isPrintingCert, setIsPrintingCert] = useState(false);
 
-  const handleDownloadFile = async (format) => {
+  const handlePrintCertificate = async () => {
     if (!businessDetail) return;
 
-    if (format === "pdf") setIsPrintingWair(true);
-    if (format === "docx") setIsDownloadingDocx(true);
+    setIsPrintingCert(true);
 
     try {
-      const response = await fetch(`/api/print-wair?format=${format}`, {
+      const response = await fetch(`/api/print-certificate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(businessDetail),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to generate WAIR ${format.toUpperCase()}`);
+        throw new Error(`Failed to generate Certificate PDF`);
       }
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `WAIR_${businessDetail.bidNumber}.${format}`;
+      let filename = `CERTIFICATE_${businessDetail.bidNumber}.pdf`;
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
         if (filenameMatch && filenameMatch.length > 1) {
@@ -147,10 +145,9 @@ export default function WorkbenchList({ title, filterStatus }) {
       saveAs(blob, filename);
     } catch (error) {
       console.error(error);
-      alert(`An error occurred while downloading the ${format.toUpperCase()}.`);
+      alert(`An error occurred while downloading the Certificate.`);
     } finally {
-      if (format === "pdf") setIsPrintingWair(false);
-      if (format === "docx") setIsDownloadingDocx(false);
+      setIsPrintingCert(false);
     }
   };
 
@@ -335,7 +332,7 @@ export default function WorkbenchList({ title, filterStatus }) {
       className="dark:bg-slate-900 bg-white dark:text-slate-200 min-h-[500px] border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden"
     >
       {/* Header Banner */}
-      <Box className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 p-8 text-white relative overflow-hidden">
+      <Box className="bg-linear-to-r from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 p-8 text-white relative overflow-hidden">
         <Box className="relative z-10">
           <Typography
             variant="h4"
@@ -1125,11 +1122,11 @@ export default function WorkbenchList({ title, filterStatus }) {
             </DialogContent>
             <DialogActions className="p-4 border-t dark:border-slate-700">
               <Button
-                onClick={() => handleDownloadFile("pdf")}
+                onClick={handlePrintCertificate}
                 variant="contained"
-                disabled={isPrintingWair || isDownloadingDocx}
+                disabled={isPrintingCert}
                 startIcon={
-                  isPrintingWair ? (
+                  isPrintingCert ? (
                     <CircularProgress size={20} color="inherit" />
                   ) : (
                     <HiPrinter />
@@ -1137,22 +1134,7 @@ export default function WorkbenchList({ title, filterStatus }) {
                 }
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
-                {isPrintingWair ? "Generating PDF..." : "Download PDF"}
-              </Button>
-              <Button
-                onClick={() => handleDownloadFile("docx")}
-                variant="outlined"
-                color="secondary"
-                disabled={isDownloadingDocx || isPrintingWair}
-                startIcon={
-                  isDownloadingDocx ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    <HiPrinter />
-                  )
-                }
-              >
-                {isDownloadingDocx ? "Generating DOCX..." : "Download DOCX"}
+                {isPrintingCert ? "Generating PDF..." : "Print PDF"}
               </Button>
               <Button
                 onClick={() => setSelectedBusinessId(null)}
