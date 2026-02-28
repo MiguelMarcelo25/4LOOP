@@ -90,7 +90,6 @@ const MSR_OPTIONS = [
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
 import axios from "axios";
-import { saveAs } from "file-saver";
 
 // Fetch function
 const fetchBusinesses = async () => {
@@ -118,34 +117,99 @@ export default function WorkbenchList({ title, filterStatus }) {
 
   const handlePrintCertificate = async () => {
     if (!businessDetail) return;
-
     setIsPrintingCert(true);
 
     try {
-      const response = await fetch(`/api/print-certificate`, {
+      // 1. Fetch populated HTML from the API (variables already injected server-side)
+      const response = await fetch("/api/print-certificate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(businessDetail),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to generate Certificate PDF`);
+        let errMsg = "Failed to generate certificate";
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (_) {}
+        throw new Error(errMsg);
       }
 
-      const blob = await response.blob();
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `CERTIFICATE_${businessDetail.bidNumber}.pdf`;
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (filenameMatch && filenameMatch.length > 1) {
-          filename = filenameMatch[1];
+      const { html } = await response.json();
+
+      // 2. Open populated HTML in a new window and trigger the browser's native print dialog
+      //    The browser's own rendering engine guarantees 100% CSS fidelity (flexbox, grid, fonts etc.)
+      //    User can "Save as PDF" or print directly from the dialog.
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert(
+          "Pop-up blocked! Please allow pop-ups for this site to print certificates.",
+        );
+        return;
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+
+      const waitForPrintAssets = async () => {
+        const doc = printWindow.document;
+        const images = Array.from(doc.images || []);
+
+        await Promise.all(
+          images.map((img) => {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+
+            return new Promise((resolve) => {
+              const done = () => resolve();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+            });
+          }),
+        );
+
+        if (doc.fonts?.ready) {
+          try {
+            await doc.fonts.ready;
+          } catch (_) {}
         }
-      }
+      };
 
-      saveAs(blob, filename);
+      let didPrint = false;
+
+      // Auto-close window after printing or cancelling
+      const triggerPrint = async () => {
+        if (didPrint) return;
+        didPrint = true;
+
+        await waitForPrintAssets();
+        printWindow.focus();
+        printWindow.print();
+        // Close the window after print dialog is dismissed
+        printWindow.onafterprint = () => printWindow.close();
+        // Fallback close for browsers that don't support onafterprint
+        setTimeout(() => {
+          if (!printWindow.closed) printWindow.close();
+        }, 4000);
+      };
+
+      // Wait for content to load and decode before printing once.
+      if (printWindow.document.readyState === "complete") {
+        await triggerPrint();
+      } else {
+        printWindow.onload = () => {
+          void triggerPrint();
+        };
+
+        // Fallback in case onload is missed in some browsers.
+        setTimeout(() => {
+          void triggerPrint();
+        }, 1200);
+      }
     } catch (error) {
-      console.error(error);
-      alert(`An error occurred while downloading the Certificate.`);
+      console.error("PDF Generation Error:", error);
+      alert(`Print Error: ${error.message}`);
     } finally {
       setIsPrintingCert(false);
     }

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
 
 export async function POST(req) {
     try {
         const businessDetail = await req.json();
+        const requestUrl = new URL(req.url);
+        const forwardedHost = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+        const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+        const host = forwardedHost || requestUrl.host;
+        const protocol = forwardedProto || requestUrl.protocol.replace(":", "");
+        const origin = `${protocol}://${host}`;
 
         // 1. Map the variables
         const dateIssued = businessDetail.createdAt
@@ -34,23 +39,9 @@ export async function POST(req) {
         } = businessDetail;
 
         const yearNoStr = new Date().getFullYear().toString().slice(-2);
-        const outputFileName = `CERTIFICATE_${bidNumber || Date.now()}`;
-
-        // 2. Read logo files and convert to Base64 to ensure Puppeteer can render them natively
-        const pasigLogoBuffer = require("fs").readFileSync(
-            require("path").join(process.cwd(), "public", "pasig-logo.png")
-        );
-        const pasigLogoBase64 = `data:image/png;base64,${pasigLogoBuffer.toString("base64")}`;
-
-        const pasigDeptLogoBuffer = require("fs").readFileSync(
-            require("path").join(process.cwd(), "public", "pasig-env.png")
-        );
-        const pasigDeptLogoBase64 = `data:image/png;base64,${pasigDeptLogoBuffer.toString("base64")}`;
-
-        const sealLogoBuffer = require("fs").readFileSync(
-            require("path").join(process.cwd(), "public", "pasig-seal.png")
-        );
-        const sealLogoBase64 = `data:image/png;base64,${sealLogoBuffer.toString("base64")}`;
+        const pasigLogoUrl = `${origin}/pasig-logo.png`;
+        const pasigDeptLogoUrl = `${origin}/pasig-env.png`;
+        const sealLogoUrl = `${origin}/pasig-seal.png`;
 
         // 3. Exact HTML payload based on Certificate.html
         const htmlContent = `
@@ -58,6 +49,7 @@ export async function POST(req) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <base href="${origin}/">
     <title>Sanitary Permit to Operate - Pasig City</title>
     <style>
         @page { size: Letter; margin: 0; }
@@ -254,8 +246,8 @@ export async function POST(req) {
 <div class="permit-container">
     <div class="header">
         <div class="logos-left">
-            <img src="${pasigLogoBase64}" alt="Pasig Logo" style="width: 50px; height: 50px; object-fit: contain;" />
-            <img src="${pasigDeptLogoBase64}" alt="Pasig Dept Logo" style="width: 50px; height: 50px; object-fit: contain;" />
+            <img src="${pasigLogoUrl}" alt="Pasig Logo" loading="eager" decoding="sync" style="width: 50px; height: 50px; object-fit: contain;" />
+            <img src="${pasigDeptLogoUrl}" alt="Pasig Dept Logo" loading="eager" decoding="sync" style="width: 50px; height: 50px; object-fit: contain;" />
         </div>
         <div class="header-text">
             <span>Republic of the Philippines</span>
@@ -263,7 +255,7 @@ export async function POST(req) {
             <span>City Health Department</span>
             <span>Environmental Sanitation Section</span>
         </div>
-        <img src="${sealLogoBase64}" alt="Pasig Seal" style="width: 50px; height: 50px; object-fit: contain;" />
+        <img src="${sealLogoUrl}" alt="Pasig Seal" loading="eager" decoding="sync" style="width: 50px; height: 50px; object-fit: contain;" />
     </div>
 
     <div class="field-row">
@@ -349,31 +341,8 @@ export async function POST(req) {
 </html>
         `;
 
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        });
-        const page = await browser.newPage();
-
-        // 8.5 x 11 inches at 96 dpi
-        await page.setViewport({ width: 816, height: 1056 });
-        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-
-        const pdfBuffer = await page.pdf({
-            format: "Letter",
-            printBackground: true,
-            margin: { top: 0, right: 0, bottom: 0, left: 0 },
-        });
-
-        await browser.close();
-
-        return new NextResponse(pdfBuffer, {
-            status: 200,
-            headers: {
-                "Content-Disposition": `attachment; filename="${outputFileName}.pdf"`,
-                "Content-Type": "application/pdf",
-            },
-        });
+        // Return the fully populated HTML to the frontend for native browser printing
+        return NextResponse.json({ html: htmlContent }, { status: 200 });
 
     } catch (error) {
         console.error("Error generating print certificate output:", error);
