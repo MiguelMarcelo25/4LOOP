@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import DateInput from '@/app/components/ui/DatePicker';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useMemo } from "react";
+import DateInput from "@/app/components/ui/DatePicker";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   TextField,
@@ -24,18 +24,25 @@ import {
   FormControl,
   InputLabel,
   InputAdornment,
-} from '@mui/material';
-import { HiSearch } from 'react-icons/hi';
-import { useQuery } from '@tanstack/react-query';
-import { getAddOwnerBusiness } from '@/app/services/BusinessService';
-import axios from 'axios';
+  Backdrop,
+  CircularProgress,
+  Card,
+  CardContent,
+  Stack,
+  Chip,
+} from "@mui/material";
+import { HiSearch } from "react-icons/hi";
+import { MdBusiness, MdCalendarToday } from "react-icons/md";
+import { useQuery } from "@tanstack/react-query";
+import { getAddOwnerBusiness } from "@/app/services/BusinessService";
+import axios from "axios";
 
 function formatViolationCode(code) {
-  if (!code) return '';
+  if (!code) return "";
   return code
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 export default function ViewTicketInspectionForm() {
@@ -44,58 +51,64 @@ export default function ViewTicketInspectionForm() {
 
   // Fetch all businesses
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['business-list'],
+    queryKey: ["business-list"],
     queryFn: () => getAddOwnerBusiness(),
   });
 
   // UI + filter states
-  const [searchType, setSearchType] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [filteredBusinesses, setFilteredBusinesses] = useState([]);
   const [inspectionCounts, setInspectionCounts] = useState({});
   const [selectedBusiness, setSelectedBusiness] = useState(null);
-  const [inspectionDate, setInspectionDate] = useState('');
-  const [remarks, setRemarks] = useState('');
+  const [inspectionDate, setInspectionDate] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [openConfirm, setOpenConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
   // Sorting
-  const [sortColumn, setSortColumn] = useState('');
-  const [sortDirection, setSortDirection] = useState('asc');
+  const [sortColumn, setSortColumn] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   const handleSort = (column) => {
     if (sortColumn === column) {
-      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortColumn(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const renderSortArrow = (column) => {
     if (sortColumn !== column) return null;
-    return sortDirection === 'asc' ? ' ▲' : ' ▼';
+    return sortDirection === "asc" ? " ▲" : " ▼";
   };
 
   useEffect(() => {
     if (!data?.data) return;
 
-    const excludedStatuses = ['pending', 'pending2', 'pending3', 'draft', 'submitted'];
+    const excludedStatuses = [
+      "pending",
+      "pending2",
+      "pending3",
+      "draft",
+      "submitted",
+    ];
 
     const filtered = data.data.filter((b) => {
-      const name = b.businessName?.toLowerCase() || '';
-      const bid = b.bidNumber?.toLowerCase() || '';
+      const name = b.businessName?.toLowerCase() || "";
+      const bid = b.bidNumber?.toLowerCase() || "";
       const q = searchTerm.toLowerCase();
 
       const matches =
-        searchType === 'all'
+        searchType === "all"
           ? name.includes(q) || bid.includes(q)
           : b[searchType]?.toLowerCase().includes(q);
 
-      // ✅ Show all except those with excluded statuses
       const isEligible = !excludedStatuses.includes(b.status?.toLowerCase());
 
       return matches && isEligible;
@@ -105,8 +118,6 @@ export default function ViewTicketInspectionForm() {
     setPage(1);
   }, [searchTerm, searchType, data]);
 
-
-  // Helper for limited concurrent fetches
   async function fetchWithLimit(items, limit, fn) {
     const results = [];
     const executing = [];
@@ -126,7 +137,6 @@ export default function ViewTicketInspectionForm() {
 
   const inspectionCache = useRef({});
 
-  // Fetch inspection info
   useEffect(() => {
     if (!data?.data?.length) return;
 
@@ -137,7 +147,7 @@ export default function ViewTicketInspectionForm() {
 
       const newInfo = {};
       const businessesToFetch = currentBusinesses.filter(
-        (b) => !inspectionCache.current[b._id]
+        (b) => !inspectionCache.current[b._id],
       );
 
       if (!businessesToFetch.length) return;
@@ -151,15 +161,15 @@ export default function ViewTicketInspectionForm() {
 
           const tickets = ticketRes.data || [];
           const completedCount = tickets.filter(
-            (t) => t.inspectionStatus === 'completed'
+            (t) => t.inspectionStatus === "completed",
           ).length;
           const hasPending = tickets.some(
-            (t) => t.inspectionStatus === 'pending'
+            (t) => t.inspectionStatus === "pending",
           );
 
           const violations = violationRes.data || [];
           const activeViolation = violations.find(
-            (v) => v.status === 'pending'
+            (v) => v.status === "pending",
           );
 
           newInfo[b._id] = {
@@ -167,10 +177,14 @@ export default function ViewTicketInspectionForm() {
             hasPending,
             violation: activeViolation
               ? `${formatViolationCode(activeViolation.code)} — ₱${activeViolation.penalty.toLocaleString()} (${activeViolation.status})`
-              : '',
+              : "",
           };
         } catch {
-          newInfo[b._id] = { completedCount: 0, hasPending: false, violation: '' };
+          newInfo[b._id] = {
+            completedCount: 0,
+            hasPending: false,
+            violation: "",
+          };
         }
       });
 
@@ -183,7 +197,6 @@ export default function ViewTicketInspectionForm() {
     fetchInspectionInfo();
   }, [page, limit, filteredBusinesses, data]);
 
-  // Sorting Logic
   const sortedBusinesses = useMemo(() => {
     const list = [...filteredBusinesses];
     if (!sortColumn) return list;
@@ -192,40 +205,40 @@ export default function ViewTicketInspectionForm() {
       const infoA = inspectionCounts[a._id] || {};
       const infoB = inspectionCounts[b._id] || {};
 
-      let valA = '';
-      let valB = '';
+      let valA = "";
+      let valB = "";
 
       switch (sortColumn) {
-        case 'inspectionCount':
+        case "inspectionCount":
           valA = infoA.completedCount || 0;
           valB = infoB.completedCount || 0;
           break;
-        case 'violation':
-          valA = infoA.violation || '';
-          valB = infoB.violation || '';
+        case "violation":
+          valA = infoA.violation || "";
+          valB = infoB.violation || "";
           break;
-        case 'action':
+        case "action":
           valA = infoA.hasPending
-            ? 'Pending Inspection'
+            ? "Pending Inspection"
             : infoA.completedCount >= 2
-              ? 'Max Inspections'
-              : 'Create Inspection';
+              ? "Max Inspections"
+              : "Create Inspection";
           valB = infoB.hasPending
-            ? 'Pending Inspection'
+            ? "Pending Inspection"
             : infoB.completedCount >= 2
-              ? 'Max Inspections'
-              : 'Create Inspection';
+              ? "Max Inspections"
+              : "Create Inspection";
           break;
         default:
-          valA = a[sortColumn] ?? '';
-          valB = b[sortColumn] ?? '';
+          valA = a[sortColumn] ?? "";
+          valB = b[sortColumn] ?? "";
       }
 
-      if (typeof valA === 'string') valA = valA.toLowerCase();
-      if (typeof valB === 'string') valB = valB.toLowerCase();
+      if (typeof valA === "string") valA = valA.toLowerCase();
+      if (typeof valB === "string") valB = valB.toLowerCase();
 
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+      if (valA > valB) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredBusinesses, inspectionCounts, sortColumn, sortDirection]);
@@ -233,38 +246,37 @@ export default function ViewTicketInspectionForm() {
   const totalPages = Math.ceil(sortedBusinesses.length / limit);
   const paginatedBusinesses = sortedBusinesses.slice(
     (page - 1) * limit,
-    page * limit
+    page * limit,
   );
-
-  // Dialog actions
-
 
   const handleCloseConfirm = () => {
     setSelectedBusiness(null);
     setOpenConfirm(false);
-    setInspectionDate('');
-    setRemarks('');
+    setInspectionDate("");
+    setRemarks("");
   };
 
   const handleSaveInspection = async () => {
     if (!selectedBusiness || !inspectionDate) return;
+    setIsSaving(true);
     try {
       await axios.post(
-        '/api/ticket',
+        "/api/ticket",
         {
           businessId: selectedBusiness._id,
           inspectionDate,
           remarks,
-          inspectionStatus: 'pending',
+          inspectionStatus: "pending",
         },
-        { withCredentials: true }
+        { withCredentials: true },
       );
-      alert('✅ Inspection ticket created!');
       handleCloseConfirm();
       refetch();
     } catch (error) {
-      console.error('Error saving inspection:', error);
-      alert('❌ Failed to save inspection.');
+      console.error("Error saving inspection:", error);
+      alert("❌ Failed to save inspection.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -273,40 +285,97 @@ export default function ViewTicketInspectionForm() {
       const res = await axios.get(`/api/ticket?businessId=${business._id}`);
       const tickets = res.data || [];
       if (!tickets.length) {
-        alert('❌ No tickets found.');
+        alert("❌ No tickets found.");
         return;
       }
       const ticketToView =
-        tickets.find((t) => t.inspectionStatus === 'pending') ||
-        tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        tickets.find((t) => t.inspectionStatus === "pending") ||
+        tickets.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        )[0];
       router.push(
-        `/admin/inspections/inspectingcurrentbusiness?id=${ticketToView._id}`
+        `/admin/inspections/inspectingcurrentbusiness?id=${ticketToView._id}`,
       );
     } catch (err) {
-      console.error('Error fetching tickets:', err);
-      alert('⚠️ Failed to load ticket status.');
+      console.error("Error fetching tickets:", err);
+      alert("⚠️ Failed to load ticket status.");
     }
   };
 
-  if (isLoading) return <Typography className="dark:text-slate-200">Loading businesses…</Typography>;
+  if (isLoading)
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress thickness={5} size={60} sx={{ color: "#2563eb" }} />
+      </Box>
+    );
 
   return (
-    <Box p={4} className="min-h-screen">
-      <Typography variant="h6" fontWeight="bold" mb={2} className="dark:text-slate-100">
-        🧾 Select Business for Inspection
-      </Typography>
-
-      <Button
-        variant="outlined"
-        onClick={() => router.push('/officers/inspections')}
-        sx={{ mb: 3 }}
-        className="dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800"
+    <Box className="animate-in fade-in duration-700 max-w-7xl mx-auto py-8 px-4">
+      {/* 🚀 Premium Header */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
       >
-        ← Back to Inspections Workbench
-      </Button>
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/30">
+            <MdBusiness size={28} />
+          </div>
+          <div>
+            <Typography
+              variant="h5"
+              className="font-bold text-gray-900 dark:text-white tracking-tight uppercase"
+            >
+              Inspection Management
+            </Typography>
+            <Typography
+              variant="body2"
+              className="text-gray-500 dark:text-gray-400 font-medium tracking-wide"
+            >
+              Monitor and manage business sanitary inspections
+            </Typography>
+          </div>
+        </div>
+        <Box className="hidden md:flex items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
+          <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
+            <MdCalendarToday size={20} />
+          </div>
+          <div>
+            <Typography
+              variant="caption"
+              className="block text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1"
+            >
+              Annual Cycle
+            </Typography>
+            <Typography
+              variant="body2"
+              className="font-bold text-gray-700 dark:text-slate-200 leading-none"
+            >
+              FY {currentYear}
+            </Typography>
+          </div>
+        </Box>
+      </Box>
 
       {/* Search & Filters */}
-      <Box display="flex" flexDirection="column" gap={2} mb={3}>
+      <Card
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 4,
+          borderRadius: 4,
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "rgba(30, 41, 59, 0.4)" : "#fff",
+          border: "1px solid",
+          borderColor: "divider",
+        }}
+      >
         <Box display="flex" gap={2} alignItems="center">
           <TextField
             select
@@ -315,14 +384,6 @@ export default function ViewTicketInspectionForm() {
             onChange={(e) => setSearchType(e.target.value)}
             size="small"
             sx={{ width: 180 }}
-            className="dark:bg-slate-800 rounded"
-            InputLabelProps={{ className: "dark:text-slate-300" }}
-            InputProps={{ className: "dark:text-slate-200" }}
-            SelectProps={{
-              MenuProps: {
-                PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" }
-              }
-            }}
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="bidNumber">BID Number</MenuItem>
@@ -330,25 +391,23 @@ export default function ViewTicketInspectionForm() {
           </TextField>
 
           <TextField
-            placeholder="Enter search term..."
+            placeholder="Search businesses..."
             variant="outlined"
             fullWidth
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             size="small"
-            className="dark:bg-slate-800 rounded"
             InputProps={{
-              className: "dark:text-slate-200",
               startAdornment: (
                 <InputAdornment position="start">
-                  <HiSearch className="text-gray-500 dark:text-slate-400" />
+                  <HiSearch className="text-gray-400" />
                 </InputAdornment>
               ),
             }}
           />
 
-          <FormControl sx={{ width: 100 }}>
-            <InputLabel className="dark:text-slate-300">Rows</InputLabel>
+          <FormControl sx={{ width: 110 }}>
+            <InputLabel>Rows</InputLabel>
             <Select
               value={limit}
               label="Rows"
@@ -356,8 +415,7 @@ export default function ViewTicketInspectionForm() {
                 setLimit(e.target.value);
                 setPage(1);
               }}
-              className="dark:text-slate-200 dark:bg-slate-800"
-              MenuProps={{ PaperProps: { className: "dark:bg-slate-800 dark:text-slate-200" } }}
+              size="small"
             >
               {[10, 20, 30, 50].map((val) => (
                 <MenuItem key={val} value={val}>
@@ -367,36 +425,45 @@ export default function ViewTicketInspectionForm() {
             </Select>
           </FormControl>
         </Box>
-
-        <Typography variant="body2" className="text-gray-500 dark:text-slate-400">
-          Showing <strong>{filteredBusinesses.length}</strong>{' '}
-          {filteredBusinesses.length === 1 ? 'business' : 'businesses'}
-        </Typography>
-      </Box>
+      </Card>
 
       {/* 📋 Table */}
-      <TableContainer component={Paper} className="dark:bg-slate-800">
+      <TableContainer
+        component={Paper}
+        elevation={0}
+        sx={{
+          borderRadius: 4,
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
+        }}
+      >
         <Table>
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
               {[
-                ['bidNumber', 'BID Number'],
-                ['businessName', 'Business Name'],
-                ['businessType', 'Type'],
-                ['contactPerson', 'Contact'],
-                ['inspectionStatus', 'Status'],
-                ['inspectionCount', `Inspection Count (${currentYear})`],
-                ['violation', 'Violation'],
-                ['action', 'Action'],
+                ["bidNumber", "BID Number"],
+                ["businessName", "Business Name"],
+                ["businessType", "Established Type"],
+                ["contactPerson", "Owner/Contact"],
+                ["inspectionStatus", "Overall Status"],
+                ["inspectionCount", "Cycles"],
+                ["violation", "Latest Violation"],
+                ["action", "Action"],
               ].map(([key, label]) => (
                 <TableCell
                   key={key}
                   onClick={() => handleSort(key)}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  className="dark:text-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  sx={{
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    color: "text.secondary",
+                    textTransform: "uppercase",
+                    fontSize: "11px",
+                    letterSpacing: "0.05em",
+                  }}
                 >
-                  {label}
-                  {renderSortArrow(key)}
+                  {label} {renderSortArrow(key)}
                 </TableCell>
               ))}
             </TableRow>
@@ -407,40 +474,82 @@ export default function ViewTicketInspectionForm() {
               const info = inspectionCounts[business._id] || {
                 completedCount: 0,
                 hasPending: false,
-                violation: '',
+                violation: "",
               };
               const completed = info.completedCount;
               const pending = info.hasPending;
-              const maxed = completed >= 2;
 
               return (
-                <TableRow key={business._id} className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.bidNumber}</TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.businessName}</TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.businessType}</TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.contactPerson}</TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{business.inspectionStatus || 'none'}</TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{completed}</TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">{info.violation || '—'}</TableCell>
-                  <TableCell className="dark:text-slate-300 dark:border-slate-700">
-                    <Box display="flex" gap={1}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        color="info"
-                        disabled={
-                          !['pending', 'completed'].includes(
-                            business.inspectionStatus?.toLowerCase() || ''
-                          )
-                        }
-                        onClick={() => handleViewStatus(business)}
-                        className="dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
-                      >
-                        View Status
-                      </Button>
-                    </Box>
+                <TableRow
+                  key={business._id}
+                  hover
+                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                >
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    {business.bidNumber}
                   </TableCell>
-
+                  <TableCell sx={{ fontWeight: 700, color: "text.primary" }}>
+                    {business.businessName}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={business.businessType}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderRadius: "6px" }}
+                    />
+                  </TableCell>
+                  <TableCell>{business.contactPerson}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={business.inspectionStatus || "none"}
+                      size="small"
+                      color={
+                        business.inspectionStatus === "completed"
+                          ? "success"
+                          : "warning"
+                      }
+                      sx={{ fontWeight: "bold" }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 800,
+                        color:
+                          completed >= 2 ? "success.main" : "text.secondary",
+                      }}
+                    >
+                      {completed}/2
+                    </Typography>
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      color: info.violation ? "error.main" : "text.secondary",
+                      fontSize: "0.8rem",
+                    }}
+                  >
+                    {info.violation || "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      disableElevation
+                      onClick={() => handleViewStatus(business)}
+                      sx={{
+                        borderRadius: "8px",
+                        textTransform: "none",
+                        fontWeight: 700,
+                        px: 2,
+                        bgcolor: "#2563eb",
+                        "&:hover": { bgcolor: "#1d4ed8" },
+                      }}
+                    >
+                      Inspect Details
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -449,70 +558,67 @@ export default function ViewTicketInspectionForm() {
       </TableContainer>
 
       {/* Pagination */}
-      <Box display="flex" justifyContent="space-between" mt={2}>
-        <Button
-          variant="outlined"
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          className="dark:text-slate-200 dark:border-slate-600 dark:disabled:text-slate-600 dark:disabled:border-slate-800"
-        >
-          ← Previous
-        </Button>
-        <Typography className="dark:text-slate-300">
-          Page {page} of {totalPages || 1}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mt={3}
+        px={1}
+      >
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+          Showing{" "}
+          <span className="font-bold text-gray-900 dark:text-white">
+            {Math.min(filteredBusinesses.length, (page - 1) * limit + 1)}-
+            {Math.min(filteredBusinesses.length, page * limit)}
+          </span>{" "}
+          of <span className="font-bold">{filteredBusinesses.length}</span>{" "}
+          entries
         </Typography>
-        <Button
-          variant="outlined"
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-          className="dark:text-slate-200 dark:border-slate-600 dark:disabled:text-slate-600 dark:disabled:border-slate-800"
-        >
-          Next →
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+            sx={{
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outlined"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            sx={{
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Next
+          </Button>
+        </Stack>
       </Box>
 
-      {/* Dialog */}
-      <Dialog 
-        open={!!selectedBusiness} 
-        onClose={handleCloseConfirm}
-        PaperProps={{ className: "dark:bg-slate-800 dark:text-slate-200" }}
+      {/* ── Loading Backdrop ── */}
+      <Backdrop
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 9999,
+          flexDirection: "column",
+          gap: 2,
+          backdropFilter: "blur(10px)",
+          backgroundColor: "rgba(15, 23, 42, 0.7)",
+        }}
+        open={isSaving}
       >
-        <DialogTitle className="dark:text-slate-100">
-          Inspection Form for {selectedBusiness?.businessName}
-        </DialogTitle>
-        <DialogContent>
-          <div className="pt-2 pb-2">
-            <DateInput
-              label="Inspection Date"
-              value={inspectionDate}
-              onChange={setInspectionDate}
-              fullWidth
-              placeholder="Select inspection date"
-            />
-          </div>
-          <TextField
-            label="Remarks"
-            fullWidth
-            multiline
-            rows={3}
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            className="dark:bg-slate-700 rounded"
-            InputLabelProps={{ className: "dark:text-slate-300" }}
-            InputProps={{ className: "dark:text-slate-200" }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirm} className="dark:text-slate-300">Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveInspection}
-            disabled={!inspectionDate}
-          >
-            Save Inspection
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <CircularProgress color="inherit" size={60} thickness={4} />
+        <Typography variant="h6" fontWeight="bold">
+          Processing Details
+        </Typography>
+      </Backdrop>
     </Box>
   );
 }

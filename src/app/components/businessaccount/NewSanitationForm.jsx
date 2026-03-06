@@ -24,6 +24,7 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import CalendarToday from "@mui/icons-material/CalendarToday";
 import RHFTextField from "@/app/components/ReactHookFormElements/RHFTextField";
 import { RHFDatePicker } from "@/app/components/ui/DatePicker";
 import DateInput from "@/app/components/ui/DatePicker";
@@ -127,10 +128,10 @@ const sanitaryPermitChecklist = [
 ];
 
 const healthCertificateChecklist = [
-  { id: "chest_x-ray", label: "Chest X-ray" },
+  { id: "chest_x-ray", label: "Chest X-Ray, Drug Test" },
   {
     id: "chest_x_ray_and_urine_and_stool",
-    label: "Chest X-ray, Urine & Stool",
+    label: "Chest X-Ray, Drug Test, Urine & Stool",
   },
   {
     id: "if_pregnant_xpert_mtb_rif_exam",
@@ -303,46 +304,81 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         // ✅ Fill base fields
         if (draft.requestType) setValue("requestType", draft.requestType);
         if (draft.businessName) setValue("businessName", draft.businessName);
-        if (draft.businessNickname) setValue("businessNickname", draft.businessNickname);
+        if (draft.businessNickname)
+          setValue("businessNickname", draft.businessNickname);
         if (draft.businessType) setValue("businessType", draft.businessType);
-        if (draft.businessAddress) setValue("businessAddress", draft.businessAddress);
-        if (draft.businessEstablishment) setValue("businessEstablishment", draft.businessEstablishment);
+        if (draft.businessAddress)
+          setValue("businessAddress", draft.businessAddress);
+        if (draft.businessEstablishment)
+          setValue("businessEstablishment", draft.businessEstablishment);
         if (draft.landmark) setValue("landmark", draft.landmark);
         if (draft.contactPerson) setValue("contactPerson", draft.contactPerson);
         if (draft.contactNumber) setValue("contactNumber", draft.contactNumber);
         if (draft.remarks) setValue("remarks", draft.remarks);
 
         // ✅ Personnel & health cert fields
-        if (draft.declaredPersonnel != null) setValue("declaredPersonnel", draft.declaredPersonnel);
-        if (draft.declaredPersonnelDueDate) setValue("declaredPersonnelDueDate", formatDateForInput(draft.declaredPersonnelDueDate));
-        if (draft.healthCertificates != null) setValue("healthCertificates", draft.healthCertificates);
-        if (draft.healthCertBalanceToComply != null) setValue("healthCertBalanceToComply", draft.healthCertBalanceToComply);
-        if (draft.healthCertDueDate) setValue("healthCertDueDate", formatDateForInput(draft.healthCertDueDate));
-        if (draft.orNumberHealthCert) setValue("orNumberHealthCert", draft.orNumberHealthCert);
-        if (draft.orDateHealthCert) setValue("orDateHealthCert", formatDateForInput(draft.orDateHealthCert));
-        if (draft.healthCertFee != null) setValue("healthCertFee", draft.healthCertFee);
-        if (draft.healthCertSanitaryFee != null) setValue("healthCertSanitaryFee", draft.healthCertSanitaryFee);
+        if (draft.declaredPersonnel != null)
+          setValue("declaredPersonnel", draft.declaredPersonnel);
+        if (draft.declaredPersonnelDueDate)
+          setValue(
+            "declaredPersonnelDueDate",
+            formatDateForInput(draft.declaredPersonnelDueDate),
+          );
+        if (draft.healthCertificates != null)
+          setValue("healthCertificates", draft.healthCertificates);
+        if (draft.healthCertBalanceToComply != null)
+          setValue(
+            "healthCertBalanceToComply",
+            draft.healthCertBalanceToComply,
+          );
+        if (draft.healthCertDueDate)
+          setValue(
+            "healthCertDueDate",
+            formatDateForInput(draft.healthCertDueDate),
+          );
+        if (draft.orNumberHealthCert)
+          setValue("orNumberHealthCert", draft.orNumberHealthCert);
+        if (draft.orDateHealthCert)
+          setValue(
+            "orDateHealthCert",
+            formatDateForInput(draft.orDateHealthCert),
+          );
+        if (draft.healthCertFee != null)
+          setValue("healthCertFee", draft.healthCertFee);
+        if (draft.healthCertSanitaryFee != null)
+          setValue("healthCertSanitaryFee", draft.healthCertSanitaryFee);
 
         // ✅ Checklists
         if (draft.sanitaryPermitChecklist?.length > 0) {
-          setSanitaryPermitChecklistState(draft.sanitaryPermitChecklist.map((i) => i.id));
+          setSanitaryPermitChecklistState(
+            draft.sanitaryPermitChecklist.map((i) => i.id),
+          );
         }
         if (draft.healthCertificateChecklist?.length > 0) {
-          setHealthCertificateChecklistState(draft.healthCertificateChecklist[0]?.id || "");
+          setHealthCertificateChecklistState(
+            draft.healthCertificateChecklist[0]?.id || "",
+          );
         }
         if (draft.msrChecklist?.length > 0) {
           setMsrChecklistState(draft.msrChecklist.map((i) => i.id));
           draft.msrChecklist.forEach((item) => {
             setValue(`msrChecklist.${item.id}.selected`, true);
             setValue(`msrChecklist.${item.id}.label`, item.label || "");
-            if (item.dueDate) setValue(`msrChecklist.${item.id}.dueDate`, formatDateForInput(item.dueDate));
+            if (item.dueDate)
+              setValue(
+                `msrChecklist.${item.id}.dueDate`,
+                formatDateForInput(item.dueDate),
+              );
           });
         }
 
         // ✅ Documents
-        if (Array.isArray(draft.businessDocuments)) setValue("businessDocs", draft.businessDocuments);
-        if (Array.isArray(draft.permitDocuments)) setValue("permitDocs", draft.permitDocuments);
-        if (Array.isArray(draft.personnelDocuments)) setValue("personnelDocs", draft.personnelDocuments);
+        if (Array.isArray(draft.businessDocuments))
+          setValue("businessDocs", draft.businessDocuments);
+        if (Array.isArray(draft.permitDocuments))
+          setValue("permitDocs", draft.permitDocuments);
+        if (Array.isArray(draft.personnelDocuments))
+          setValue("personnelDocs", draft.personnelDocuments);
 
         console.log("✅ Draft loaded and form pre-filled:", draft.bidNumber);
       } catch (err) {
@@ -353,7 +389,13 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     };
 
     loadDraft();
-  }, [searchParams, setValue, setSanitaryPermitChecklistState, setHealthCertificateChecklistState, setMsrChecklistState]);
+  }, [
+    searchParams,
+    setValue,
+    setSanitaryPermitChecklistState,
+    setHealthCertificateChecklistState,
+    setMsrChecklistState,
+  ]);
 
   useEffect(() => {
     // Skip initial render
@@ -890,21 +932,35 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       Array.isArray(businessData?.penaltyRecords) &&
       businessData.penaltyRecords.length > 0;
 
+    // ✅ If business was already released/completed or has past inspections, force Renewal
+    const isPreviouslyDone =
+      businessData?.status?.toLowerCase() === "released" ||
+      businessData?.status?.toLowerCase() === "completed" ||
+      (businessData?.inspectionRecords?.length || 0) > 0;
+
     const shouldLockRequestType =
-      inspectionCount > 0 || hasReinspection || hasPenalties;
+      inspectionCount > 0 ||
+      hasReinspection ||
+      hasPenalties ||
+      isPreviouslyDone;
     const autoRequestType = shouldLockRequestType ? "Renewal" : "New";
 
     const currentType = watch("requestType");
-    if (currentType !== autoRequestType) {
+    if (
+      currentType !== autoRequestType ||
+      isRequestTypeLocked !== shouldLockRequestType
+    ) {
       setValue("requestType", autoRequestType);
       setIsRequestTypeLocked(shouldLockRequestType);
       console.log(
-        "🧭 Auto-set requestType:",
+        "Compass🧭 Auto-set requestType:",
         autoRequestType,
+        "| Locked:",
+        shouldLockRequestType,
         "| Inspections:",
         inspectionCount,
-        "| Penalties:",
-        businessData?.penaltyRecords?.length || 0,
+        "| Status:",
+        businessData?.status,
       );
     }
 
@@ -1127,10 +1183,12 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
 
     setValue("penaltyRecords", computed);
 
-    if (completed.length >= 2 || computed.length > 0) {
+    if (completed.length >= 1 || computed.length > 0) {
       setValue("requestType", "Renewal");
       setIsRequestTypeLocked(true);
-      console.log("🔁 Auto-set to Renewal due to inspections or penalties");
+      console.log(
+        "🔁 Auto-set to Renewal due to existing inspections or penalties",
+      );
     }
   }, [tickets?.length, setValue]);
 
@@ -1213,7 +1271,12 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       {/* Draft loading overlay */}
       <Backdrop
         open={isDraftLoading}
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1, flexDirection: "column", gap: 2 }}
+        sx={{
+          color: "#fff",
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          flexDirection: "column",
+          gap: 2,
+        }}
       >
         <CircularProgress color="inherit" />
         <Typography variant="body1" sx={{ color: "white", fontWeight: 600 }}>
@@ -1242,19 +1305,33 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         </Collapse>
       )}
 
-      <div className="max-w-5xl mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700">
-        {/* Modern Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-6">
-          <h1 className="text-2xl font-bold text-white">
-            New Sanitation Permit Request
+      {/* 🟢 Admin-style Header */}
+      <div className="max-w-5xl mx-auto mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">
+            Sanitation Permit Request
           </h1>
-          <p className="text-blue-100 text-sm mt-1">
-            Complete the steps below to submit your application
+          <p className="mt-1 font-medium text-gray-600 dark:text-gray-400">
+            Complete the steps below to submit your application.
           </p>
         </div>
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm text-sm text-gray-700 dark:text-gray-300 font-medium">
+          <CalendarToday
+            className="text-blue-600 dark:text-blue-400"
+            sx={{ fontSize: 18 }}
+          />
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </div>
+      </div>
 
+      <div className="max-w-5xl mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-slate-700">
         {/* Stepper Section */}
-        <div className="px-8 pt-8 pb-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+        <div className="px-8 pt-8 pb-4 bg-slate-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 text-slate-600 dark:text-slate-300">
           <Stepper activeStep={activeStep} alternativeLabel>
             {steps.map((step) => (
               <Step key={step.id}>
@@ -1311,7 +1388,8 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             {currentStepId === 0 && (
               <div className="max-w-4xl mx-auto space-y-8">
                 {/* Section 1: Business Identification */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+                {/* Section 1: Business Identification */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm transition-all">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                     <label className="md:col-span-3 text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                       Select Business
@@ -1465,14 +1543,19 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             {currentStepId === 1 && (
               <div className="space-y-8 max-w-5xl mx-auto">
                 {/* A. Sanitary Permit */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-100 dark:border-blue-800 flex items-center gap-3">
-                    <div className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
-                      A
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transition-all">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center gap-4">
+                    <div className="p-2 rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/30">
+                      <span className="font-bold">A</span>
                     </div>
-                    <h2 className="text-lg font-bold text-blue-900 dark:text-blue-200">
-                      ISSUANCE OF SANITARY PERMIT
-                    </h2>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">
+                        Issuance of Sanitary Permit
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        Verify standard sanitary requirements
+                      </p>
+                    </div>
                   </div>
 
                   <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1540,14 +1623,19 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                 </div>
 
                 {/* B. Health Certificate */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-100 dark:border-blue-800 flex items-center gap-3">
-                    <div className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
-                      B
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transition-all">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center gap-4">
+                    <div className="p-2 rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/30">
+                      <span className="font-bold">B</span>
                     </div>
-                    <h2 className="text-lg font-bold text-blue-900 dark:text-blue-200">
-                      ISSUANCE OF HEALTH CERTIFICATE
-                    </h2>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">
+                        Issuance of Health Certificate
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        Required medical and drug test clearances
+                      </p>
+                    </div>
                   </div>
 
                   <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -1802,7 +1890,9 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                             placeholder="0"
                             fullWidth
                             size="small"
-                            InputLabelProps={{ className: "dark:text-slate-300" }}
+                            InputLabelProps={{
+                              className: "dark:text-slate-300",
+                            }}
                             InputProps={{
                               className:
                                 "dark:text-slate-200 dark:bg-slate-700/50",
@@ -1931,11 +2021,30 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             {currentStepId === 3 && (
               <div className="space-y-8 max-w-5xl mx-auto">
                 {/* Inspection Record */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                      Inspection Record
-                    </h3>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transition-all">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center gap-4">
+                    <div className="p-2 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.64.304 1.25.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">
+                        Inspection Record
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        History of sanitary inspections
+                      </p>
+                    </div>
                   </div>
                   <div className="p-0 overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -2029,11 +2138,30 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                 </div>
 
                 {/* Penalty Record */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                      Penalty Record
-                    </h3>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transition-all">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center gap-4">
+                    <div className="p-2 rounded-xl bg-orange-500 text-white shadow-lg shadow-orange-500/30">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">
+                        Penalty Record
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        Payment details for violations found
+                      </p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[1fr_250px]">
@@ -2362,36 +2490,43 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+              <Button
+                variant="outlined"
                 onClick={handleBack}
                 disabled={activeStep === 0}
-                className={`
-              px-6 py-2.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-2
-              ${
-                activeStep === 0
-                  ? "bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-600"
-                  : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700"
-              }
-            `}
+                startIcon={
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                }
+                sx={{
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1,
+                  borderColor: "rgba(0,0,0,0.12)",
+                  color: "text.secondary",
+                  "&:hover": {
+                    borderColor: "rgba(0,0,0,0.24)",
+                    backgroundColor: "rgba(0,0,0,0.02)",
+                  },
+                }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
                 Back
-              </button>
+              </Button>
 
               <div className="flex flex-col items-end gap-4 mt-4 sm:mt-0">
                 {!canSubmit && (
@@ -2417,87 +2552,53 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                 <div className="flex flex-wrap justify-end gap-3">
                   {activeStep === steps.length - 1 ? (
                     // Final step: Show submit buttons
-                    <>
-                      <button
-                        type="button"
+                    <div className="flex flex-wrap justify-end gap-3 w-full sm:w-auto">
+                      <Button
+                        variant="text"
                         onClick={handleClear}
-                        className="px-6 py-2.5 rounded-lg font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors dark:text-slate-400 dark:hover:text-red-400 dark:hover:bg-red-900/20"
+                        sx={{
+                          borderRadius: "10px",
+                          textTransform: "none",
+                          fontWeight: 600,
+                          color: "text.secondary",
+                          "&:hover": {
+                            color: "#ef4444",
+                            backgroundColor: "rgba(239, 68, 68, 0.05)",
+                          },
+                        }}
                       >
                         Clear Form
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="outlined"
                         onClick={handleSaveDraft}
                         disabled={isLoading}
-                        className="px-6 py-2.5 rounded-lg font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-all dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30 flex items-center gap-2"
+                        startIcon={
+                          isLoading ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : null
+                        }
+                        sx={{
+                          borderRadius: "10px",
+                          textTransform: "none",
+                          fontWeight: 600,
+                          px: 3,
+                          borderColor: "rgba(37, 99, 235, 0.3)",
+                          bgcolor: "rgba(37, 99, 235, 0.02)",
+                          "&:hover": {
+                            bgcolor: "rgba(37, 99, 235, 0.05)",
+                            borderColor: "#2563eb",
+                          },
+                        }}
                       >
-                        {isLoading ? (
-                          <>
-                            <svg
-                              className="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Saving...
-                          </>
-                        ) : (
-                          "Save as Draft"
-                        )}
-                      </button>
-                      <button
+                        {isLoading ? "Saving..." : "Save as Draft"}
+                      </Button>
+                      <Button
+                        variant="contained"
                         type="submit"
                         disabled={!canSubmit || !submitReady || isLoading}
-                        className={`
-                      px-8 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/30 flex items-center gap-2
-                      ${
-                        !canSubmit || !submitReady || isLoading
-                          ? "bg-slate-400 cursor-not-allowed shadow-none"
-                          : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5 transition-all"
-                      }
-                    `}
-                      >
-                        {isLoading ? (
-                          <>
-                            <svg
-                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Submitting...
-                          </>
-                        ) : (
-                          <>
-                            Submit Application
+                        endIcon={
+                          !isLoading && (
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="h-5 w-5"
@@ -2512,33 +2613,82 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                                 d="M14 5l7 7m0 0l-7 7m7-7H3"
                               />
                             </svg>
-                          </>
+                          )
+                        }
+                        sx={{
+                          borderRadius: "12px",
+                          textTransform: "none",
+                          fontWeight: 700,
+                          px: 4,
+                          py: 1.2,
+                          background:
+                            !canSubmit || !submitReady || isLoading
+                              ? "#cbd5e1"
+                              : "linear-gradient(to right, #2563eb, #4f46e5)",
+                          boxShadow:
+                            !canSubmit || !submitReady || isLoading
+                              ? "none"
+                              : "0 10px 15px -3px rgba(37, 99, 235, 0.3)",
+                          "&:hover": {
+                            background:
+                              "linear-gradient(to right, #1d4ed8, #4338ca)",
+                            transform: "translateY(-1px)",
+                            boxShadow:
+                              "0 12px 20px -5px rgba(37, 99, 235, 0.4)",
+                          },
+                        }}
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <CircularProgress size={18} color="inherit" />
+                            <span>Submitting...</span>
+                          </div>
+                        ) : (
+                          "Submit Application"
                         )}
-                      </button>
-                    </>
+                      </Button>
+                    </div>
                   ) : (
                     // Other steps: Show Next button
-                    <button
-                      type="button"
+                    <Button
+                      variant="contained"
                       onClick={handleNext}
-                      className="px-8 py-2.5 rounded-lg font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                      endIcon={
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 7l5 5m0 0l-5 5m5-5H6"
+                          />
+                        </svg>
+                      }
+                      sx={{
+                        borderRadius: "12px",
+                        textTransform: "none",
+                        fontWeight: 700,
+                        px: 5,
+                        py: 1.2,
+                        background:
+                          "linear-gradient(to right, #2563eb, #4f46e5)",
+                        boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.3)",
+                        "&:hover": {
+                          background:
+                            "linear-gradient(to right, #1d4ed8, #4338ca)",
+                          transform: "translateY(-1px)",
+                          boxShadow: "0 12px 20px -5px rgba(37, 99, 235, 0.4)",
+                        },
+                        transition: "all 0.2s",
+                      }}
                     >
                       Next Step
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 7l5 5m0 0l-5 5m5-5H6"
-                        />
-                      </svg>
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

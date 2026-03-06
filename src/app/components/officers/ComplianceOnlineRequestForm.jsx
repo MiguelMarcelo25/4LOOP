@@ -38,10 +38,10 @@ export default function ComplianceOnlineRequestForm() {
   ];
 
   const healthCertificateOptions = [
-    { id: "chest_x-ray", label: "Chest X-ray" },
+    { id: "chest_x-ray", label: "Chest X-Ray, Drug Test" },
     {
       id: "chest_x_ray_and_urine_and_stool",
-      label: "Chest X-ray, Urine & Stool",
+      label: "Chest X-Ray, Drug Test, Urine & Stool",
     },
     {
       id: "if_pregnant_xpert_mtb_rif_exam",
