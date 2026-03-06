@@ -31,6 +31,7 @@ import {
   MdRule,
   MdSend
 } from 'react-icons/md';
+import StatusModal from '@/app/components/ui/StatusModal';
 
 const fetcher = (url) =>
   fetch(url, { credentials: 'include' }).then((res) => res.json());
@@ -46,6 +47,12 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState(null);
+  const [modal, setModal] = useState({
+    open: false,
+    type: 'error',
+    title: '',
+    message: '',
+  });
   
   useEffect(() => {
     const storedId = localStorage.getItem('loggedUserId');
@@ -126,6 +133,19 @@ export default function Sidebar() {
     setMessage('Upload canceled.');
   };
 
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, '');
+    showModal('error', 'Logout Failed', text);
+  };
+
   // 🚀 Direct Logout Helper
   const handleLogout = async () => {
     try {
@@ -140,7 +160,7 @@ export default function Sidebar() {
       window.location.href = '/login';
     } catch (error) {
       console.error('Logout failed:', error);
-      alert('Logout failed. Please try again.');
+      notifyModal('Logout failed. Please try again.');
     }
   };
 
@@ -309,6 +329,14 @@ export default function Sidebar() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+        <StatusModal
+          open={modal.open}
+          type={modal.type}
+          title={modal.title}
+          message={modal.message}
+          onClose={closeModal}
+        />
+
         {/* Toggle Button */}
         <button 
             onClick={toggleSidebar}
@@ -503,3 +531,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+

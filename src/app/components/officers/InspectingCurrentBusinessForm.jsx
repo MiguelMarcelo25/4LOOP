@@ -47,6 +47,7 @@ import {
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import StatusModal from "@/app/components/ui/StatusModal";
 import axios from "axios";
 
 function formatOrdinal(n) {
@@ -111,6 +112,12 @@ export default function InspectingCurrentBusinessForm() {
   const [validationModalOpen, setValidationModalOpen] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [missingFieldsList, setMissingFieldsList] = useState([]);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
 
   useEffect(() => {
     if (currentTicket) {
@@ -142,6 +149,19 @@ export default function InspectingCurrentBusinessForm() {
       else next = "";
       return { ...prev, [field]: next };
     });
+  };
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    showModal("error", "Inspection Notice", text);
   };
 
   const handleCompleteInspection = async () => {
@@ -220,7 +240,7 @@ export default function InspectingCurrentBusinessForm() {
       const completedCount = completedInspections.length;
 
       if (completedCount >= 2) {
-        alert("Only 2 inspections are allowed per year.");
+        notifyModal("Only 2 inspections are allowed per year.");
         setIsCompleting(false);
         return;
       }
@@ -410,6 +430,13 @@ export default function InspectingCurrentBusinessForm() {
 
   return (
     <Box className="animate-in fade-in duration-700 max-w-7xl mx-auto py-8 px-4 ">
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
       {/* 🚀 Header Navigation */}
       <Box
         display="flex"
@@ -1474,3 +1501,4 @@ export default function InspectingCurrentBusinessForm() {
     </Box>
   );
 }
+

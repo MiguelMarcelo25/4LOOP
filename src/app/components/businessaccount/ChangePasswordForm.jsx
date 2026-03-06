@@ -7,11 +7,11 @@ import {
   TextField,
   Button,
   CircularProgress,
-  Box,
   Typography,
 } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
-import { updateUserPassword } from "@/app/services/UserService"; // ✅ Correct service
+import StatusModal from "@/app/components/ui/StatusModal";
+import { updateUserPassword } from "@/app/services/UserService";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -31,6 +31,20 @@ export default function ChangePasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [error, setError] = useState("");
+  const [modal, setModal] = useState({
+    open: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
 
   const { mutate, isPending } = useMutation({
     mutationFn: () =>
@@ -40,11 +54,14 @@ export default function ChangePasswordForm() {
         newPassword: password,
       }),
     onSuccess: () => {
-      alert("✅ Password updated successfully!");
-      router.push("/businessaccount");
+      showModal("success", "Password Updated", "Password updated successfully.");
+      setTimeout(() => {
+        router.push("/businessaccount");
+      }, 1200);
     },
-    onError: (error) => {
-      const errMsg = error.response?.data?.error || "Failed to update password";
+    onError: (mutationError) => {
+      const errMsg =
+        mutationError.response?.data?.error || "Failed to update password";
       setError(errMsg);
     },
   });
@@ -53,11 +70,15 @@ export default function ChangePasswordForm() {
     e.preventDefault();
     setError("");
 
-    if (!oldPass || !password || !confirmPass)
-      return setError("All fields are required.");
+    if (!oldPass || !password || !confirmPass) {
+      setError("All fields are required.");
+      return;
+    }
 
-    if (password !== confirmPass)
-      return setError("Passwords do not match.");
+    if (password !== confirmPass) {
+      setError("Passwords do not match.");
+      return;
+    }
 
     mutate();
   };
@@ -66,8 +87,19 @@ export default function ChangePasswordForm() {
 
   return (
     <div className="w-full max-w-md mx-auto">
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       <div className="bg-white dark:bg-slate-800 shadow-xl rounded-2xl border border-gray-100 dark:border-slate-700 p-8">
-        <Typography variant="h5" className="text-center font-bold text-gray-800 dark:text-slate-200 mb-6">
+        <Typography
+          variant="h5"
+          className="text-center font-bold text-gray-800 dark:text-slate-200 mb-6"
+        >
           Change Password
         </Typography>
 
@@ -125,7 +157,7 @@ export default function ChangePasswordForm() {
 
           {error && (
             <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400 text-sm">
-              ⚠️ {error}
+              Warning: {error}
             </div>
           )}
 
@@ -135,7 +167,7 @@ export default function ChangePasswordForm() {
             disabled={isPending}
             type="submit"
             className="mt-6 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold shadow-md transition-all"
-            sx={{ textTransform: 'none', fontSize: '1rem' }}
+            sx={{ textTransform: "none", fontSize: "1rem" }}
           >
             {isPending ? "Updating..." : "Update Password"}
           </Button>

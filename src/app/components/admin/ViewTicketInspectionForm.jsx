@@ -15,6 +15,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -35,6 +36,7 @@ import { HiSearch } from "react-icons/hi";
 import { MdBusiness, MdCalendarToday } from "react-icons/md";
 import { useQuery } from "@tanstack/react-query";
 import { getAddOwnerBusiness } from "@/app/services/BusinessService";
+import StatusModal from "@/app/components/ui/StatusModal";
 import axios from "axios";
 
 function formatViolationCode(code) {
@@ -65,6 +67,12 @@ export default function ViewTicketInspectionForm() {
   const [remarks, setRemarks] = useState("");
   const [openConfirm, setOpenConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -256,6 +264,19 @@ export default function ViewTicketInspectionForm() {
     setRemarks("");
   };
 
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    showModal("error", "Inspection Notice", text);
+  };
+
   const handleSaveInspection = async () => {
     if (!selectedBusiness || !inspectionDate) return;
     setIsSaving(true);
@@ -274,7 +295,7 @@ export default function ViewTicketInspectionForm() {
       refetch();
     } catch (error) {
       console.error("Error saving inspection:", error);
-      alert("❌ Failed to save inspection.");
+      notifyModal("❌ Failed to save inspection.");
     } finally {
       setIsSaving(false);
     }
@@ -285,7 +306,7 @@ export default function ViewTicketInspectionForm() {
       const res = await axios.get(`/api/ticket?businessId=${business._id}`);
       const tickets = res.data || [];
       if (!tickets.length) {
-        alert("❌ No tickets found.");
+        notifyModal("❌ No tickets found.");
         return;
       }
       const ticketToView =
@@ -298,7 +319,7 @@ export default function ViewTicketInspectionForm() {
       );
     } catch (err) {
       console.error("Error fetching tickets:", err);
-      alert("⚠️ Failed to load ticket status.");
+      notifyModal("⚠️ Failed to load ticket status.");
     }
   };
 
@@ -316,6 +337,14 @@ export default function ViewTicketInspectionForm() {
 
   return (
     <Box className="animate-in fade-in duration-700 max-w-7xl mx-auto py-8 px-4">
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       {/* 🚀 Premium Header */}
       <Box
         display="flex"
@@ -324,21 +353,22 @@ export default function ViewTicketInspectionForm() {
         mb={4}
       >
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/30">
-            <MdBusiness size={28} />
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center">
+            <MdBusiness size={32} />
           </div>
           <div>
             <Typography
-              variant="h5"
-              className="font-bold text-gray-900 dark:text-white tracking-tight uppercase"
+              variant="h4"
+              className="font-extrabold text-slate-900 dark:text-white tracking-tight leading-none"
             >
               Inspection Management
             </Typography>
             <Typography
               variant="body2"
-              className="text-gray-500 dark:text-gray-400 font-medium tracking-wide"
+              className="text-slate-500 dark:text-slate-400 font-medium mt-1.5"
             >
-              Monitor and manage business sanitary inspections
+              Real-time monitoring and administrative control of business
+              sanitary inspections.
             </Typography>
           </div>
         </div>
@@ -366,65 +396,67 @@ export default function ViewTicketInspectionForm() {
       {/* Search & Filters */}
       <Card
         elevation={0}
-        sx={{
-          p: 2,
-          mb: 4,
-          borderRadius: 4,
-          bgcolor: (theme) =>
-            theme.palette.mode === "dark" ? "rgba(30, 41, 59, 0.4)" : "#fff",
-          border: "1px solid",
-          borderColor: "divider",
-        }}
+        className="mb-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md"
+        sx={{ p: 2.5 }}
       >
-        <Box display="flex" gap={2} alignItems="center">
-          <TextField
-            select
-            label="Search By"
-            value={searchType}
-            onChange={(e) => setSearchType(e.target.value)}
-            size="small"
-            sx={{ width: 180 }}
-          >
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="bidNumber">BID Number</MenuItem>
-            <MenuItem value="businessName">Business Name</MenuItem>
-          </TextField>
-
-          <TextField
-            placeholder="Search businesses..."
-            variant="outlined"
-            fullWidth
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <HiSearch className="text-gray-400" />
-                </InputAdornment>
-              ),
-            }}
-          />
-
-          <FormControl sx={{ width: 110 }}>
-            <InputLabel>Rows</InputLabel>
-            <Select
-              value={limit}
-              label="Rows"
-              onChange={(e) => {
-                setLimit(e.target.value);
-                setPage(1);
-              }}
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={3}>
+            <TextField
+              select
+              fullWidth
+              label="Search Category"
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value)}
               size="small"
+              className="bg-white dark:bg-slate-800"
             >
-              {[10, 20, 30, 50].map((val) => (
-                <MenuItem key={val} value={val}>
-                  {val}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+              <MenuItem value="all">All Fields</MenuItem>
+              <MenuItem value="bidNumber">BID Number</MenuItem>
+              <MenuItem value="businessName">Business Name</MenuItem>
+            </TextField>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              placeholder="Search by name, BID, or type..."
+              variant="outlined"
+              fullWidth
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              className="bg-white dark:bg-slate-800"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <HiSearch className="text-indigo-500" />
+                  </InputAdornment>
+                ),
+                className: "rounded-xl font-medium",
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={3} className="flex gap-2">
+            <FormControl fullWidth size="small">
+              <InputLabel>View Rows</InputLabel>
+              <Select
+                value={limit}
+                label="View Rows"
+                onChange={(e) => {
+                  setLimit(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-white dark:bg-slate-800"
+              >
+                {[10, 20, 30, 50].map((val) => (
+                  <MenuItem key={val} value={val}>
+                    {val} Records
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
       </Card>
 
       {/* 📋 Table */}
@@ -483,52 +515,71 @@ export default function ViewTicketInspectionForm() {
                 <TableRow
                   key={business._id}
                   hover
-                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                  className="transition-colors border-b dark:border-slate-800"
+                  sx={{ "&:last-child td": { border: 0 } }}
                 >
-                  <TableCell sx={{ fontWeight: 600 }}>
-                    {business.bidNumber}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "text.primary" }}>
-                    {business.businessName}
-                  </TableCell>
-                  <TableCell>
+                  <TableCell className="dark:text-slate-300">
                     <Chip
-                      label={business.businessType}
+                      label={business.bidNumber}
                       size="small"
+                      color="primary"
                       variant="outlined"
-                      sx={{ borderRadius: "6px" }}
+                      className="font-bold text-[11px] rounded-md border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-400"
                     />
                   </TableCell>
-                  <TableCell>{business.contactPerson}</TableCell>
+                  <TableCell>
+                    <Typography className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                      {business.businessName}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      className="text-slate-400 dark:text-slate-500 font-medium"
+                    >
+                      {business.businessNickname || "—"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 text-[11px] font-bold border border-slate-200 dark:border-slate-700 inline-block">
+                      {business.businessType}
+                    </Box>
+                  </TableCell>
+                  <TableCell className="dark:text-slate-400 text-sm">
+                    {business.contactPerson}
+                  </TableCell>
                   <TableCell>
                     <Chip
-                      label={business.inspectionStatus || "none"}
+                      label={
+                        business.inspectionStatus === "completed"
+                          ? "RELEASED"
+                          : business.inspectionStatus?.toUpperCase() || "NONE"
+                      }
                       size="small"
                       color={
                         business.inspectionStatus === "completed"
                           ? "success"
                           : "warning"
                       }
-                      sx={{ fontWeight: "bold" }}
+                      className="font-extrabold text-[10px] tracking-wider rounded-md h-6"
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 800,
-                        color:
-                          completed >= 2 ? "success.main" : "text.secondary",
-                      }}
-                    >
-                      {completed}/2
-                    </Typography>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography
+                        variant="body2"
+                        className={`font-black ${completed >= 2 ? "text-emerald-600" : "text-slate-400"}`}
+                      >
+                        {completed}/2
+                      </Typography>
+                      <Box className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <Box
+                          className={`h-full transition-all duration-500 ${completed >= 2 ? "bg-emerald-500" : "bg-indigo-500"}`}
+                          style={{ width: `${(completed / 2) * 100}%` }}
+                        />
+                      </Box>
+                    </Box>
                   </TableCell>
                   <TableCell
-                    sx={{
-                      color: info.violation ? "error.main" : "text.secondary",
-                      fontSize: "0.8rem",
-                    }}
+                    className={`text-[11px] font-medium ${info.violation ? "text-rose-600 dark:text-rose-400" : "text-slate-400"}`}
                   >
                     {info.violation || "—"}
                   </TableCell>
@@ -538,16 +589,9 @@ export default function ViewTicketInspectionForm() {
                       size="small"
                       disableElevation
                       onClick={() => handleViewStatus(business)}
-                      sx={{
-                        borderRadius: "8px",
-                        textTransform: "none",
-                        fontWeight: 700,
-                        px: 2,
-                        bgcolor: "#2563eb",
-                        "&:hover": { bgcolor: "#1d4ed8" },
-                      }}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-[11px] px-4 py-1.5"
                     >
-                      Inspect Details
+                      View Details
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -622,3 +666,4 @@ export default function ViewTicketInspectionForm() {
     </Box>
   );
 }
+

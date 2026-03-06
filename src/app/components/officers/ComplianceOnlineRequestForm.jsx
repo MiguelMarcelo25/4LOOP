@@ -15,6 +15,7 @@ import {
 import { AddCircle, Delete, Edit, Save } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
+import StatusModal from "@/app/components/ui/StatusModal";
 
 export default function ComplianceOnlineRequestForm() {
   const router = useRouter();
@@ -30,6 +31,12 @@ export default function ComplianceOnlineRequestForm() {
   const [msrItems, setMsrItems] = useState([]);
   const [loadingSave, setLoadingSave] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
 
   // ✅ Dropdown options
   const sanitaryPermitOptions = [
@@ -188,6 +195,19 @@ export default function ComplianceOnlineRequestForm() {
     if (which === "msr") setMsrItems((s) => s.filter((_, i) => i !== idx));
   };
 
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    showModal("error", "Checklist Notice", text);
+  };
+
   // ✅ Save checklists
   // ✅ Save checklists (officer override)
   const handleSaveChecklists = async () => {
@@ -197,7 +217,7 @@ export default function ComplianceOnlineRequestForm() {
       healthItems.length === 0 &&
       msrItems.length === 0
     ) {
-      alert("Please add at least one checklist item before saving.");
+      notifyModal("Please add at least one checklist item before saving.");
       return;
     }
 
@@ -290,6 +310,14 @@ export default function ComplianceOnlineRequestForm() {
 
   return (
     <Box className="w-full bg-white shadow rounded-lg p-6">
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       {/* Back Button */}
       <div className="flex justify-start mb-6">
         <Button
@@ -818,3 +846,4 @@ export default function ComplianceOnlineRequestForm() {
     </Box>
   );
 }
+

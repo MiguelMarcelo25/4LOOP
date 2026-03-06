@@ -1,11 +1,7 @@
-'use client';
+"use client";
 
 import ComplianceOnlineRequestForm from "@/app/components/officers/ComplianceOnlineRequestForm";
 
 export default function ComplianceOnlineRequestPage() {
-  return (
-    <main >
-      <ComplianceOnlineRequestForm />
-    </main>
-  );
+  return <ComplianceOnlineRequestForm />;
 }

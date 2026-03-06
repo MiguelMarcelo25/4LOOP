@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
 import CollapsibleSection from "@/app/components/ui/CollapsibleSection";
+import StatusModal from "@/app/components/ui/StatusModal";
 
 export default function PendingPermitApprovalForm() {
   const router = useRouter();
@@ -22,6 +23,30 @@ export default function PendingPermitApprovalForm() {
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    const success = /approved|success/i.test(text);
+    showModal(
+      success ? "success" : "error",
+      success ? "Permit Approved" : "Approval Notice",
+      text,
+    );
+  };
 
   // Fetch business data
   const {
@@ -49,7 +74,7 @@ export default function PendingPermitApprovalForm() {
         localStorage.getItem("loggedUserId");
 
       if (!officerId) {
-        alert("⚠️ Officer ID not found. Please log in again.");
+        notifyModal("⚠️ Officer ID not found. Please log in again.");
         setIsUpdating(false);
         return;
       }
@@ -70,12 +95,14 @@ export default function PendingPermitApprovalForm() {
       const result = await res.json();
       console.log("✅ Approval Result:", result);
 
-      await queryClient.invalidateQueries(["pending-approvals"]);
-      alert("✅ Business has been approved and moved to Release stage.");
-      router.push("/officers/workbench/permitapproval");
+            await queryClient.invalidateQueries(["pending-approvals"]);
+      notifyModal("✅ Business has been approved and moved to Release stage.");
+      setTimeout(() => {
+        router.push("/officers/workbench/permitapproval");
+      }, 1200);
     } catch (err) {
       console.error("❌ Approval failed:", err);
-      alert("⚠️ Request failed. Please check your connection.");
+      notifyModal("⚠️ Request failed. Please check your connection.");
     } finally {
       setIsUpdating(false);
     }
@@ -102,6 +129,14 @@ export default function PendingPermitApprovalForm() {
 
   return (
     <Box p={4} className="bg-white dark:bg-slate-900 shadow rounded-lg">
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       {/* Back Button */}
       <div className="flex justify-start mb-6">
         <Button
@@ -230,3 +265,6 @@ export default function PendingPermitApprovalForm() {
     </Box>
   );
 }
+
+
+

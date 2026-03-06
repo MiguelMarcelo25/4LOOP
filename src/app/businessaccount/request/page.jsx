@@ -1,18 +1,7 @@
-'use client';
+"use client";
 
-import Sidebar from '@/app/components/Sidebar';
-import BusinessRequestForm from '../../components/businessaccount/RequestForm';
+import BusinessRequestForm from "../../components/businessaccount/RequestForm";
 
 export default function BusinessRequestPage() {
-  return (
-    <div className="min-h-screen flex">
-      {/* 🧭 Sidebar */}
-      <Sidebar/>
-
-      {/* 📄 Main Content */}
-      <main className="flex-1 p-8">
-        <BusinessRequestForm />
-      </main>
-    </div>
-  );
+  return <BusinessRequestForm />;
 }

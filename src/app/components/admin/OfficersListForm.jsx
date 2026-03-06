@@ -30,6 +30,7 @@ import {
   HiBan,
   HiCheckCircle,
 } from "react-icons/hi";
+import StatusModal from "@/app/components/ui/StatusModal";
 
 export default function OfficersListForm() {
   const router = useRouter();
@@ -44,6 +45,20 @@ export default function OfficersListForm() {
     content: "",
     action: null,
   });
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
 
   // Fetch officers from API
   const { data, isLoading, isError, error } = useQuery({
@@ -81,7 +96,7 @@ export default function OfficersListForm() {
     },
     onError: (error) => {
       console.error("Status update failed:", error);
-      alert(`Error: ${error.message}`);
+      showModal("error", "Status Update Failed", error.message);
       setConfirmDialog({ ...confirmDialog, open: false });
     },
   });
@@ -148,6 +163,14 @@ export default function OfficersListForm() {
 
   return (
     <Box className="w-full bg-white dark:bg-slate-900 shadow rounded-lg p-6">
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       {/* Header */}
       <div className="text-center mb-8 relative">
         <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-300 uppercase">

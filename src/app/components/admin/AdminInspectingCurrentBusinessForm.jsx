@@ -131,21 +131,14 @@ export default function AdminInspectingCurrentBusinessForm() {
         </Button>
         <Stack direction="row" spacing={2} alignItems="center">
           <Chip
-            icon={<MdInfo />}
-            label={`${formatOrdinal(activeNum)} Inspection for ${year}`}
-            color="primary"
-            variant="outlined"
-            sx={{ fontWeight: "bold", borderRadius: "8px" }}
+            icon={<MdInfo className="text-indigo-500" />}
+            label={`${formatOrdinal(activeNum)} ${activeNum === 1 ? "Routine" : "Re-inspection"} — FY ${year}`}
+            className="font-bold rounded-xl border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300"
           />
           <Chip
-            icon={<MdCheckCircle />}
-            label="Admin Read-Only"
-            sx={{
-              fontWeight: "bold",
-              borderRadius: "8px",
-              bgcolor: "rgba(255, 255, 255, 0.1)",
-              color: "text.secondary",
-            }}
+            icon={<MdCheckCircle className="text-emerald-500" />}
+            label="Administrative Review"
+            className="font-bold rounded-xl border-emerald-100 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
           />
         </Stack>
       </Box>
@@ -331,80 +324,89 @@ export default function AdminInspectingCurrentBusinessForm() {
                     <Box>
                       <Typography
                         variant="subtitle2"
-                        className="font-semibold mb-2 text-slate-700 dark:text-slate-300"
+                        className="font-bold mb-3 text-slate-700 dark:text-slate-300 uppercase text-[10px] tracking-widest"
                       >
-                        Sanitary Permit (SP)
+                        Sanitary Permit (SP) Status
                       </Typography>
-                      <RadioGroup row value={scores.sanitaryPermit || ""}>
-                        <FormControlLabel
-                          value="with"
-                          control={
-                            <Radio
-                              disabled
-                              sx={{ "&.Mui-checked": { color: "#10b981" } }}
-                            />
-                          }
-                          label={
-                            <span className="dark:text-slate-300">
-                              With Permit
-                            </span>
-                          }
-                          sx={{ mr: 3 }}
-                        />
-                        <FormControlLabel
-                          value="without"
-                          control={
-                            <Radio
-                              disabled
-                              sx={{ "&.Mui-checked": { color: "#ef4444" } }}
-                            />
-                          }
-                          label={
-                            <span className="dark:text-slate-300">
-                              Without Permit
-                            </span>
-                          }
-                        />
-                      </RadioGroup>
+                      <Box className="flex gap-4">
+                        <Box
+                          className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-sm transition-all ${scores.sanitaryPermit === "with" ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800" : "bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-700 opacity-50"}`}
+                        >
+                          <MdCheckCircle
+                            className={
+                              scores.sanitaryPermit === "with"
+                                ? "text-emerald-500"
+                                : "text-slate-300"
+                            }
+                          />
+                          <Typography
+                            className={`text-xs font-bold ${scores.sanitaryPermit === "with" ? "text-emerald-700 dark:text-emerald-400" : "text-slate-400"}`}
+                          >
+                            With Permit
+                          </Typography>
+                        </Box>
+                        <Box
+                          className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-sm transition-all ${scores.sanitaryPermit === "without" ? "bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-800" : "bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-700 opacity-50"}`}
+                        >
+                          <MdRadioButtonChecked
+                            className={
+                              scores.sanitaryPermit === "without"
+                                ? "text-rose-500"
+                                : "text-slate-300"
+                            }
+                          />
+                          <Typography
+                            className={`text-xs font-bold ${scores.sanitaryPermit === "without" ? "text-rose-700 dark:text-rose-400" : "text-slate-400"}`}
+                          >
+                            No Permit
+                          </Typography>
+                        </Box>
+                      </Box>
                     </Box>
 
                     <Box>
                       <Typography
                         variant="subtitle2"
-                        className="font-semibold mb-2 text-slate-700 dark:text-slate-300"
+                        className="font-bold mb-3 text-slate-700 dark:text-slate-300 uppercase text-[10px] tracking-widest"
                       >
-                        Health Certificates (HC)
+                        Health Certificates (HC) Distribution
                       </Typography>
-                      <Stack
-                        direction="row"
-                        spacing={2}
-                        sx={{ maxWidth: "500px" }}
-                      >
-                        <TextField
-                          type="number"
-                          size="small"
-                          label="Total"
-                          value={scores.healthCertificates?.actualCount ?? ""}
-                          disabled
-                          sx={{ flex: 1 }}
-                        />
-                        <TextField
-                          type="number"
-                          size="small"
-                          label="With"
-                          value={scores.healthCertificates?.withCert ?? ""}
-                          disabled
-                          sx={{ flex: 1 }}
-                        />
-                        <TextField
-                          type="number"
-                          size="small"
-                          label="Without"
-                          value={scores.healthCertificates?.withoutCert ?? ""}
-                          disabled
-                          sx={{ flex: 1 }}
-                        />
-                      </Stack>
+                      <Grid container spacing={2}>
+                        {[
+                          {
+                            label: "Total Staff",
+                            count: scores.healthCertificates?.actualCount,
+                            color: "indigo",
+                          },
+                          {
+                            label: "With Certs",
+                            count: scores.healthCertificates?.withCert,
+                            color: "emerald",
+                          },
+                          {
+                            label: "Missing",
+                            count: scores.healthCertificates?.withoutCert,
+                            color: "rose",
+                          },
+                        ].map((stat, i) => (
+                          <Grid item xs={4} key={i}>
+                            <Box
+                              className={`p-3 rounded-2xl border bg-${stat.color}-50/50 dark:bg-${stat.color}-900/10 border-${stat.color}-100 dark:border-${stat.color}-800/50 text-center`}
+                            >
+                              <Typography
+                                className={`text-[10px] uppercase font-black text-${stat.color}-500 mb-1`}
+                              >
+                                {stat.label}
+                              </Typography>
+                              <Typography
+                                className={`text-xl font-extrabold text-${stat.color}-700 dark:text-${stat.color}-300`}
+                              >
+                                {stat.count ?? 0}
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
                     </Box>
                   </Stack>
                 </Box>
@@ -561,23 +563,17 @@ export default function AdminInspectingCurrentBusinessForm() {
                     <Box>
                       <Typography
                         variant="subtitle2"
-                        className="font-semibold mb-2 text-slate-700 dark:text-slate-300"
+                        className="font-bold mb-3 text-slate-700 dark:text-slate-300 uppercase text-[10px] tracking-widest"
                       >
-                        Additional Remarks & Findings
+                        Findings & Remarks History
                       </Typography>
-                      <TextField
-                        multiline
-                        rows={5}
-                        fullWidth
-                        value={currentTicket?.remarks || ""}
-                        disabled
-                        sx={{
-                          backgroundColor: (theme) =>
-                            theme.palette.mode === "dark"
-                              ? "rgba(255,255,255,0.03)"
-                              : "#fff",
-                        }}
-                      />
+                      <Box className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                        <Typography className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic whitespace-pre-wrap">
+                          {currentTicket?.remarks
+                            ? `"${currentTicket.remarks}"`
+                            : "No remarks provided for this inspection."}
+                        </Typography>
+                      </Box>
                     </Box>
                   </Stack>
                 </Box>

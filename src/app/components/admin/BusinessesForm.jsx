@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Typography,
@@ -20,28 +20,30 @@ import {
   FormControl,
   InputLabel,
   Button,
-} from '@mui/material';
+  Grid,
+  InputAdornment,
+} from "@mui/material";
+import { MdBusiness } from "react-icons/md";
 
-
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getAddOwnerBusiness } from '@/app/services/BusinessService';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getAddOwnerBusiness } from "@/app/services/BusinessService";
 
 export default function BusinessesForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
-    queryKey: ['business-list'],
+    queryKey: ["business-list"],
     queryFn: () => getAddOwnerBusiness(),
   });
 
   const [businesses, setBusinesses] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchField, setSearchField] = useState('businessName');
-  const [sortField, setSortField] = useState('');
-  const [sortDirection, setSortDirection] = useState('asc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchField, setSearchField] = useState("businessName");
+  const [sortField, setSortField] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
   const [newId, setNewId] = useState(null);
   const [newBusiness, setNewBusiness] = useState({});
   const [page, setPage] = useState(1);
@@ -55,275 +57,321 @@ export default function BusinessesForm() {
   }, [data]);
 
   const fields = [
-    { label: 'BID Number', field: 'bidNumber' },
-    { label: 'Name of Company', field: 'businessName' },
-    { label: 'Trade Name', field: 'businessNickname' },
-    { label: 'Line of Business', field: 'businessType' },
-    { label: 'Business Address', field: 'businessAddress' },
-    { label: 'Landmark', field: 'landmark' },
-    { label: 'Contact Person', field: 'contactPerson' },
-    { label: 'Contact Number', field: 'contactNumber' },
-    { label: 'Status', field: 'status' },
-    { label: 'Date Created', field: 'createdAt' },
-    { label: 'Date Updated', field: 'updatedAt' },
+    { label: "BID Number", field: "bidNumber" },
+    { label: "Name of Company", field: "businessName" },
+    { label: "Trade Name", field: "businessNickname" },
+    { label: "Line of Business", field: "businessType" },
+    { label: "Business Address", field: "businessAddress" },
+    { label: "Landmark", field: "landmark" },
+    { label: "Contact Person", field: "contactPerson" },
+    { label: "Contact Number", field: "contactNumber" },
+    { label: "Status", field: "status" },
+    { label: "Date Created", field: "createdAt" },
+    { label: "Date Updated", field: "updatedAt" },
   ];
 
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
-  const filteredBusinesses = businesses
-    .filter((business) => {
-      const value = business[searchField];
-      if (!value) return false;
+  const filteredBusinesses = businesses.filter((business) => {
+    const value = business[searchField];
+    if (!value) return false;
 
-      const term = searchTerm.toLowerCase().trim();
+    const term = searchTerm.toLowerCase().trim();
 
-      // ✅ Handle "Line of Business" specifically
-      if (searchField === 'businessType') {
-        const type = String(value).toLowerCase().trim();
+    // ✅ Handle "Line of Business" specifically
+    if (searchField === "businessType") {
+      const type = String(value).toLowerCase().trim();
 
-        // Only include if the type is "food" or "non-food"
-        const allowed = ['food', 'non-food'];
-        if (!allowed.includes(type)) return false;
+      // Only include if the type is "food" or "non-food"
+      const allowed = ["food", "non-food"];
+      if (!allowed.includes(type)) return false;
 
-        // If user didn't type anything, show both Food and Non-Food
-        if (!term) return true;
+      // If user didn't type anything, show both Food and Non-Food
+      if (!term) return true;
 
-        // Normalize spacing/hyphen in search input
-        const normalizedTerm = term.replace(/\s+/g, '-');
+      // Normalize spacing/hyphen in search input
+      const normalizedTerm = term.replace(/\s+/g, "-");
 
-        // Match logic
-        if (normalizedTerm === 'food') return type.includes('food');
-        if (normalizedTerm === 'non-food' || term.includes('non')) return type.includes('non-food');
+      // Match logic
+      if (normalizedTerm === "food") return type.includes("food");
+      if (normalizedTerm === "non-food" || term.includes("non"))
+        return type.includes("non-food");
 
-        return type.includes(normalizedTerm);
-      }
+      return type.includes(normalizedTerm);
+    }
 
-      
-      // ✅ Normal case for all other fields
-      return String(value).toLowerCase().includes(term);
-    });
+    // ✅ Normal case for all other fields
+    return String(value).toLowerCase().includes(term);
+  });
 
   // Pagination
   const startIndex = (page - 1) * limit;
   const paginatedBusinesses = filteredBusinesses.slice(
     startIndex,
-    startIndex + limit
+    startIndex + limit,
   );
   const total = filteredBusinesses.length;
   const totalPages = Math.ceil(total / limit);
 
-
   return (
-    <Paper elevation={2} sx={{ p: 3 }} className="dark:bg-slate-800 dark:text-slate-200 transition-colors duration-200">
-      <Typography variant="h6" gutterBottom className="dark:text-slate-100"><b>Business Details</b></Typography>
-
-      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <TextField
-          select
-          label="Search Field"
-          value={searchField}
-          onChange={(e) => setSearchField(e.target.value)}
-          sx={{ minWidth: 200 }}
-          className="dark:bg-slate-700 dark:text-slate-200 rounded"
-          InputLabelProps={{ className: "dark:text-slate-300" }}
-          InputProps={{ className: "dark:text-slate-200" }}
-        >
-          {fields.map(({ label, field }) => (
-            <MenuItem key={field} value={field}>
-              {label}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          fullWidth
-          label={`Search by ${fields.find(f => f.field === searchField)?.label}`}
-          variant="outlined"
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setPage(1);
-          }}
-          className="dark:bg-slate-700 dark:text-slate-200 rounded"
-          InputLabelProps={{ className: "dark:text-slate-300" }}
-          InputProps={{ className: "dark:text-slate-200" }}
-        />
-
-        <FormControl sx={{ width: 120 }}>
-          <InputLabel className="dark:text-slate-300">Rows per page</InputLabel>
-          <Select
-            value={limit}
-            label="Rows per page"
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="dark:text-slate-200 dark:border-slate-600"
-            inputProps={{ className: "dark:text-slate-200" }}
+    <Box className="animate-in fade-in duration-700 max-w-7xl mx-auto py-8 px-4">
+      {/* 🚀 Header */}
+      <Box className="mb-8 flex items-center gap-4">
+        <Box className="p-3.5 rounded-2xl bg-linear-to-br from-indigo-500 to-blue-600 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center">
+          <MdBusiness size={32} />
+        </Box>
+        <Box>
+          <Typography
+            variant="h4"
+            className="font-extrabold text-slate-900 dark:text-white tracking-tight leading-none"
           >
-            {[10, 20, 30, 50].map((size) => (
-              <MenuItem key={size} value={size}>
-                {size}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
+            Business Directory
+          </Typography>
+          <Typography
+            variant="body2"
+            className="text-slate-500 dark:text-slate-400 font-medium mt-1.5"
+          >
+            Full database of registered establishments and their operational
+            statuses.
+          </Typography>
+        </Box>
+      </Box>
 
-      <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }} className="dark:text-slate-400">
-        Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} of {total}{' '}
-        businesses
+      {/* 🔍 Search Card */}
+      <Card
+        elevation={0}
+        className="mb-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md p-2.5"
+      >
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={3}>
+            <TextField
+              select
+              fullWidth
+              label="Filter By"
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+              size="small"
+              className="bg-white dark:bg-slate-800"
+            >
+              {fields.map(({ label, field }) => (
+                <MenuItem key={field} value={field}>
+                  {label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              placeholder={`Search directory by ${fields.find((f) => f.field === searchField)?.label}...`}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              size="small"
+              className="bg-white dark:bg-slate-800"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MdBusiness className="text-indigo-500" />
+                  </InputAdornment>
+                ),
+                className: "rounded-xl font-medium",
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>View Per Page</InputLabel>
+              <Select
+                value={limit}
+                label="View Per Page"
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="bg-white dark:bg-slate-800"
+              >
+                {[12, 24, 48].map((size) => (
+                  <MenuItem key={size} value={size}>
+                    {size} Businesses
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Card>
+
+      <Typography
+        variant="body2"
+        className="mb-4 font-bold text-slate-400 dark:text-slate-500 text-[11px] uppercase tracking-widest"
+      >
+        Showing {startIndex + 1}–{Math.min(startIndex + limit, total)} OF{" "}
+        {total} ESTABLISHMENTS
       </Typography>
 
-      {/* Tile Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {paginatedBusinesses.map((business) => (
-          <Card 
-            key={business._id} 
-            elevation={3}
-            className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-xl transition-shadow duration-300"
+          <Card
+            key={business._id}
+            elevation={0}
+            className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 group overflow-hidden"
           >
-            <CardActionArea 
+            <CardActionArea
               onClick={() => setSelectedBusiness(business)}
-              className="h-full"
+              className="p-6"
             >
-              <CardContent className="h-full flex flex-col p-5">
-                {/* BID Number Badge */}
-                <div className="flex justify-between items-start mb-3">
-                  <Chip 
-                    label={business.bidNumber || 'No BID'} 
-                    size="small" 
-                    color="primary" 
-                    variant="outlined"
-                    className="font-bold dark:border-blue-400 dark:text-blue-300"
-                  />
-                  {business.status && (
-                    <Chip 
-                      label={business.status} 
-                      size="small" 
-                      color={business.status === 'active' ? 'success' : 'default'}
-                      className="capitalize"
-                    />
-                  )}
-                </div>
+              <Box className="flex justify-between items-start mb-6">
+                <Box className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-500 shadow-sm border border-indigo-100 dark:border-indigo-800/50">
+                  <MdBusiness size={24} />
+                </Box>
+                <Chip
+                  label={business.status?.toUpperCase() || "ACTIVE"}
+                  size="small"
+                  className={`font-black text-[9px] rounded-md px-1 ${
+                    business.status === "active"
+                      ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                />
+              </Box>
 
-                {/* Company Name */}
-                <Typography variant="h6" component="div" className="font-bold text-gray-900 dark:text-slate-100 leading-tight mb-1 line-clamp-2" title={business.businessName}>
-                  {business.businessName || '—'}
-                </Typography>
+              <Typography
+                variant="h6"
+                className="font-extrabold text-slate-900 dark:text-white line-clamp-1 mb-1 leading-tight"
+              >
+                {business.businessName}
+              </Typography>
+              <Typography className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 tracking-wider mb-4">
+                BID: {business.bidNumber || "UNASSIGNED"}
+              </Typography>
 
-                {/* Trade Name */}
-                {business.businessNickname && (
-                  <Typography variant="body2" className="text-gray-500 dark:text-slate-400 mb-3 truncate">
-                    {business.businessNickname}
-                  </Typography>
-                )}
-                
-                <Divider className="my-2 dark:border-slate-700" />
+              <Divider className="mb-4 opacity-50 border-dashed" />
 
-                {/* Line of Business */}
-                <div className="mt-auto pt-2">
-                  <Typography variant="caption" className="block text-gray-500 dark:text-slate-500 uppercase tracking-wider text-[10px]">
-                    Line of Business
+              <Stack spacing={1.5}>
+                <Box className="flex items-center gap-2">
+                  <Typography className="text-[10px] uppercase font-black text-slate-400 dark:text-slate-500 min-w-16">
+                    Owner
                   </Typography>
-                  <Typography variant="body2" className="font-medium text-gray-700 dark:text-slate-300 line-clamp-2">
-                    {business.businessType || '—'}
+                  <Typography className="text-xs font-bold text-slate-700 dark:text-slate-300 line-clamp-1">
+                    {business.contactPerson || "—"}
                   </Typography>
-                </div>
-              </CardContent>
+                </Box>
+                <Box className="flex items-center gap-2">
+                  <Typography className="text-[10px] uppercase font-black text-slate-400 dark:text-slate-500 min-w-16">
+                    Type
+                  </Typography>
+                  <Typography className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                    {business.businessType || "—"}
+                  </Typography>
+                </Box>
+              </Stack>
             </CardActionArea>
           </Card>
         ))}
       </div>
 
-      {/* Detail Modal */}
+      {/* Pagination Container */}
+      <Box className="mt-12 flex justify-center items-center gap-6">
+        <Button
+          variant="outlined"
+          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          disabled={page === 1}
+          className="rounded-xl font-bold border-slate-200 dark:border-slate-800 disabled:opacity-30"
+        >
+          Previous
+        </Button>
+        <Typography className="font-black text-sm text-slate-700 dark:text-slate-300">
+          Page {page}{" "}
+          <span className="text-slate-400 text-xs font-medium">
+            of {totalPages || 1}
+          </span>
+        </Typography>
+        <Button
+          variant="outlined"
+          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+          disabled={page === totalPages}
+          className="rounded-xl font-bold border-slate-200 dark:border-slate-800 disabled:opacity-30"
+        >
+          Next
+        </Button>
+      </Box>
+
+      {/* Modern Detail Dialog */}
       <Dialog
         open={Boolean(selectedBusiness)}
         onClose={() => setSelectedBusiness(null)}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
         PaperProps={{
-          className: "dark:bg-slate-800 dark:text-slate-200 rounded-xl"
+          className:
+            "rounded-3xl dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden",
         }}
       >
         {selectedBusiness && (
           <>
-            <DialogTitle className="border-b dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
-              <div className="flex flex-col gap-1">
-                <Typography variant="h5" component="div" className="font-bold dark:text-slate-100">
-                  {selectedBusiness.businessName}
-                </Typography>
-                <Typography variant="subtitle2" className="text-gray-500 dark:text-slate-400">
-                  BID: {selectedBusiness.bidNumber}
-                </Typography>
-              </div>
+            <DialogTitle className="p-8 bg-linear-to-b from-slate-50 to-white dark:from-slate-900/50 dark:to-transparent border-b border-slate-100 dark:border-slate-800">
+              <Box className="flex items-center gap-4 mb-2">
+                <Box className="p-3 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 flex items-center justify-center">
+                  <MdBusiness size={28} />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="h5"
+                    className="font-black text-slate-900 dark:text-white leading-tight"
+                  >
+                    {selectedBusiness.businessName}
+                  </Typography>
+                  <Typography className="text-xs font-bold text-indigo-600 dark:text-indigo-400 tracking-widest uppercase">
+                    BID: {selectedBusiness.bidNumber}
+                  </Typography>
+                </Box>
+              </Box>
             </DialogTitle>
-            <DialogContent className="py-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <DialogContent className="p-8">
+              <Grid container spacing={4} className="mt-2">
                 {fields.map(({ label, field }) => (
-                  <div key={field} className="flex flex-col">
-                    <Typography variant="caption" className="text-gray-500 dark:text-slate-400 uppercase tracking-wide">
+                  <Grid item xs={12} sm={6} key={field}>
+                    <Typography
+                      variant="caption"
+                      className="uppercase font-black text-slate-400 dark:text-slate-500 tracking-widest text-[9px]"
+                    >
                       {label}
                     </Typography>
-                    <Typography variant="body1" className="font-medium dark:text-slate-200 break-words">
-                       {field === 'createdAt' || field === 'updatedAt'
-                        ? new Date(selectedBusiness[field]).toLocaleString('en-PH')
-                        : selectedBusiness[field] || '—'}
+                    <Typography className="font-bold text-slate-800 dark:text-slate-200 mt-1 break-words">
+                      {field === "createdAt" || field === "updatedAt"
+                        ? new Date(selectedBusiness[field]).toLocaleString(
+                            "en-PH",
+                            { month: "long", day: "numeric", year: "numeric" },
+                          )
+                        : selectedBusiness[field] || "—"}
                     </Typography>
-                  </div>
+                  </Grid>
                 ))}
-              </div>
+              </Grid>
             </DialogContent>
-            <DialogActions className="p-4 border-t dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
-              <Button onClick={() => setSelectedBusiness(null)} color="primary" variant="contained">
-                Close
+            <DialogActions className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+              <Button
+                onClick={() => setSelectedBusiness(null)}
+                fullWidth
+                variant="contained"
+                className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-3 rounded-2xl shadow-xl hover:scale-[1.02] transition-transform"
+              >
+                Close View
               </Button>
             </DialogActions>
           </>
         )}
       </Dialog>
-
-      {/* Pagination Controls */}
-      <Stack
-        direction="row"
-        spacing={2}
-        justifyContent="flex-end"
-        alignItems="center"
-        sx={{ mt: 2 }}
-      >
-        <Typography variant="body2">
-          Page {page} of {totalPages || 1}
-        </Typography>
-
-        <Box>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-            disabled={page === 1}
-            sx={{ mr: 1 }}
-            className="dark:text-slate-200 dark:border-slate-600"
-          >
-            Prev
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-            disabled={page === totalPages}
-            className="dark:text-slate-200 dark:border-slate-600"
-          >
-            Next
-          </Button>
-        </Box>
-      </Stack>
-    </Paper>
+    </Box>
   );
 }

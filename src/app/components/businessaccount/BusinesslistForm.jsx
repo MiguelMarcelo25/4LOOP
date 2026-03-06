@@ -26,6 +26,7 @@ import {
   DialogContentText,
   DialogActions,
 } from "@mui/material";
+import StatusModal from "@/app/components/ui/StatusModal";
 import { getAddOwnerBusiness } from "@/app/services/BusinessService";
 
 // ─── file helper ────────────────────────────────────────────────────────────
@@ -49,8 +50,27 @@ function MsrUploadSection({ business, onUploadSuccess }) {
   const [pending, setPending] = useState({}); // { [msrId]: File }
   const [uploading, setUploading] = useState({}); // { [msrId]: bool }
   const [done, setDone] = useState({}); // { [msrId]: bool }
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
 
   if (msrItems.length === 0) return null;
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    showModal("error", "Upload Failed", text);
+  };
 
   const isAlreadyUploaded = (item) =>
     existing.some((d) => d.name?.startsWith(`[MSR] ${item.label}`));
@@ -95,7 +115,7 @@ function MsrUploadSection({ business, onUploadSuccess }) {
       onUploadSuccess?.();
     } catch (err) {
       console.error("MSR upload error:", err);
-      alert("❌ Upload failed. Please try again.");
+      notifyModal("❌ Upload failed. Please try again.");
     } finally {
       setUploading((u) => ({ ...u, [item.id]: false }));
     }
@@ -103,6 +123,14 @@ function MsrUploadSection({ business, onUploadSuccess }) {
 
   return (
     <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       <div className="flex items-center gap-2 mb-4">
         <HiExclamationCircle className="text-orange-500 text-lg" />
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
@@ -1089,3 +1117,4 @@ export default function BusinesslistForm() {
     </div>
   );
 }
+

@@ -30,6 +30,7 @@ import {
 import { HiSearch } from "react-icons/hi";
 import { useQuery } from "@tanstack/react-query";
 import { getAddOwnerBusiness } from "@/app/services/BusinessService";
+import StatusModal from "@/app/components/ui/StatusModal";
 import axios from "axios";
 
 if (typeof window !== "undefined" && !window.requestIdleCallback) {
@@ -61,6 +62,12 @@ export default function CreateTicketInspectionForm() {
   const [inspectionDate, setInspectionDate] = useState("");
   const [openConfirm, setOpenConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -277,6 +284,19 @@ export default function CreateTicketInspectionForm() {
     setOpenConfirm(true);
   };
 
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    showModal("error", "Inspection Notice", text);
+  };
+
   const handleSaveInspection = async () => {
     if (!selectedBusiness || !inspectionDate) return;
 
@@ -313,7 +333,7 @@ export default function CreateTicketInspectionForm() {
       console.error("❌ Error saving inspection:", error);
       const errorMsg =
         error.response?.data?.error || "Failed to save inspection.";
-      alert(`❌ ${errorMsg}`);
+      notifyModal(`❌ ${errorMsg}`);
     } finally {
       setIsSaving(false);
     }
@@ -324,7 +344,7 @@ export default function CreateTicketInspectionForm() {
       const res = await axios.get(`/api/ticket?businessId=${business._id}`);
       const tickets = res.data || [];
       if (!tickets.length) {
-        alert("❌ No tickets found.");
+        notifyModal("❌ No tickets found.");
         return;
       }
       const ticketToView =
@@ -337,7 +357,7 @@ export default function CreateTicketInspectionForm() {
       );
     } catch (err) {
       console.error("Error fetching tickets:", err);
-      alert("⚠️ Failed to load ticket status.");
+      notifyModal("⚠️ Failed to load ticket status.");
     }
   };
 
@@ -345,6 +365,14 @@ export default function CreateTicketInspectionForm() {
 
   return (
     <Box p={4}>
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       <Typography variant="h6" fontWeight="bold" mb={2}>
         🧾 Select Business for Inspection
       </Typography>
@@ -601,3 +629,4 @@ export default function CreateTicketInspectionForm() {
     </Box>
   );
 }
+

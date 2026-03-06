@@ -44,6 +44,7 @@ import {
   HiPrinter,
 } from "react-icons/hi";
 import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
+import StatusModal from "@/app/components/ui/StatusModal";
 
 const MSR_OPTIONS = [
   { id: "health_certificate", label: "Health Certificate" },
@@ -114,6 +115,25 @@ export default function WorkbenchList({ title, filterStatus }) {
   const [confirmStatusData, setConfirmStatusData] = useState(null); // { id, nextStatus, label }
   const [remark, setRemark] = useState("");
   const [isPrintingCert, setIsPrintingCert] = useState(false);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    showModal("error", "Workbench Notice", text);
+  };
 
   const handlePrintCertificate = async () => {
     if (!businessDetail) return;
@@ -143,7 +163,7 @@ export default function WorkbenchList({ title, filterStatus }) {
       //    User can "Save as PDF" or print directly from the dialog.
       const printWindow = window.open("", "_blank");
       if (!printWindow) {
-        alert(
+        notifyModal(
           "Pop-up blocked! Please allow pop-ups for this site to print certificates.",
         );
         return;
@@ -209,7 +229,7 @@ export default function WorkbenchList({ title, filterStatus }) {
       }
     } catch (error) {
       console.error("PDF Generation Error:", error);
-      alert(`Print Error: ${error.message}`);
+      notifyModal(`Print Error: ${error.message}`);
     } finally {
       setIsPrintingCert(false);
     }
@@ -287,11 +307,11 @@ export default function WorkbenchList({ title, filterStatus }) {
         queryClient.invalidateQueries(["business-detail", selectedBusinessId]);
         queryClient.invalidateQueries(["workbench-list"]);
         // Optional: Show success feedback via snackbar if available, else alert for now
-        // alert("Requirements updated successfully!");
+        // notifyModal("Requirements updated successfully!");
       }
     } catch (error) {
       console.error("Failed to save MSR:", error);
-      alert("Failed to save changes. Please try again.");
+      notifyModal("Failed to save changes. Please try again.");
     } finally {
       setIsSavingMsr(false);
     }
@@ -395,6 +415,14 @@ export default function WorkbenchList({ title, filterStatus }) {
       elevation={0}
       className="dark:bg-slate-900 bg-white dark:text-slate-200 min-h-[500px] border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden"
     >
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       {/* Header Banner */}
       <Box className="bg-linear-to-r from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 p-8 text-white relative overflow-hidden">
         <Box className="relative z-10">
@@ -568,7 +596,9 @@ export default function WorkbenchList({ title, filterStatus }) {
                                 ? "Compliance"
                                 : business.status === "pending3"
                                   ? "Approval"
-                                  : business.status || "Unknown"
+                                  : business.status === "completed"
+                                    ? "Released"
+                                    : business.status || "Unknown"
                         }
                         size="small"
                         color={
@@ -660,7 +690,9 @@ export default function WorkbenchList({ title, filterStatus }) {
                         ? "Compliance"
                         : businessDetail.status === "pending3"
                           ? "Approval"
-                          : businessDetail.status
+                          : businessDetail.status === "completed"
+                            ? "Released"
+                            : businessDetail.status
                 }
                 color="primary"
                 size="small"
@@ -1185,21 +1217,24 @@ export default function WorkbenchList({ title, filterStatus }) {
               </Stack>
             </DialogContent>
             <DialogActions className="p-4 border-t dark:border-slate-700">
-              <Button
-                onClick={handlePrintCertificate}
-                variant="contained"
-                disabled={isPrintingCert}
-                startIcon={
-                  isPrintingCert ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    <HiPrinter />
-                  )
-                }
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                {isPrintingCert ? "Generating PDF..." : "Print PDF"}
-              </Button>
+              {businessDetail.status === "completed" && (
+                <Button
+                  onClick={handlePrintCertificate}
+                  variant="contained"
+                  disabled={isPrintingCert}
+                  startIcon={
+                    isPrintingCert ? (
+                      <CircularProgress size={20} color="inherit" />
+                    ) : (
+                      <HiPrinter />
+                    )
+                  }
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {isPrintingCert ? "Generating PDF..." : "Print PDF"}
+                </Button>
+              )}
+
               <Button
                 onClick={() => setSelectedBusinessId(null)}
                 variant="outlined"
@@ -1330,3 +1365,4 @@ export default function WorkbenchList({ title, filterStatus }) {
     </Paper>
   );
 }
+

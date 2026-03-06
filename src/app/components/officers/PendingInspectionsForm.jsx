@@ -21,6 +21,7 @@ import {
   DialogActions,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import StatusModal from "@/app/components/ui/StatusModal";
 import axios from "axios";
 
 export default function PendingInspectionsForm() {
@@ -29,6 +30,25 @@ export default function PendingInspectionsForm() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "error",
+    title: "",
+    message: "",
+  });
+
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
+
+  const notifyModal = (message) => {
+    const text = String(message).replace(/^[^A-Za-z0-9]+/, "");
+    showModal("error", "Delete Failed", text);
+  };
 
   // ✅ Use placeholderData for instant UI feedback + refetch background
   const {
@@ -70,7 +90,7 @@ export default function PendingInspectionsForm() {
       handleCloseDeleteDialog();
     } catch (err) {
       console.error("Error deleting inspection:", err);
-      alert("Failed to delete inspection.");
+      notifyModal("Failed to delete inspection.");
     } finally {
       setIsDeleting(false);
     }
@@ -78,6 +98,14 @@ export default function PendingInspectionsForm() {
 
   return (
     <Box position="relative" p={4}>
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
+
       <Typography variant="h6" fontWeight="bold" mb={4}>
         🧾 Pending Inspection Tickets
       </Typography>
@@ -254,3 +282,4 @@ export default function PendingInspectionsForm() {
     </Box>
   );
 }
+
