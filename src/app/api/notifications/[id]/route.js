@@ -1,10 +1,11 @@
+export const dynamic = "force-dynamic";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import Notification from "@/models/Notification";
 import { getSession } from "@/lib/Auth";
 
 // 🟢 GET Notifications (for logged-in business account)
-export async function GET() {
+export async function GET(request, { params }) {
   await connectMongoDB();
 
   const session = await getSession();

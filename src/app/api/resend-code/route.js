@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import User from "@/models/User";
@@ -66,3 +67,4 @@ export async function POST(req) {
     );
   }
 }
+

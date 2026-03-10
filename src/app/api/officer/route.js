@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import Business from "@/models/Business";
@@ -81,5 +82,6 @@ export async function POST(request) {
   return NextResponse.json(businessrequest, { status: 200 })
 
 }
+
 
 

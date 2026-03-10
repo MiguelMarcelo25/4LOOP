@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import User from "@/models/User";
 import mongoose from "mongoose";
@@ -37,3 +38,4 @@ export async function POST(request) {
     return NextResponse.json({ error: "Database error while updating profile picture." }, { status: 500 });
   }
 }
+

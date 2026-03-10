@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import Violation from "@/models/Violation";
 import Ticket from "@/models/Ticket";
@@ -101,3 +102,4 @@ export async function POST(request) {
     return NextResponse.json({ error: "Failed to create violation" }, { status: 500 });
   }
 }
+

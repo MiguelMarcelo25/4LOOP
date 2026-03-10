@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
@@ -29,3 +30,4 @@ export async function POST(req) {
     return NextResponse.json({ error: "Server error." }, { status: 500 });
   }
 }
+

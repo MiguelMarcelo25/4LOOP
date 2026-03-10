@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import connectMongoDB from "@/lib/ConnectMongodb";
@@ -80,3 +81,4 @@ export async function POST(req) {
     );
   }
 }
+

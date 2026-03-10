@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Violation from "@/models/Violation";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";

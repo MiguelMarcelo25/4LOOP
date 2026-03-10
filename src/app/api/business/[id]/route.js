@@ -1,4 +1,5 @@
-import Notification from "@/models/Notification"; // ⬅️ Add this at the top of your file
+export const dynamic = "force-dynamic";
+import Notification from "@/models/Notification";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import Business from "@/models/Business";
