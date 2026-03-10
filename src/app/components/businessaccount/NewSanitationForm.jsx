@@ -1064,9 +1064,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       .map((inspection) => ({
         date: inspection.inspectionDate
           ? new Date(inspection.inspectionDate).toISOString().split("T")[0]
-          : inspection.dateReinspected
-            ? new Date(inspection.dateReinspected).toISOString().split("T")[0]
-            : "",
+          : "",
         personnelCount:
           inspection.inspectionChecklist?.healthCertificates?.actualCount || "",
         inspectedBy:

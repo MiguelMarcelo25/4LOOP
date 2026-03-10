@@ -550,19 +550,6 @@ export default function AdminInspectingCurrentBusinessForm() {
                     <Box>
                       <Typography
                         variant="subtitle2"
-                        className="font-semibold mb-2 text-slate-700 dark:text-slate-300"
-                      >
-                        Scheduled Re-inspection Date
-                      </Typography>
-                      <DateInput
-                        value={currentTicket?.dateReinspected}
-                        disabled
-                        className="max-w-[300px]"
-                      />
-                    </Box>
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
                         className="font-bold mb-3 text-slate-700 dark:text-slate-300 uppercase text-[10px] tracking-widest"
                       >
                         Findings & Remarks History

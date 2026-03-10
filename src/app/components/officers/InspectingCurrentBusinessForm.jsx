@@ -108,7 +108,7 @@ export default function InspectingCurrentBusinessForm() {
     sanitaryOrder02: "",
   });
   const [remarks, setRemarks] = useState("");
-  const [dateReinspected, setDateReinspected] = useState("");
+
   const [validationModalOpen, setValidationModalOpen] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [missingFieldsList, setMissingFieldsList] = useState([]);
@@ -125,13 +125,6 @@ export default function InspectingCurrentBusinessForm() {
         setScores(currentTicket.inspectionChecklist);
       }
       setRemarks(currentTicket.remarks || "");
-      // Fallback to inspectionDate (from modal) if dateReinspected isn't set yet
-      const initialDate =
-        currentTicket.dateReinspected ||
-        (currentTicket.inspectionDate
-          ? currentTicket.inspectionDate.split("T")[0]
-          : "");
-      setDateReinspected(initialDate);
     }
   }, [currentTicket]);
 
@@ -935,19 +928,6 @@ export default function InspectingCurrentBusinessForm() {
 
                   <Stack spacing={3}>
                     {/* Re-inspection Date */}
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        className="font-semibold mb-2 text-slate-700 dark:text-slate-300"
-                      >
-                        Scheduled Re-inspection Date
-                      </Typography>
-                      <DateInput
-                        value={dateReinspected}
-                        disabled
-                        className="max-w-[300px]"
-                      />
-                    </Box>
 
                     {/* Remarks */}
                     <Box>
@@ -1501,4 +1481,3 @@ export default function InspectingCurrentBusinessForm() {
     </Box>
   );
 }
-
