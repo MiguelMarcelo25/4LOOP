@@ -1033,20 +1033,6 @@ export default function WorkbenchList({ title, filterStatus }) {
                             );
                           })}
                         </List>
-
-                        <div className="flex justify-end pt-2 border-t dark:border-slate-700">
-                          <Button
-                            variant="contained"
-                            size="small"
-                            color="primary"
-                            startIcon={<HiSave />}
-                            onClick={handleSaveMsr}
-                            disabled={isSavingMsr}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            {isSavingMsr ? "Saving..." : "Update Requirements"}
-                          </Button>
-                        </div>
                       </div>
                     );
                   })()}
@@ -1254,6 +1240,7 @@ export default function WorkbenchList({ title, filterStatus }) {
                     {
                       officerInCharge: loggedUserId,
                       newRemarks: remark,
+                      msrChecklist: msrEdits,
                     },
                   );
                   setConfirmStatusData(null);
@@ -1365,4 +1352,3 @@ export default function WorkbenchList({ title, filterStatus }) {
     </Paper>
   );
 }
-
