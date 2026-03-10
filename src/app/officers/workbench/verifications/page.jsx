@@ -2,6 +2,6 @@
 
 import WorkbenchList from "@/app/components/officers/WorkbenchList";
 
-export default function OnlineRequestPage() {
-  return <WorkbenchList title="Online Requests" filterStatus="submitted" />;
+export default function VerificationsPage() {
+  return <WorkbenchList title="Verifications" filterStatus="pending" />;
 }

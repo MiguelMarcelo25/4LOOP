@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { Typography, Button, Stack, Box } from '@mui/material';
+import { useRouter } from "next/navigation";
+import { Typography, Button, Stack, Box } from "@mui/material";
 
 const steps = [
-  { label: 'Online Requests', path: '/officers/workbench/onlinerequest' },
-  { label: 'Verifications', path: '/officers/workbench/verification' },
-  { label: 'Compliance', path: '/officers/workbench/compliance' },
-  { label: 'Permit Approval', path: '/officers/workbench/permitapproval' },
-  { label: 'Release', path: '/officers/workbench/release' },
+  { label: "Online Requests", path: "/officers/workbench/onlinerequest" },
+  { label: "Verifications", path: "/officers/workbench/verifications" },
+  { label: "Compliance", path: "/officers/workbench/compliance" },
+  { label: "Permit Approval", path: "/officers/workbench/permitapproval" },
+  { label: "Release", path: "/officers/workbench/release" },
 ];
 
 export default function WorkbenchForm() {
@@ -18,11 +18,8 @@ export default function WorkbenchForm() {
     router.push(path);
   };
 
-
-
   return (
     <Box p={4}>
-
       {/* 🧭 Title */}
       <Typography variant="h4" fontWeight="bold" mb={2}>
         Officer Workbench

@@ -60,7 +60,7 @@ export default function VerifyOnlineRequestForm() {
       refetch();
       await queryClient.invalidateQueries(["verification-requests"]);
       localStorage.removeItem("verificationRequestId");
-      router.push("/officers/workbench/verification");
+      router.push("/officers/workbench/verifications");
     } catch (err) {
       console.error("❌ Update failed:", err);
       setIsUpdating(false);
@@ -100,7 +100,7 @@ export default function VerifyOnlineRequestForm() {
         <Button
           variant="outlined"
           color="secondary"
-          onClick={() => router.push("/officers/workbench/verification")}
+          onClick={() => router.push("/officers/workbench/verifications")}
         >
           ↩️ Back to Verification Request Lists
         </Button>
