@@ -8,6 +8,8 @@ export async function PUT(req, { params }) {
   await connectMongoDB();
   const { id } = await params;
   const body = await req.json();
+  const normalize = (value) =>
+    typeof value === 'string' ? value.toLowerCase() : '';
 
   try {
     // Get the current user session
@@ -35,19 +37,42 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const updateFields = {
-      bidNumber: body.newBidNumber,
-      businessName: body.newBusinessName,
-      businessNickname: body.newBusinessNickname,
-      businessType: body.newBusinessType,
-      businessAddress: body.newBusinessAddress,
-      landmark: body.newLandmark,
-      contactPerson: body.newContactPerson,
-      contactNumber: body.newContactNumber,
-      status: body.newStatus,
-      msrChecklist: body.msrChecklist, // ✅ Allow updating MSR checklist
-      updatedAt: new Date(),
-    };
+    const isWithdrawToDraft =
+      normalize(body.newStatus) === 'draft' &&
+      normalize(business.status) === 'submitted';
+    const isRenewal = normalize(business.requestType) === 'renewal';
+    const resolvedStatus =
+      isWithdrawToDraft && isRenewal
+        ? business.statusBeforeSubmission || 'released'
+        : body.newStatus;
+    const isRenewalDataRestore =
+      role === 'business' &&
+      isRenewal &&
+      business.submissionSnapshot &&
+      normalize(body.newStatus) ===
+        normalize(business.statusBeforeSubmission || '');
+
+    const updateFields = isRenewalDataRestore
+      ? {
+          ...business.submissionSnapshot,
+          status: resolvedStatus,
+          statusBeforeSubmission: null,
+          submissionSnapshot: null,
+          updatedAt: new Date(),
+        }
+      : {
+          bidNumber: body.newBidNumber,
+          businessName: body.newBusinessName,
+          businessNickname: body.newBusinessNickname,
+          businessType: body.newBusinessType,
+          businessAddress: body.newBusinessAddress,
+          landmark: body.newLandmark,
+          contactPerson: body.newContactPerson,
+          contactNumber: body.newContactNumber,
+          status: resolvedStatus,
+          msrChecklist: body.msrChecklist,
+          updatedAt: new Date(),
+        };
 
     // Update the business
     if (mongoose.Types.ObjectId.isValid(id)) {
@@ -100,3 +125,4 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: 'Failed to fetch business' }, { status: 500 });
   }
 }
+

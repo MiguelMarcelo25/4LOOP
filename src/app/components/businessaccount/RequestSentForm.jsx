@@ -75,7 +75,8 @@ export default function RequestSentForm() {
     queryFn: async () => {
       const response = await getSanitationOnlineRequest();
       const all = Array.isArray(response) ? response : response?.data || [];
-      return all.filter((req) => req.status === "submitted");
+      const trackableStatuses = ["submitted", "pending", "pending2", "pending3"];
+      return all.filter((req) => trackableStatuses.includes(req.status));
     },
     refetchInterval: 5000,
   });
@@ -189,8 +190,17 @@ export default function RequestSentForm() {
     setDeleteDialogOpen(false);
     setRequestToDelete(null);
   };
+  const getWithdrawStatus = (req) => {
+    if (!req) return "draft";
+    if (req.statusBeforeSubmission) return req.statusBeforeSubmission;
+
+    const requestType = String(req.requestType || "").toLowerCase();
+    return requestType === "renewal" ? "released" : "draft";
+  };
+
   const handleDeleteConfirm = () => {
     if (!requestToDelete || isWithdrawing) return;
+    const withdrawStatus = getWithdrawStatus(requestToDelete);
     setIsWithdrawing(true);
     mutation.mutate({
       id: requestToDelete._id,
@@ -204,7 +214,7 @@ export default function RequestSentForm() {
         newLandmark: requestToDelete.landmark || "",
         newContactNumber: requestToDelete.contactNumber || "",
         newRemarks: "",
-        newStatus: "draft",
+        newStatus: withdrawStatus,
       },
     });
     // ⚠️ Do NOT close here — wait for onSuccess
@@ -233,10 +243,10 @@ export default function RequestSentForm() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">
-            Submitted Requests
+            Check Your Requests
           </h1>
           <p className="text-gray-500 dark:text-slate-400 mt-1">
-            Your applications are under review. Track their progress below.
+            Track your active applications and withdraw if needed.
           </p>
         </div>
         <span className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold rounded-full border border-blue-200 dark:border-blue-800">
@@ -292,7 +302,7 @@ export default function RequestSentForm() {
       {filteredRequests.length === 0 && (
         <div className="text-center py-20 text-gray-400 dark:text-slate-500">
           <div className="text-6xl mb-4">📭</div>
-          <p className="text-lg font-medium">No submitted requests found.</p>
+          <p className="text-lg font-medium">No active requests found.</p>
           <p className="text-sm mt-1">
             Submit a new sanitation permit request to see it here.
           </p>
@@ -768,7 +778,8 @@ export default function RequestSentForm() {
             ) : (
               <>
                 Are you sure you want to withdraw this request? It will be moved
-                back to <strong>draft</strong> status.
+                back to <strong>{getWithdrawStatus(requestToDelete)}</strong>{" "}
+                status.
                 {requestToDelete && (
                   <>
                     <br />

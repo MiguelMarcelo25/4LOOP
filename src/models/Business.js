@@ -82,6 +82,12 @@ const BusinessSchema = new Schema(
       ],
       default: "draft",
     },
+    // Captures the previous lifecycle state before moving to "submitted",
+    // so withdraw can restore the correct status.
+    statusBeforeSubmission: { type: String, default: null },
+    // Snapshot of pre-submit values for renewal requests.
+    // Used to restore business data when a renewal is withdrawn.
+    submissionSnapshot: { type: Schema.Types.Mixed, default: null },
 
     businessAccount: {
       type: Schema.Types.ObjectId,

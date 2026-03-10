@@ -1491,40 +1491,91 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                       />
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700 flex flex-col justify-center">
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase">
-                          Status:
+                    <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-lg border border-slate-100 dark:border-slate-700 flex flex-col justify-center">
+                      <div className="flex flex-col gap-2">
+                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                          Request Type
                         </span>
-                        <div className="flex items-center gap-6">
+
+                        <div
+                          className={`grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900/70 border border-slate-300/70 dark:border-slate-700 ${
+                            isRequestTypeLocked ? "opacity-70" : ""
+                          }`}
+                        >
                           <label
-                            className={`flex items-center gap-2 cursor-pointer transition-colors ${isRequestTypeLocked ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
+                            className={`relative rounded-lg px-3 py-2.5 transition-all ${
+                              requestType === "New"
+                                ? "bg-white dark:bg-slate-800 shadow-sm ring-1 ring-blue-500/70"
+                                : "bg-transparent"
+                            } ${
+                              isRequestTypeLocked
+                                ? "cursor-not-allowed"
+                                : "cursor-pointer hover:bg-white/70 dark:hover:bg-slate-800/70"
+                            }`}
                           >
                             <input
                               type="radio"
                               value="New"
                               {...register("requestType")}
                               disabled={isRequestTypeLocked}
-                              className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                              className="sr-only"
                             />
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">
-                              New
-                            </span>
+                            <div className="flex items-center justify-between">
+                              <span
+                                className={`font-semibold ${
+                                  requestType === "New"
+                                    ? "text-blue-700 dark:text-blue-300"
+                                    : "text-slate-600 dark:text-slate-300"
+                                }`}
+                              >
+                                NEW
+                              </span>
+                              <span
+                                className={`h-2.5 w-2.5 rounded-full transition-all ${
+                                  requestType === "New"
+                                    ? "bg-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.2)]"
+                                    : "bg-slate-400 dark:bg-slate-600"
+                                }`}
+                              />
+                            </div>
                           </label>
 
                           <label
-                            className={`flex items-center gap-2 cursor-pointer transition-colors ${isRequestTypeLocked ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
+                            className={`relative rounded-lg px-3 py-2.5 transition-all ${
+                              requestType === "Renewal"
+                                ? "bg-white dark:bg-slate-800 shadow-sm ring-1 ring-blue-500/70"
+                                : "bg-transparent"
+                            } ${
+                              isRequestTypeLocked
+                                ? "cursor-not-allowed"
+                                : "cursor-pointer hover:bg-white/70 dark:hover:bg-slate-800/70"
+                            }`}
                           >
                             <input
                               type="radio"
                               value="Renewal"
                               {...register("requestType")}
                               disabled={isRequestTypeLocked}
-                              className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                              className="sr-only"
                             />
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">
-                              Renewal
-                            </span>
+                            <div className="flex items-center justify-between">
+                              <span
+                                className={`font-semibold ${
+                                  requestType === "Renewal"
+                                    ? "text-blue-700 dark:text-blue-300"
+                                    : "text-slate-600 dark:text-slate-300"
+                                }`}
+                              >
+                                RENEWAL
+                              </span>
+                              <span
+                                className={`h-2.5 w-2.5 rounded-full transition-all ${
+                                  requestType === "Renewal"
+                                    ? "bg-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.2)]"
+                                    : "bg-slate-400 dark:bg-slate-600"
+                                }`}
+                              />
+                            </div>
                           </label>
                         </div>
                       </div>

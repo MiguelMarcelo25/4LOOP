@@ -1,7 +1,5 @@
-"use client";
-
-import PendingRequestForm from "../../components/businessaccount/PendingForm";
+import { redirect } from "next/navigation";
 
 export default function PendingRequestPage() {
-  return <PendingRequestForm />;
+  redirect("/businessaccount/request/requestsent");
 }

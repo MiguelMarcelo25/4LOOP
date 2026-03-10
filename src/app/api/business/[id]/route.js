@@ -141,6 +141,39 @@ export async function PUT(request, { params }) {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
+  const normalizeStatus = (value) =>
+    typeof value === "string" ? value.toLowerCase() : "";
+  const normalizeType = (value) =>
+    typeof value === "string" ? value.toLowerCase() : "";
+  const RENEWAL_RESTORE_FIELDS = [
+    "bidNumber",
+    "businessName",
+    "businessNickname",
+    "businessType",
+    "businessAddress",
+    "landmark",
+    "contactPerson",
+    "contactNumber",
+    "requestType",
+    "remarks",
+    "businessEstablishment",
+    "sanitaryPermitChecklist",
+    "healthCertificateChecklist",
+    "msrChecklist",
+    "orDateHealthCert",
+    "orNumberHealthCert",
+    "healthCertSanitaryFee",
+    "healthCertFee",
+    "declaredPersonnel",
+    "declaredPersonnelDueDate",
+    "healthCertificates",
+    "healthCertBalanceToComply",
+    "healthCertDueDate",
+    "businessDocuments",
+    "permitDocuments",
+    "personnelDocuments",
+    "officerInCharge",
+  ];
   const assignNullableNumber = (sourceKey, targetKey = sourceKey) => {
     if (!hasBodyKey(sourceKey)) return;
     const raw = body[sourceKey];
@@ -210,6 +243,28 @@ export async function PUT(request, { params }) {
         { error: "Unauthorized or business not found." },
         { status: 403 }
       );
+    }
+
+    // Preserve the current status before moving a request into "submitted".
+    // This allows withdrawal to restore the exact prior lifecycle state.
+    if (normalizeStatus(updateFields.status) === "submitted") {
+      updateFields.statusBeforeSubmission = business.status || null;
+
+      const targetRequestType = normalizeType(
+        updateFields.requestType || business.requestType
+      );
+
+      if (targetRequestType === "renewal") {
+        updateFields.submissionSnapshot = RENEWAL_RESTORE_FIELDS.reduce(
+          (snapshot, key) => {
+            snapshot[key] = business[key] ?? null;
+            return snapshot;
+          },
+          {}
+        );
+      } else {
+        updateFields.submissionSnapshot = null;
+      }
     }
 
     // ✅ Always update checklists if provided

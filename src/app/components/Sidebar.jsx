@@ -239,7 +239,7 @@ export default function Sidebar() {
             { label: 'Add a Business', path: '/businesses/addbusiness', icon: 'add' }
           ]
         },
-        { 
+        {
           label: 'Make a Request', 
           path: '/request',
           submenu: [
@@ -248,7 +248,6 @@ export default function Sidebar() {
             { label: 'Check Your Request', path: '/request/requestsent', icon: 'checkrequest' }
           ]
         },
-        { label: 'Pending Request', path: '/pending' },
         { label: 'Completed Request', path: '/completed' },
         { label: 'Change Password', path: '/changepassword' }
       ]
