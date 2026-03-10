@@ -126,10 +126,19 @@ export async function POST(request) {
     }
 
     // ✅ Generate ticket number
-    const count = await Ticket.countDocuments({
-      createdAt: { $gte: start, $lte: end },
-    });
-    const ticketNumber = `TKT-${currentYear}-${String(count + 1).padStart(3, "0")}`;
+    const latestTicket = await Ticket.findOne({
+      ticketNumber: { $regex: `^TKT-${currentYear}-` },
+    }).sort({ ticketNumber: -1 });
+
+    let nextNumber = 1;
+    if (latestTicket) {
+      const lastTicketNumber = latestTicket.ticketNumber;
+      const parts = lastTicketNumber.split("-");
+      if (parts.length === 3) {
+        nextNumber = parseInt(parts[2], 10) + 1;
+      }
+    }
+    const ticketNumber = `TKT-${currentYear}-${String(nextNumber).padStart(3, "0")}`;
 
     const inspectionNumber = completedInspectionsThisYear + 1;
 
@@ -172,7 +181,7 @@ export async function POST(request) {
     const populatedTicket = await ticket.populate([
       {
         path: "business",
-        select: "businessName bidNumber businessType contactPerson businessAddress requestType"
+        select: "businessName bidNumber businessType contactPerson businessAddress requestType businessAccount"
       },
       {
         path: "businessAccount",
@@ -190,15 +199,18 @@ export async function POST(request) {
 
     // ✅ Create Notification for business owner
     try {
-      await Notification.create({
-        user: biz.businessAccount || account?._id, // recipient
-        business: biz._id,
-        ticket: ticket._id,
-        title: "Inspection Scheduled",
-        message: `A new inspection (${ticketNumber}) has been scheduled for your business "${biz.businessName}" on ${formattedDate}.`,
-        type: "inspection_created",
-        link: `/businessaccount/tickets/${ticket._id}`,
-      });
+      const recipientId = ticket.businessAccount || biz.businessAccount || account?._id;
+      if (recipientId) {
+        await Notification.create({
+          user: recipientId, // recipient
+          business: biz._id,
+          ticket: ticket._id,
+          title: "Inspection Scheduled",
+          message: `A new inspection (${ticketNumber}) has been scheduled for your business "${biz.businessName}" on ${formattedDate}.`,
+          type: "inspection_created",
+          link: `/businessaccount/tickets/${ticket._id}`,
+        });
+      }
     } catch (notifErr) {
       console.error("⚠️ Notification creation failed:", notifErr);
     }
