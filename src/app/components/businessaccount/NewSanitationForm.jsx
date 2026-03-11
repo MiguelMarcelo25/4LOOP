@@ -1146,11 +1146,21 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         {
           label: "Water Potability",
           violated: ic.certificateOfPotability === "x",
-          computeAmount: () => 500,
+          computeAmount: () => 0,
         },
         {
-          label: "MSR",
-          violated: ic.sanitaryOrder01 === "x" || ic.sanitaryOrder02 === "x",
+          label: "Pest Control",
+          violated: ic.pestControl === "x",
+          computeAmount: () => 0,
+        },
+        {
+          label: "Sanitary Order 01",
+          violated: ic.sanitaryOrder01 === "x",
+          computeAmount: () => 5000,
+        },
+        {
+          label: "Sanitary Order 02",
+          violated: ic.sanitaryOrder02 === "x",
           computeAmount: (o) => (o === 1 ? 1000 : o === 2 ? 2000 : 5000),
         },
       ];

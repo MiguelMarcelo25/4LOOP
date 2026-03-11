@@ -295,21 +295,29 @@ export default function InspectingCurrentBusinessForm() {
 
       if (scores.certificateOfPotability === "x") {
         detectedViolations.push({
-          code: "expired_documents",
-          description:
-            "No valid certificate of potability or expired document.",
+          code: "water_potability_violation",
+          description: "No valid certificate of water potability.",
         });
       }
 
-      if (
-        scores.pestControl === "x" ||
-        scores.sanitaryOrder01 === "x" ||
-        scores.sanitaryOrder02 === "x"
-      ) {
+      if (scores.pestControl === "x") {
         detectedViolations.push({
-          code: "failure_renew_sanitary",
-          description:
-            "Non-compliance with sanitary orders or pest control requirements.",
+          code: "pest_control_violation",
+          description: "Non-compliance with pest control requirements.",
+        });
+      }
+
+      if (scores.sanitaryOrder01 === "x") {
+        detectedViolations.push({
+          code: "sanitary_order_01",
+          description: "Non-compliance with Sanitary Order 01.",
+        });
+      }
+
+      if (scores.sanitaryOrder02 === "x") {
+        detectedViolations.push({
+          code: "sanitary_order_02",
+          description: "Non-compliance with Sanitary Order 02.",
         });
       }
 
@@ -336,12 +344,16 @@ export default function InspectingCurrentBusinessForm() {
               case "no_health_certificate":
                 amount = (scores.healthCertificates?.withoutCert || 0) * 500;
                 break;
-              case "expired_documents":
-                amount = 500;
+              case "sanitary_order_01":
+                amount = 5000;
                 break;
-              case "failure_renew_sanitary":
+              case "sanitary_order_02":
                 amount =
                   offenseCount === 1 ? 1000 : offenseCount === 2 ? 2000 : 5000;
+                break;
+              case "water_potability_violation":
+              case "pest_control_violation":
+                amount = 0; // "check po muna namin"
                 break;
               default:
                 amount = 0;

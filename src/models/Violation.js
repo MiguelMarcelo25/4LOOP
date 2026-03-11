@@ -17,7 +17,11 @@ const ViolationSchema = new Schema(
     "fake_documents",
     "expired_documents",
     "other",
-    "pest_control_noncompliance", // ✅ add this
+    "pest_control_noncompliance",
+    "sanitary_order_01",
+    "sanitary_order_02",
+    "water_potability_violation",
+    "pest_control_violation",
   ],
   required: true,
 },
