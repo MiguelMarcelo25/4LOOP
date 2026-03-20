@@ -3,10 +3,17 @@ import Notification from "@/models/Notification";
 import connectMongoDB from "@/lib/ConnectMongodb";
 import { NextResponse } from "next/server";
 import Business from "@/models/Business";
+import BusinessSubmissionSnapshot from "@/models/BusinessSubmissionSnapshot";
 import Ticket from "@/models/Ticket";
 import mongoose from "mongoose";
 import { getSession } from "@/lib/Auth";
 import User from "@/models/User";
+
+const MAX_BUSINESS_UPDATE_BYTES = 15 * 1024 * 1024;
+
+function getApproxJsonSizeBytes(value) {
+  return Buffer.byteLength(JSON.stringify(value ?? {}), "utf8");
+}
 
 // 🔹 Helper function to locate a business
 async function findBusiness(id, userId, role) {
@@ -255,15 +262,29 @@ export async function PUT(request, { params }) {
       );
 
       if (targetRequestType === "renewal") {
-        updateFields.submissionSnapshot = RENEWAL_RESTORE_FIELDS.reduce(
+        const snapshot = RENEWAL_RESTORE_FIELDS.reduce(
           (snapshot, key) => {
             snapshot[key] = business[key] ?? null;
             return snapshot;
           },
           {}
         );
+
+        await BusinessSubmissionSnapshot.findOneAndUpdate(
+          { business: business._id },
+          {
+            business: business._id,
+            snapshot,
+            statusBeforeSubmission: business.status || null,
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+
+        // Keep the live business document lean. Restore state is stored separately.
+        updateFields.submissionSnapshot = null;
       } else {
         updateFields.submissionSnapshot = null;
+        await BusinessSubmissionSnapshot.deleteOne({ business: business._id });
       }
     }
 
@@ -280,6 +301,28 @@ export async function PUT(request, { params }) {
     // ✅ Update tracking info
     updateFields.lastChecklistUpdatedBy = userId;
     updateFields.lastChecklistUpdatedAt = new Date();
+
+    const candidateBusiness = {
+      ...business,
+      ...updateFields,
+    };
+    const approxDocumentBytes = getApproxJsonSizeBytes(candidateBusiness);
+
+    if (approxDocumentBytes > MAX_BUSINESS_UPDATE_BYTES) {
+      console.warn("⚠️ Rejecting oversized business update", {
+        businessId: String(business._id),
+        approxDocumentBytes,
+      });
+
+      return NextResponse.json(
+        {
+          error:
+            "The attached documents are too large to save in one request. Please remove some files or upload smaller/compressed versions.",
+          approxDocumentBytes,
+        },
+        { status: 413 }
+      );
+    }
 
     // ✅ Apply update
     const updated = await Business.findByIdAndUpdate(

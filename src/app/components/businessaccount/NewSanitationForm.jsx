@@ -208,11 +208,57 @@ function formatPeso(amount) {
 
 const fileToBase64 = (file) =>
   new Promise((resolve, reject) => {
+    // If not an image, just do standard base64 conversion
+    if (!file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+      return;
+    }
+
+    // Attempt to compress image using canvas
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        // Resize if too large (e.g., max 1280px dimension)
+        const MAX_DIM = 1200;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          } else {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Export as JPEG with 0.6 quality (significant space savings)
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+        resolve(dataUrl);
+      };
+      img.onerror = (error) => reject(error);
+    };
     reader.onerror = (error) => reject(error);
   });
+
+const MAX_BUSINESS_UPDATE_BYTES = 15 * 1024 * 1024;
+
+function getApproxJsonSizeBytes(value) {
+  return new Blob([JSON.stringify(value)]).size;
+}
 
 export default function NewSanitationForm({ initialData, readOnly = false }) {
   const router = useRouter();
@@ -672,6 +718,15 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       personnelDocuments,
     };
 
+    const approxPayloadBytes = getApproxJsonSizeBytes(requestPayload);
+    if (approxPayloadBytes > MAX_BUSINESS_UPDATE_BYTES) {
+      const err = new Error(
+        "The attached documents are too large to save in one request. Please remove some files or upload smaller/compressed versions.",
+      );
+      err.status = 413;
+      throw err;
+    }
+
     const res = await fetch(`/api/business/${data.bidNumber}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -717,6 +772,10 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
         return;
       }
       if (err.status === 409) {
+        setWarningMessage(err.message);
+        return;
+      }
+      if (err.status === 413) {
         setWarningMessage(err.message);
         return;
       }
@@ -1907,7 +1966,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                             helperText="Upload TOP, Official Receipts, or other permit-related documents."
                             multiple={true}
                             allowedTypes={["image/*", ".pdf", ".docx"]}
-                            maxSizeMB={20}
+                            maxSizeMB={5}
                             value={field.value}
                             onChange={field.onChange}
                             error={errors.permitDocs?.message}
@@ -2062,7 +2121,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                             helperText="Upload the list of personnel and their health certificates (consolidated PDF or individual images)."
                             multiple={true}
                             allowedTypes={["image/*", ".pdf", ".docx"]}
-                            maxSizeMB={20}
+                            maxSizeMB={5}
                             value={field.value}
                             onChange={field.onChange}
                             error={errors.personnelDocs?.message}
@@ -2229,7 +2288,7 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                         <thead>
                           <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">
                             <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700">
-                              Checklist
+                              Requirement
                             </th>
                             <th className="px-4 py-3 font-semibold border-b border-slate-200 dark:border-slate-700 w-24">
                               Offense
@@ -2263,24 +2322,15 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
                               className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                             >
                               <td className="px-4 py-3">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
-                                    {...register(
-                                      `penaltyRecords.${index}.isChecked`,
-                                    )}
-                                  />
-                                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    {row.label ||
-                                      [
-                                        "Sanitary Permit",
-                                        "Health Certificate",
-                                        "Water Potability",
-                                        "MSR",
-                                      ][index]}
-                                  </span>
-                                </label>
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                  {row.label ||
+                                    [
+                                      "Sanitary Permit",
+                                      "Health Certificate",
+                                      "Water Potability",
+                                      "MSR",
+                                    ][index]}
+                                </span>
                               </td>
                               <td className="px-4 py-3">
                                 <Controller

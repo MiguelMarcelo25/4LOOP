@@ -25,9 +25,49 @@ import FileUpload from "@/app/components/ui/FileUpload";
 
 const fileToBase64 = (file) =>
   new Promise((resolve, reject) => {
+    // If not an image, just do standard base64 conversion
+    if (!file.type || !file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+      return;
+    }
+
+    // Attempt to compress image using canvas
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        // Resize if too large (e.g., max 1280px dimension)
+        const MAX_DIM = 1200;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          } else {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Export as JPEG with 0.6 quality (significant space savings)
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+        resolve(dataUrl);
+      };
+      img.onerror = (error) => reject(error);
+    };
     reader.onerror = (error) => reject(error);
   });
 
@@ -462,7 +502,7 @@ export default function AddbusinessForm() {
                       helperText="DTI/SEC Registration, Business Permit, or any proof of business."
                       multiple={true}
                       allowedTypes={["image/*", ".pdf", ".docx"]}
-                      maxSizeMB={20}
+                      maxSizeMB={5}
                       value={field.value}
                       onChange={field.onChange}
                       size="small"
@@ -479,7 +519,7 @@ export default function AddbusinessForm() {
                       helperText="Tax Order of Payment (TOP), Official Receipts, or other permit-related documents."
                       multiple={true}
                       allowedTypes={["image/*", ".pdf", ".docx"]}
-                      maxSizeMB={20}
+                      maxSizeMB={5}
                       value={field.value}
                       onChange={field.onChange}
                       size="small"
@@ -496,7 +536,7 @@ export default function AddbusinessForm() {
                       helperText="List of personnel and their health certificates."
                       multiple={true}
                       allowedTypes={["image/*", ".pdf", ".docx"]}
-                      maxSizeMB={20}
+                      maxSizeMB={5}
                       value={field.value}
                       onChange={field.onChange}
                       size="small"

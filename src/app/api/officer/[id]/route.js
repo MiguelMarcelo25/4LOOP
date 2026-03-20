@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectMongoDB from '@/lib/ConnectMongodb';
 import Business from '@/models/Business';
+import BusinessSubmissionSnapshot from '@/models/BusinessSubmissionSnapshot';
 import mongoose from 'mongoose';
 import { getSession } from '@/lib/Auth';
 
@@ -48,13 +49,16 @@ export async function PUT(req, { params }) {
     const isRenewalDataRestore =
       role === 'business' &&
       isRenewal &&
-      business.submissionSnapshot &&
       normalize(body.newStatus) ===
         normalize(business.statusBeforeSubmission || '');
+    const snapshotDoc = isRenewalDataRestore
+      ? await BusinessSubmissionSnapshot.findOne({ business: business._id }).lean()
+      : null;
+    const restoreSnapshot = snapshotDoc?.snapshot || business.submissionSnapshot;
 
-    const updateFields = isRenewalDataRestore
+    const updateFields = isRenewalDataRestore && restoreSnapshot
       ? {
-          ...business.submissionSnapshot,
+          ...restoreSnapshot,
           status: resolvedStatus,
           statusBeforeSubmission: null,
           submissionSnapshot: null,
@@ -79,6 +83,10 @@ export async function PUT(req, { params }) {
       business = await Business.findByIdAndUpdate(id, updateFields, { new: true });
     } else {
       business = await Business.findOneAndUpdate({ bidNumber: id }, updateFields, { new: true });
+    }
+
+    if (isRenewalDataRestore) {
+      await BusinessSubmissionSnapshot.deleteOne({ business: business._id });
     }
 
     return NextResponse.json(business, { status: 200 });
