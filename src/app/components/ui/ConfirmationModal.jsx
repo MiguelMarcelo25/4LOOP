@@ -45,15 +45,15 @@ export default function ConfirmationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto cursor-pointer" onClick={onCancel}>
       <div
-        className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onCancel}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
         >
           <MdClose size={24} />
         </button>
@@ -82,14 +82,14 @@ export default function ConfirmationModal({
               <button
                 onClick={onCancel}
                 disabled={isLoading}
-                className="flex-1 px-6 py-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-bold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all disabled:opacity-50"
+                className="flex-1 px-6 py-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-bold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all disabled:opacity-50 cursor-pointer hover:scale-[1.02] active:scale-95"
               >
                 {cancelText}
               </button>
               <button
                 onClick={onConfirm}
                 disabled={isLoading}
-                className={`flex-1 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 ${typeConfig[type]} disabled:opacity-50`}
+                className={`flex-1 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 ${typeConfig[type]} disabled:opacity-50 cursor-pointer hover:scale-[1.02] active:scale-95`}
               >
                 {isLoading ? (
                   <>

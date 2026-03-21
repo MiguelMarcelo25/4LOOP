@@ -56,7 +56,7 @@ export default function StatusModal({ open, type, title, message, onClose }) {
   // Success / Error overlay
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] cursor-pointer"
       onClick={onClose}
     >
       <div
@@ -65,6 +65,7 @@ export default function StatusModal({ open, type, title, message, onClose }) {
           relative w-full max-w-sm mx-4 rounded-2xl shadow-2xl p-6
           bg-white dark:bg-slate-800
           border-t-4 ${isSuccess ? 'border-green-500' : 'border-red-500'}
+          cursor-default
         `}
         style={{ animation: 'statusModalIn 0.25s ease-out' }}
       >
@@ -99,8 +100,9 @@ export default function StatusModal({ open, type, title, message, onClose }) {
           <button
             onClick={onClose}
             className={`
-              mt-2 px-6 py-2 rounded-lg text-sm font-semibold text-white transition
-              ${isSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+              mt-2 px-6 py-2 rounded-lg text-sm font-semibold text-white transition-all duration-200
+              ${isSuccess ? 'bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95 shadow-md shadow-green-500/20' : 'bg-red-600 hover:bg-red-700 hover:scale-105 active:scale-95 shadow-md shadow-red-500/20'}
+              cursor-pointer flex items-center justify-center
             `}
           >
             Got it

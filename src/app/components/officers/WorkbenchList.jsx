@@ -46,65 +46,41 @@ import {
 import ConfirmationModal from "@/app/components/ui/ConfirmationModal";
 import StatusModal from "@/app/components/ui/StatusModal";
 
-const MSR_OPTIONS = [
-  { id: "health_certificate", label: "Health Certificate" },
-  {
-    id: "pest_control_contract_agreement",
-    label: "Pest Control Contract / Agreement",
-  },
-  {
-    id: "applicable_pest_control_method",
-    label: "Applicable Pest Control Method",
-  },
-  { id: "license_of_embalmer", label: "License of Embalmer" },
-  { id: "fda_license_to_operate", label: "FDA - License to Operate" },
-  {
-    id: "food_safety_compliance_officer",
-    label: "Food Safety Compliance Officer (FSCO)",
-  },
-  { id: "doh_license_or_accreditation", label: "DOH License / Accreditation" },
-  {
-    id: "manufacturers_distributors_importers_of_excreta_sewage",
-    label: "Manufacturers/Distributors of Excreta/Sewage",
-  },
-  {
-    id: "clearance_from_social_hygiene_clinic",
-    label: "Clearance From Social Hygiene Clinic",
-  },
-  { id: "permit_to_operate", label: "Permit to Operate" },
-  {
-    id: "material_information_data_sheet",
-    label: "Material Information Data Sheet",
-  },
-  {
-    id: "random_swab_test_result_of_equipments_and_rooms",
-    label: "Swab Test Result of Equipments & Rooms",
-  },
-  {
-    id: "certificate_of_potability_of_drinking_water",
-    label: "Certificate of Potability of Drinking Water",
-  },
-  { id: "for_water_refilling_station", label: "For Water Refilling Station" },
-  { id: "others", label: "Others" },
-];
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 
-// Fetch function
+// Fetch functions
 const fetchBusinesses = async () => {
   const response = await axios.get("/api/officer");
   return response.data;
 };
 
+const fetchMSRRequirements = async () => {
+  const response = await axios.get("/api/msr-requirements");
+  return response.data;
+};
+
 export default function WorkbenchList({ title, filterStatus }) {
-  const { data: businesses = [], isLoading } = useQuery({
-    queryKey: ["workbench-list"],
-    queryFn: fetchBusinesses,
+  const queryClient = useQueryClient();
+
+  // 1️⃣ Main data queries
+  const {
+    data: businesses = [],
+    isLoading,
+    isError: isBizError,
+  } = useQuery({ queryKey: ["businesses"], queryFn: fetchBusinesses });
+
+  const { data: requirements = [] } = useQuery({
+    queryKey: ["msr-requirements"],
+    queryFn: fetchMSRRequirements,
   });
 
-  const queryClient = useQueryClient();
+  // Use dynamic requirements as options, or fallback to empty
+  const msrOptions = useMemo(() => {
+    return requirements.map((r) => ({ id: r._id, label: r.label }));
+  }, [requirements]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBusinessId, setSelectedBusinessId] = useState(null);
   const [page, setPage] = useState(1);
@@ -985,7 +961,7 @@ export default function WorkbenchList({ title, filterStatus }) {
                           dense
                           className="grid grid-cols-1 md:grid-cols-2 gap-x-4"
                         >
-                          {MSR_OPTIONS.map((option) => {
+                          {msrOptions.map((option) => {
                             const userItem =
                               businessMsrMap[option.id] ||
                               businessMsrMap[option.label];

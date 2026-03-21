@@ -222,6 +222,7 @@ export default function Sidebar() {
           ]
         },
         { label: 'Businesses', path: '/businesses' },
+        { label: 'MSR Requirements', path: '/msr-requirements' },
         { label: 'Profile Settings', path: '/profile' }
       ]
     },
@@ -299,7 +300,8 @@ export default function Sidebar() {
       'Make a Request': <MdAddCircle size={24} />,
       'Change Password': <MdLock size={24} />,
       'Profile Settings': <MdPerson size={24} />,
-      'Workbench': <MdWork size={24} />
+      'Workbench': <MdWork size={24} />,
+      'MSR Requirements': <MdAssignment size={24} />
     };
     return mainIcons[label] || <MdDashboard size={24} />;
   };
