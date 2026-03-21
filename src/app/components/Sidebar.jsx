@@ -45,7 +45,6 @@ export default function Sidebar() {
   const [isUploadingNewImage, setIsUploadingNewImage] = useState(false);
   const [message, setMessage] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const [modal, setModal] = useState({
     open: false,
@@ -69,8 +68,7 @@ export default function Sidebar() {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState));
   };
 
-  // Determine if sidebar should be visually expanded
-  const isExpanded = isHovered || !isCollapsed;
+  const isExpanded = !isCollapsed;
 
   const { data } = useSWR(userId ? `/api/users/${userId}` : null, fetcher);
   const user = data?.user;
@@ -325,8 +323,6 @@ export default function Sidebar() {
         transition-all duration-300 ease-in-out z-50
         ${isExpanded ? 'w-72' : 'w-20'}
       `}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
         <StatusModal
           open={modal.open}
@@ -339,14 +335,14 @@ export default function Sidebar() {
         {/* Toggle Button */}
         <button 
             onClick={toggleSidebar}
-            className="absolute -right-3 top-9 bg-blue-600 text-white p-1.5 rounded-full shadow-lg hover:bg-blue-700 hover:scale-110 transition-all z-50 border-2 border-white dark:border-slate-800"
+            className="absolute -right-3.5 top-8 flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700 hover:scale-110 transition-all z-50 border-[2px] border-white dark:border-slate-800"
             title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
             {isCollapsed ? <MdChevronRight size={20} /> : <MdChevronLeft size={20} />}
         </button>
 
       {/* 👤 Profile Section */}
-      <div className={`flex flex-col items-center py-8 transition-all duration-300 ${!isExpanded ? 'px-2' : 'px-6'}`}>
+      <div className={`flex flex-col items-center pt-10 pb-6 transition-all duration-300 ${!isExpanded ? 'px-2' : 'px-6'}`}>
         <label className="cursor-pointer relative group">
           {preview ? (
             <div className={`
@@ -429,22 +425,22 @@ export default function Sidebar() {
            
            // Common class for menu items
            const itemClass = `
-            w-full group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
+            group relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
             ${isActive 
               ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none' 
               : 'text-gray-600 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400'}
-            ${!isExpanded ? 'justify-center' : ''}
+            ${!isExpanded ? 'w-14 h-14 mx-auto justify-center gap-0 px-0' : 'w-full'}
            `;
 
            // Content inside the button/link
            const itemContent = (
              <>
-               <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+               <span className={`flex items-center justify-center transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
                   {getIcon(item.label)}
                </span>
                <span className={`
-                 font-medium whitespace-nowrap transition-all duration-300 origin-left flex-1 text-left
-                 ${!isExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}
+                 font-medium whitespace-nowrap transition-all duration-300 origin-left text-left
+                 ${!isExpanded ? 'w-0 flex-none opacity-0 overflow-hidden' : 'w-auto flex-1 opacity-100'}
                `}>
                  {item.label}
                </span>
@@ -466,18 +462,18 @@ export default function Sidebar() {
                 <button 
                   onClick={handleLogout} 
                   className={`
-                    w-full group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 mt-4
+                    group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 mt-4
                     text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 
                     hover:shadow-md border border-transparent hover:border-red-100 dark:hover:border-red-900
-                    ${!isExpanded ? 'justify-center' : ''}
+                    ${!isExpanded ? 'w-14 h-14 mx-auto justify-center gap-0 px-0' : 'w-full'}
                   `}
                 >
-                   <span className="transition-transform duration-300 group-hover:rotate-[-20deg] group-hover:scale-110">
+                   <span className="flex items-center justify-center transition-transform duration-300 group-hover:rotate-[-20deg] group-hover:scale-110">
                       {getIcon(item.label)}
                    </span>
                    <span className={`
-                     font-bold whitespace-nowrap transition-all duration-300 origin-left flex-1 text-left
-                     ${!isExpanded ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}
+                     font-bold whitespace-nowrap transition-all duration-300 origin-left text-left
+                     ${!isExpanded ? 'w-0 flex-none opacity-0 overflow-hidden' : 'w-auto flex-1 opacity-100'}
                    `}>
                      {item.label}
                    </span>

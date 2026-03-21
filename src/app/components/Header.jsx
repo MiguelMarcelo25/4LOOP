@@ -1,12 +1,11 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import ThemeToggle from '@/app/components/ThemeToggle';
+import Link from "next/link";
+import Image from "next/image";
+import ThemeToggle from "@/app/components/ThemeToggle";
 
 export default function Header() {
   return (
     <div className="bg-blue-900 dark:bg-slate-900 text-white py-4 border-b border-blue-800 dark:border-slate-800">
       <div className="container mx-auto flex justify-between items-center px-6">
-
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center">
             <Image
@@ -17,22 +16,26 @@ export default function Header() {
             />
           </Link>
           <div className="flex flex-col">
-            <span className="text-xs font-extralight tracking-wide">LUNGSOD NG</span>
+            <span className="text-xs font-extralight tracking-wide">
+              LUNGSOD NG
+            </span>
             <span className="text-lg font-semibold tracking-wide">PASIG</span>
-            <span className="text-xs font-extralight tracking-wide">UMAAGOS AND PAG-ASA</span>
+            <span className="text-xs font-extralight tracking-wide">
+              UMAAGOS ANG PAG-ASA
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-6">
           <div className="text-right text-sm hidden sm:block">
-            {new Date().toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}{' '}
-            |{' '}
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
+            {new Date().toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}{" "}
+            |{" "}
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
             })}
           </div>
           <ThemeToggle />

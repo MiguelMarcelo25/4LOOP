@@ -1003,6 +1003,10 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
       hasPenalties ||
       isPreviouslyDone;
     const autoRequestType = shouldLockRequestType ? "Renewal" : "New";
+    const isRenewalRequest = autoRequestType === "Renewal";
+    const renewalDueDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
 
     const currentType = watch("requestType");
     if (
@@ -1038,49 +1042,64 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     setValue("status", businessData?.status || "");
     setValue("remarks", businessData?.remarks || "");
 
-    // ✅ Personnel & Health Cert fields
-    if (businessData?.declaredPersonnel != null)
-      setValue("declaredPersonnel", businessData.declaredPersonnel);
-    if (businessData?.declaredPersonnelDueDate)
-      setValue(
-        "declaredPersonnelDueDate",
-        formatDateForInput(businessData.declaredPersonnelDueDate),
-      );
-    if (businessData?.healthCertificates != null)
-      setValue("healthCertificates", businessData.healthCertificates);
-    if (businessData?.healthCertBalanceToComply != null)
-      setValue(
-        "healthCertBalanceToComply",
-        businessData.healthCertBalanceToComply,
-      );
-    if (businessData?.healthCertDueDate)
-      setValue(
-        "healthCertDueDate",
-        formatDateForInput(businessData.healthCertDueDate),
-      );
-    if (businessData?.orNumberHealthCert)
-      setValue("orNumberHealthCert", businessData.orNumberHealthCert);
-    if (businessData?.orDateHealthCert)
-      setValue(
-        "orDateHealthCert",
-        formatDateForInput(businessData.orDateHealthCert),
-      );
-    if (businessData?.healthCertFee != null)
-      setValue("healthCertFee", businessData.healthCertFee);
-    if (businessData?.healthCertSanitaryFee != null)
-      setValue("healthCertSanitaryFee", businessData.healthCertSanitaryFee);
+    // ✅ Renewal should start permit/certificate sections clean instead of reusing old values.
+    if (isRenewalRequest) {
+      setValue("declaredPersonnel", "");
+      setValue("declaredPersonnelDueDate", renewalDueDate);
+      setValue("healthCertificates", "");
+      setValue("healthCertBalanceToComply", "");
+      setValue("healthCertDueDate", renewalDueDate);
+      setValue("orNumberHealthCert", "");
+      setValue("orDateHealthCert", "");
+      setValue("healthCertFee", "");
+      setValue("healthCertSanitaryFee", "");
+      setSanitaryPermitChecklistState([]);
+      setHealthCertificateChecklistState("");
+    } else {
+      // ✅ Personnel & Health Cert fields
+      if (businessData?.declaredPersonnel != null)
+        setValue("declaredPersonnel", businessData.declaredPersonnel);
+      if (businessData?.declaredPersonnelDueDate)
+        setValue(
+          "declaredPersonnelDueDate",
+          formatDateForInput(businessData.declaredPersonnelDueDate),
+        );
+      if (businessData?.healthCertificates != null)
+        setValue("healthCertificates", businessData.healthCertificates);
+      if (businessData?.healthCertBalanceToComply != null)
+        setValue(
+          "healthCertBalanceToComply",
+          businessData.healthCertBalanceToComply,
+        );
+      if (businessData?.healthCertDueDate)
+        setValue(
+          "healthCertDueDate",
+          formatDateForInput(businessData.healthCertDueDate),
+        );
+      if (businessData?.orNumberHealthCert)
+        setValue("orNumberHealthCert", businessData.orNumberHealthCert);
+      if (businessData?.orDateHealthCert)
+        setValue(
+          "orDateHealthCert",
+          formatDateForInput(businessData.orDateHealthCert),
+        );
+      if (businessData?.healthCertFee != null)
+        setValue("healthCertFee", businessData.healthCertFee);
+      if (businessData?.healthCertSanitaryFee != null)
+        setValue("healthCertSanitaryFee", businessData.healthCertSanitaryFee);
 
-    // ✅ Pre-tick checklists from saved data
-    if (businessData?.sanitaryPermitChecklist?.length > 0) {
-      setSanitaryPermitChecklistState(
-        businessData.sanitaryPermitChecklist.map((i) => i.id),
-      );
-    }
-    if (businessData?.healthCertificateChecklist?.length > 0) {
-      // radio — take the first saved item id
-      setHealthCertificateChecklistState(
-        businessData.healthCertificateChecklist[0]?.id || "",
-      );
+      // ✅ Pre-tick checklists from saved data
+      if (businessData?.sanitaryPermitChecklist?.length > 0) {
+        setSanitaryPermitChecklistState(
+          businessData.sanitaryPermitChecklist.map((i) => i.id),
+        );
+      }
+      if (businessData?.healthCertificateChecklist?.length > 0) {
+        // radio — take the first saved item id
+        setHealthCertificateChecklistState(
+          businessData.healthCertificateChecklist[0]?.id || "",
+        );
+      }
     }
     if (businessData?.msrChecklist?.length > 0) {
       setMsrChecklistState(businessData.msrChecklist.map((i) => i.id));
@@ -1090,11 +1109,15 @@ export default function NewSanitationForm({ initialData, readOnly = false }) {
     if (Array.isArray(businessData?.businessDocuments)) {
       setValue("businessDocs", businessData.businessDocuments);
     }
-    if (Array.isArray(businessData?.permitDocuments)) {
+    if (!isRenewalRequest && Array.isArray(businessData?.permitDocuments)) {
       setValue("permitDocs", businessData.permitDocuments);
+    } else if (isRenewalRequest) {
+      setValue("permitDocs", []);
     }
-    if (Array.isArray(businessData?.personnelDocuments)) {
+    if (!isRenewalRequest && Array.isArray(businessData?.personnelDocuments)) {
       setValue("personnelDocs", businessData.personnelDocuments);
+    } else if (isRenewalRequest) {
+      setValue("personnelDocs", []);
     }
   }, [businessData, bidNumber, tickets?.length, reset, setValue, watch]);
 

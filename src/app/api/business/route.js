@@ -16,6 +16,7 @@ export async function GET(request) {
     const { role, id: userId } = session.user;
     const url = new URL(request.url);
     const queryParams = Object.fromEntries(url.searchParams.entries());
+    const requestedStatus = String(queryParams.status || "").trim().toLowerCase();
 
     if (role !== "officer") {
       delete queryParams.businessAccount;
@@ -26,7 +27,14 @@ export async function GET(request) {
     let filter = {};
     if (role === "business") {
       filter = { ...queryParams, businessAccount: userId };
-    } else if (role === "officer" || role === "admin") {
+    } else if (role === "officer") {
+      if (requestedStatus === "draft") {
+        return NextResponse.json([], { status: 200 });
+      }
+      filter = requestedStatus
+        ? { ...queryParams }
+        : { ...queryParams, status: { $ne: "draft" } };
+    } else if (role === "admin") {
       filter = { ...queryParams };
     } else {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
