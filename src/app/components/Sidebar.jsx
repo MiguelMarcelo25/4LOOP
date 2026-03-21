@@ -195,7 +195,8 @@ export default function Sidebar() {
         { label: 'Businesses', path: '/businesses' },
         { label: 'Inspections', path: '/inspections' },
         { label: 'Pending Request', path: '/pending' },
-        { label: 'Completed Request', path: '/completed' }
+        { label: 'Completed Request', path: '/completed' },
+        { label: 'MSR Requirements', path: '/msr-requirements' }
       ]
     },
     officer: {
@@ -222,7 +223,6 @@ export default function Sidebar() {
           ]
         },
         { label: 'Businesses', path: '/businesses' },
-        { label: 'MSR Requirements', path: '/msr-requirements' },
         { label: 'Profile Settings', path: '/profile' }
       ]
     },

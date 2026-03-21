@@ -1,6 +1,6 @@
 "use client";
 
-import MSRManagement from "@/app/components/officers/MSRManagement";
+import MSRManagement from "@/app/components/admin/MSRManagement";
 import { Box } from "@mui/material";
 
 export default function MSRRequirementsPage() {
