@@ -1,427 +1,677 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Typography,
-  Paper,
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  TableHead,
+  Button,
   TextField,
   MenuItem,
-  Card,
-  Grid,
-  InputAdornment,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Stack,
-  Select,
-  FormControl,
-  InputLabel,
-  IconButton,
-  Tooltip,
+  CircularProgress,
+  Box,
+  Typography,
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
-import { MdBusiness, MdOutlineVisibility, MdLocationOn } from "react-icons/md";
-import { HiSearch, HiOutlinePhone, HiOutlineUser } from "react-icons/hi";
+import {
+  HiChevronDown,
+  HiChevronUp,
+  HiSearch,
+} from "react-icons/hi";
+
 import { getAddOwnerBusiness } from "@/app/services/BusinessService";
+import DocList from "@/app/components/ui/DocViewer"; // Assuming this is available
+
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+function formatViolationCode(code) {
+  if (!code) return "";
+  return code
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+const STEPS = [
+  { label: "Verification", icon: "🔍" },
+  { label: "Compliance", icon: "📋" },
+  { label: "Permit Approval", icon: "✅" },
+  { label: "Release", icon: "🎉" },
+];
+
+function getProgressStep(status) {
+  switch (status) {
+    case "draft": return -1;
+    case "submitted": return 0;
+    case "pending": return 1;
+    case "pending2": return 2;
+    case "pending3": return 2;
+    case "completed": return 3;
+    case "released": return 4;
+    case "expired": return 4;
+    default: return -1;
+  }
+}
+
+function getStatusBadge(status) {
+  switch (status) {
+    case "released":
+      return {
+        label: "Valid",
+        cls: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+      };
+    case "expired":
+      return {
+        label: "Expired",
+        cls: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+      };
+    case "completed":
+      return {
+        label: "Approved",
+        cls: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      };
+    case "draft":
+      return {
+        label: "Draft",
+        cls: "bg-gray-100 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700",
+      };
+    case "submitted":
+      return {
+        label: "Submitted",
+        cls: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      };
+    default:
+      return {
+        label: "Processing",
+        cls: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
+      };
+  }
+}
+
+// ─── component ──────────────────────────────────────────────────────────────
 
 export default function BusinessesForm() {
-  const { data, isLoading } = useQuery({
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["business-list"],
     queryFn: () => getAddOwnerBusiness(),
   });
 
   const [businesses, setBusinesses] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState("businessName");
-  const [sortField, setSortField] = useState("");
-  const [sortDirection, setSortDirection] = useState("asc");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [selectedBusiness, setSelectedBusiness] = useState(null);
+  const [searchType, setSearchType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expanded, setExpanded] = useState({});
 
+  // Fetch inspection tickets and merge into businesses
   useEffect(() => {
-    if (data?.data) {
-      setBusinesses(data.data);
+    async function fetchInspectionDetails() {
+      if (!data?.data) return;
+      try {
+        const res = await fetch("/api/ticket");
+        if (!res.ok) {
+           setBusinesses(data.data);
+           return;
+        }
+        const allTickets = await res.json();
+
+        const updated = data.data.map((biz) => {
+          const bizTickets = allTickets.filter(
+            (t) => t.business === biz._id || t.business?._id === biz._id,
+          );
+          const latestTicket = bizTickets.length
+            ? bizTickets.sort(
+              (a, b) =>
+                new Date(b.inspectionDate) - new Date(a.inspectionDate),
+            )[0]
+            : null;
+          const violations = latestTicket?.violations || [];
+          const recordedViolation =
+            violations.length > 0
+              ? violations.map((v) => v.code).join(", ")
+              : "—";
+          const penaltyFee = violations.reduce(
+            (sum, v) => sum + (v.penalty || 0),
+            0,
+          );
+          return {
+            ...biz,
+            inspectionStatus: latestTicket?.inspectionStatus || "—",
+            resolutionStatus: latestTicket?.resolutionStatus || "—",
+            violations,
+            recordedViolation,
+            penaltyFee,
+          };
+        });
+
+        setBusinesses(updated);
+      } catch (err) {
+        console.error("Failed to fetch inspection details:", err);
+        setBusinesses(data.data);
+      }
     }
+    fetchInspectionDetails();
   }, [data]);
 
-  const fields = [
-    { label: "BID Number", field: "bidNumber" },
-    { label: "Company Profile", field: "businessName" },
-    { label: "Trade Name", field: "businessNickname" },
-    { label: "Category", field: "businessType" },
-    { label: "Location", field: "businessAddress" },
-    { label: "Primary Contact", field: "contactPerson" },
-    { label: "Status", field: "status" },
-  ];
+  const filteredBusinesses = useMemo(() => {
+    if (!searchQuery.trim()) return businesses;
+    const q = searchQuery.toLowerCase();
+    return businesses.filter((biz) => {
+      if (searchType === "all") {
+        return (
+          biz.bidNumber?.toLowerCase().includes(q) ||
+          biz.businessName?.toLowerCase().includes(q) ||
+          biz.businessNickname?.toLowerCase().includes(q) ||
+          biz.contactPerson?.toLowerCase().includes(q)
+        );
+      }
+      return biz[searchType]?.toLowerCase().includes(q);
+    });
+  }, [businesses, searchType, searchQuery]);
 
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
+  const toggleExpand = (id) =>
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const filteredBusinesses = businesses.filter((business) => {
-    const value = business[searchField];
-    if (!value) return false;
 
-    const term = searchTerm.toLowerCase().trim();
+  // ── loading / error states ────────────────────────────────────────────────
 
-    if (searchField === "businessType") {
-      const type = String(value).toLowerCase().trim();
-      const allowed = ["food", "non-food"];
-      if (!allowed.includes(type)) return false;
-      if (!term) return true;
-      const normalizedTerm = term.replace(/\s+/g, "-");
-      if (normalizedTerm === "food") return type.includes("food");
-      if (normalizedTerm === "non-food" || term.includes("non")) return type.includes("non-food");
-      return type.includes(normalizedTerm);
-    }
+  if (isLoading)
+    return (
+      <Box mt={4} textAlign="center">
+        <CircularProgress />
+        <Typography mt={2}>Loading businesses...</Typography>
+      </Box>
+    );
 
-    return String(value).toLowerCase().includes(term);
-  });
+  if (isError)
+    return (
+      <Box mt={4} textAlign="center">
+        <Typography color="error">❌ Failed: {error?.message}</Typography>
+      </Box>
+    );
 
-  const sortedBusinesses = [...filteredBusinesses].sort((a, b) => {
-    if (!sortField) return 0;
-    const aValue = a[sortField];
-    const bValue = b[sortField];
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-    }
-    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-  });
-
-  const startIndex = (page - 1) * limit;
-  const paginatedBusinesses = sortedBusinesses.slice(startIndex, startIndex + limit);
-  const total = sortedBusinesses.length;
-  const totalPages = Math.ceil(total / limit) || 1;
+  // ── render ────────────────────────────────────────────────────────────────
 
   return (
-    <Box className="animate-in fade-in duration-700 w-full px-4 lg:px-8 py-8">
-      {/* 🚀 Header */}
-      <Box className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-gray-100 dark:border-slate-800">
-        <Box className="flex items-center gap-5">
-          <Box className="p-4 rounded-[1.5rem] bg-linear-to-br from-indigo-500 to-blue-600 text-white shadow-xl shadow-indigo-500/30 flex items-center justify-center">
-            <MdBusiness size={40} />
-          </Box>
-          <Box>
-            <Typography variant="h3" className="font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-1">
-              Business Registry
-            </Typography>
-            <Typography variant="body1" className="text-slate-500 dark:text-slate-400 font-medium">
-              Comprehensive database of registered municipal establishments.
-            </Typography>
-          </Box>
-        </Box>
-        <Box className="flex gap-4">
-           {/* Total counter pill */}
-           <Box className="bg-white dark:bg-slate-900 px-6 py-3 rounded-2xl border border-gray-100 dark:border-slate-800 flex items-center gap-3 shadow-md shadow-slate-200/40 dark:shadow-none">
-              <Typography className="text-sm font-black text-indigo-600 dark:text-indigo-400">
-                 {total}
-              </Typography>
-              <Typography className="text-[10px] uppercase font-black text-slate-400 tracking-widest">
-                 Total Listings
-              </Typography>
-           </Box>
-        </Box>
-      </Box>
+    <div className="max-w-7xl mx-auto px-4 py-8 animate-in fade-in duration-700">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">
+            Business Directory
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 mt-1">
+            Administrative view of all registered businesses and their progress.
+          </p>
+        </div>
+        <span className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-semibold rounded-full border border-blue-200 dark:border-blue-800">
+          {filteredBusinesses.length}{" "}
+          {filteredBusinesses.length === 1 ? "Business Found" : "Businesses Found"}
+        </span>
+      </div>
 
-      {/* 🔍 Search & Filter Setup */}
-      <Box className="mb-8 p-6 lg:p-4 rounded-[2rem] border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md shadow-2xl shadow-slate-200/30 dark:shadow-none">
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
-            <TextField
-              select
-              fullWidth
-              label="Search Field"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl"
-              InputProps={{ sx: { borderRadius: "1rem" } }}
+      {/* Search & Filter */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-4 mb-8 flex flex-col md:flex-row gap-4 items-center">
+        <div className="flex-1 w-full relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <HiSearch className="text-gray-400 text-xl" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search businesses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        </div>
+        <div className="w-full md:w-auto min-w-[200px]">
+          <TextField
+            select
+            label="Filter By"
+            value={searchType}
+            onChange={(e) => setSearchType(e.target.value)}
+            size="small"
+            fullWidth
+            variant="outlined"
+            className="bg-gray-50 dark:bg-slate-700"
+            InputProps={{ className: "dark:text-slate-200" }}
+            InputLabelProps={{ className: "dark:text-slate-400" }}
+            SelectProps={{
+              MenuProps: {
+                PaperProps: {
+                  className: "dark:bg-slate-800 dark:text-slate-200",
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">All Fields</MenuItem>
+            <MenuItem value="bidNumber">BID Number</MenuItem>
+            <MenuItem value="businessName">Business Name</MenuItem>
+            <MenuItem value="businessNickname">Trade Name</MenuItem>
+            <MenuItem value="businessType">Business Type</MenuItem>
+            <MenuItem value="contactPerson">Owner / Contact</MenuItem>
+          </TextField>
+        </div>
+      </div>
+
+      {/* Empty State */}
+      {filteredBusinesses.length === 0 && (
+        <div className="text-center py-20 text-gray-400 dark:text-slate-500">
+          <div className="text-6xl mb-4">🏢</div>
+          <p className="text-lg font-medium">No businesses found.</p>
+          <p className="text-sm mt-1">Try adjusting your search or filters.</p>
+        </div>
+      )}
+
+      {/* Business Cards */}
+      <div className="space-y-6">
+        {filteredBusinesses.map((business) => {
+          const isExpanded = expanded[business._id];
+          const activeStep = getProgressStep(business.status);
+          const isExpired = business.status === "expired";
+          const badge = getStatusBadge(business.status);
+          const showTracker = business.status !== "draft";
+
+          return (
+            <div
+              key={business._id}
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-all duration-300 ${isExpanded ? "ring-2 ring-blue-100 dark:ring-blue-900/40 shadow-md" : "hover:shadow-md"}`}
             >
-              {fields.map(({ label, field }) => (
-                <MenuItem key={field} value={field} className="font-bold text-sm text-slate-700 dark:text-slate-200">{label}</MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={7}>
-            <TextField
-              fullWidth
-              placeholder={`Search registry by ${fields.find((f) => f.field === searchField)?.label}...`}
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
-              className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <HiSearch className="text-indigo-500 text-xl ml-2" />
-                  </InputAdornment>
-                ),
-                sx: { borderRadius: "1rem", fontFamily: 'inherit', fontWeight: 600 },
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-             <FormControl fullWidth>
-               <InputLabel>Rows/Page</InputLabel>
-               <Select
-                 value={limit}
-                 label="Rows/Page"
-                 onChange={(e) => {
-                   setLimit(Number(e.target.value));
-                   setPage(1);
-                 }}
-                 className="bg-slate-50 dark:bg-slate-800/80"
-                 sx={{ borderRadius: "1rem" }}
-               >
-                 {[10, 25, 50, 100].map((size) => (
-                   <MenuItem key={size} value={size} className="font-bold text-sm text-slate-700 dark:text-slate-200">{size} rows</MenuItem>
-                 ))}
-               </Select>
-             </FormControl>
-          </Grid>
-        </Grid>
-      </Box>
-
-      {/* 📋 Data Table with High-End Aesthetic */}
-      <TableContainer component={Paper} elevation={0} className="rounded-[2rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl shadow-indigo-100/20 dark:shadow-none overflow-hidden pb-4">
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              {fields.map(({ label, field }) => (
-                <TableCell
-                  key={field}
-                  onClick={() => handleSort(field)}
-                  className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md border-b-2 border-slate-100 dark:border-slate-700 cursor-pointer text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500 py-5 transition-colors hover:text-indigo-500"
-                >
-                  <Box className="flex items-center gap-2">
-                    {field === 'businessName' && <MdBusiness/>}
-                    {field === 'businessAddress' && <MdLocationOn/>}
-                    {field === 'contactPerson' && <HiOutlineUser/>}
-                    {label}
-                    {sortField === field && (
-                      <span className="text-indigo-500 font-bold ml-1 text-lg leading-none">
-                        {sortDirection === "asc" ? "↑" : "↓"}
+              {/* ── Card Header ─────────────────────────────────────────── */}
+              <div className="p-6 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/50">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                  {/* Left: info + tracker */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1 flex-wrap">
+                      <h2 className="text-xl font-bold text-gray-800 dark:text-slate-200 truncate">
+                        {business.businessName || "Unnamed Business"}
+                      </h2>
+                      <span
+                        className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide border shrink-0 ${badge.cls}`}
+                      >
+                        {badge.label}
                       </span>
+                    </div>
+
+                    <div className="text-sm text-gray-500 dark:text-slate-400 flex flex-wrap gap-3 mb-4">
+                      <span>
+                        BID:{" "}
+                        <span className="font-mono text-gray-700 dark:text-slate-300">
+                          {business.bidNumber || "—"}
+                        </span>
+                      </span>
+                      <span>•</span>
+                      <span>{business.businessType || "—"}</span>
+                      <span>•</span>
+                      <span>Owner: {business.contactPerson || "—"}</span>
+                    </div>
+
+                    {/* Progress Tracker */}
+                    {showTracker && (
+                      <div>
+                        <p className="text-[10px] text-center font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Application Progress
+                        </p>
+                        <div className="flex items-start w-full gap-9">
+                          {STEPS.map((step, idx) => {
+                            const isDone = activeStep > idx;
+                            const isCurrent = activeStep === idx;
+                            const isLast = idx === STEPS.length - 1;
+                            return (
+                              <div
+                                key={idx}
+                                className="flex items-center flex-1"
+                              >
+                                <div className="flex flex-col items-center shrink-0">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${isExpired
+                                        ? isDone || isCurrent
+                                          ? "bg-red-100 border-red-400 text-red-600"
+                                          : "bg-gray-100 border-gray-300 text-gray-400"
+                                        : isDone
+                                          ? "bg-green-500 border-green-500 text-white"
+                                          : isCurrent
+                                            ? "bg-blue-500 border-blue-500 text-white ring-2 ring-blue-200 dark:ring-blue-700"
+                                            : "bg-gray-100 border-gray-300 text-gray-400 dark:bg-slate-700 dark:border-slate-600"
+                                      }`}
+                                  >
+                                    {isDone && !isExpired ? "✓" : step.icon}
+                                  </div>
+                                  <span
+                                    className={`text-[9px] mt-1 text-center leading-tight font-semibold ${isExpired
+                                        ? isDone || isCurrent
+                                          ? "text-red-500"
+                                          : "text-gray-400"
+                                        : isDone
+                                          ? "text-green-600 dark:text-green-400"
+                                          : isCurrent
+                                            ? "text-blue-600 dark:text-blue-400"
+                                            : "text-gray-400 dark:text-slate-500"
+                                      }`}
+                                  >
+                                    {step.label}
+                                  </span>
+                                </div>
+                                {!isLast && (
+                                  <div
+                                    className={`flex-1 h-0.5 mx-1 mb-4 rounded ${isExpired
+                                        ? isDone
+                                          ? "bg-red-300"
+                                          : "bg-gray-200"
+                                        : isDone
+                                          ? "bg-green-400 dark:bg-green-600"
+                                          : "bg-gray-200 dark:bg-slate-700"
+                                      }`}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
-                  </Box>
-                </TableCell>
-              ))}
-              <TableCell align="center" className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md border-b-2 border-slate-100 dark:border-slate-700 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500 py-5">
-                Quick Action
-              </TableCell>
-            </TableRow>
-          </TableHead>
+                  </div>
 
-          <TableBody>
-            {isLoading ? (
-               <TableRow>
-                 <TableCell colSpan={8} align="center" className="py-32">
-                   <div className="flex flex-col items-center justify-center gap-4">
-                      <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                      <Typography className="text-slate-400 font-black uppercase tracking-widest text-[11px]">Syncing Database...</Typography>
-                   </div>
-                 </TableCell>
-               </TableRow>
-            ) : paginatedBusinesses.length > 0 ? (
-              paginatedBusinesses.map((business, idx) => (
-                <TableRow 
-                   key={business._id} 
-                   hover 
-                   className={`transition-colors border-b dark:border-slate-800 ${idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/40 dark:bg-slate-800/20'}`}
-                >
-                  <TableCell className="font-extrabold text-indigo-600 dark:text-indigo-400 text-xs tracking-wider">
-                    {business.bidNumber || "—"}
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Stack spacing={0.5}>
-                       <Typography className="font-black text-slate-800 dark:text-slate-100 text-[15px] leading-tight group-hover:text-indigo-600 transition-colors">
-                         {business.businessName}
-                       </Typography>
-                       <Typography className="text-slate-400 dark:text-slate-500 text-[11px] font-bold">
-                         {business.businessNickname || "No Trade Name"}
-                       </Typography>
-                    </Stack>
-                  </TableCell>
+                  {/* Right: action buttons */}
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <Button
+                      variant={isExpanded ? "contained" : "outlined"}
+                      color="primary"
+                      onClick={() => toggleExpand(business._id)}
+                      endIcon={isExpanded ? <HiChevronUp /> : <HiChevronDown />}
+                      sx={{ textTransform: "none", borderRadius: "8px" }}
+                    >
+                      {isExpanded ? "Hide Details" : "View Details"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
 
-                  <TableCell className="text-slate-500 dark:text-slate-400 text-xs">
-                    {business.businessNickname || "—"}
-                  </TableCell>
+              {/* ── Expanded Details ─────────────────────────────────────── */}
+              {isExpanded && (
+                <div className="p-6 bg-white dark:bg-slate-800 animate-fadeIn">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Left: Business Info */}
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                        Business Information
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          ["BID Number", business.bidNumber],
+                          ["Request Type", business.requestType],
+                          ["Trade Name", business.businessNickname],
+                          ["Business Type", business.businessType],
+                          ["Address", business.businessAddress],
+                          ["Landmark", business.landmark],
+                          ["Contact Person", business.contactPerson],
+                          ["Contact Number", business.contactNumber],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2"
+                          >
+                            <span className="text-gray-500 dark:text-slate-400 text-sm">
+                              {label}
+                            </span>
+                            <span className="text-gray-800 dark:text-slate-200 font-medium text-sm text-right max-w-[60%]">
+                              {value || "—"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
 
-                  <TableCell>
-                    <Box className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-[10px] font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-800/50 inline-block text-center shadow-xs truncate max-w-[140px]">
-                      {business.businessType || "UNSPECIFIED"}
-                    </Box>
-                  </TableCell>
+                      {/* Remarks */}
+                      <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg p-4">
+                        <span className="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase">
+                          Remarks
+                        </span>
+                        <p className="text-gray-700 dark:text-slate-300 text-sm mt-1 whitespace-pre-line">
+                          {business.remarks || "No remarks."}
+                        </p>
+                      </div>
+                    </div>
 
-                  <TableCell className="text-slate-600 dark:text-slate-300 text-[13px] font-medium max-w-[240px] truncate" title={business.businessAddress}>
-                    {business.businessAddress || "—"}
-                  </TableCell>
+                    {/* Right: Checklists */}
+                    <div className="space-y-8">
+                      {/* Sanitary Permit Checklist */}
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          A. Sanitary Permit Checklist
+                        </h3>
+                        {business.sanitaryPermitChecklist?.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {business.sanitaryPermitChecklist.map((item, i) => (
+                              <span
+                                key={i}
+                                className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600"
+                              >
+                                {item.label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
+                        )}
+                      </div>
 
-                  <TableCell>
-                    <Stack spacing={1}>
-                       <Typography className="text-slate-800 dark:text-slate-200 text-sm font-bold flex items-center gap-2">
-                          <HiOutlineUser className="text-slate-400 text-lg"/>
-                          {business.contactPerson || "—"}
-                       </Typography>
-                       {business.contactNumber && (
-                         <Typography className="text-slate-500 dark:text-slate-500 text-[11px] font-medium flex items-center gap-2">
-                           <HiOutlinePhone className="text-slate-400"/>
-                           {business.contactNumber}
-                         </Typography>
-                       )}
-                    </Stack>
-                  </TableCell>
+                      {/* Health Cert Checklist */}
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          B. Health Certificate Checklist
+                        </h3>
+                        {business.healthCertificateChecklist?.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {business.healthCertificateChecklist.map(
+                              (item, i) => (
+                                <span
+                                  key={i}
+                                  className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs px-2 py-1 rounded border border-gray-200 dark:border-slate-600"
+                                >
+                                  {item.label}
+                                </span>
+                              ),
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">
+                            None
+                          </span>
+                        )}
+                      </div>
 
-                  <TableCell>
-                    <Chip
-                      label={business.status?.toUpperCase() || 'ACTIVE'}
-                      className={`font-black text-[10px] uppercase tracking-widest h-7 px-1 shadow-sm ${
-                        business.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800/80 dark:text-emerald-400"
-                          : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
-                      }`}
-                    />
-                  </TableCell>
+                      {/* MSR Checklist */}
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
+                          Minimum Sanitary Requirements (MSR)
+                        </h3>
+                        {business.msrChecklist?.length > 0 ? (
+                          <ul className="space-y-2">
+                            {business.msrChecklist.map((item, i) => {
+                               const isUploaded = business.personnelDocuments?.some(d => d.name?.startsWith(`[MSR] ${item.label}`));
+                               return (
+                                  <li
+                                    key={i}
+                                    className={`flex justify-between items-center text-sm p-3 rounded border ${isUploaded ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800" : "bg-gray-50 dark:bg-slate-700 border-gray-100 dark:border-slate-600"}`}
+                                  >
+                                    <span className={isUploaded ? "text-green-800 dark:text-green-300 font-medium" : "text-gray-700 dark:text-slate-300"}>
+                                      {item.label} {isUploaded && " (Uploaded)"}
+                                    </span>
+                                    {item.dueDate && (
+                                      <span className="text-red-500 dark:text-red-400 text-xs font-medium">
+                                        Due:{" "}
+                                        {new Date(item.dueDate).toLocaleDateString(
+                                          "en-PH",
+                                        )}
+                                      </span>
+                                    )}
+                                  </li>
+                               );
+                            })}
+                          </ul>
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">
+                            None Assigned
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                  <TableCell align="center">
-                    <Tooltip title="View Complete Registry Profile" arrow>
-                       <IconButton 
-                         onClick={() => setSelectedBusiness(business)}
-                         className="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 transition-all duration-300 hover:scale-110 active:scale-95 border border-indigo-100 dark:border-indigo-800"
-                       >
-                         <MdOutlineVisibility size={20} />
-                       </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} align="center" className="py-24">
-                   <Box className="flex flex-col items-center justify-center opacity-60">
-                      <MdBusiness size={64} className="text-slate-300 dark:text-slate-600 mb-4" />
-                      <Typography variant="h6" className="text-slate-400 dark:text-slate-500 font-extrabold tracking-tight">No Establishments Found</Typography>
-                      <Typography variant="body2" className="text-slate-400 dark:text-slate-600 mt-1 max-w-sm text-center">We couldn't find any businesses matching your current search parameters. Try adjusting your filters.</Typography>
-                   </Box>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  {/* Personnel & Health Certificates */}
+                  <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                      Personnel & Health Certificates Data
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        ["Total Personnel", business.declaredPersonnel],
+                        [
+                          "Personnel Due Date",
+                          business.declaredPersonnelDueDate
+                            ? new Date(
+                              business.declaredPersonnelDueDate,
+                            ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
+                        ["Health Certificates", business.healthCertificates],
+                        [
+                          "Balance to Comply",
+                          business.healthCertBalanceToComply || 0,
+                        ],
+                        [
+                          "Health Cert Due",
+                          business.healthCertDueDate
+                            ? new Date(
+                              business.healthCertDueDate,
+                            ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
+                        [
+                          "Health Cert Fee",
+                          typeof business.healthCertFee === "number"
+                            ? `₱${business.healthCertFee.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+                            : null,
+                        ],
+                        [
+                          "Sanitary Fee",
+                          typeof business.healthCertSanitaryFee === "number"
+                            ? `₱${business.healthCertSanitaryFee.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+                            : null,
+                        ],
+                        ["OR Number", business.orNumberHealthCert],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-center shadow-sm"
+                        >
+                          <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">
+                            {label}
+                          </div>
+                          <div className="font-semibold text-gray-800 dark:text-slate-200 text-sm">
+                            {value ?? "—"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
-      {/* Pagination Controls */}
-      <Box className="mt-8 flex justify-between items-center px-4 bg-white dark:bg-slate-900 py-4 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-100/50 dark:shadow-none">
-         <Typography variant="body2" className="text-slate-400 font-bold uppercase tracking-widest text-[11px]">
-           Showing <span className="text-indigo-600 dark:text-indigo-400 mx-1">{total > 0 ? startIndex + 1 : 0}</span> to <span className="text-indigo-600 dark:text-indigo-400 mx-1">{Math.min(startIndex + limit, total)}</span> of <span className="text-slate-800 dark:text-slate-200 mx-1">{total}</span>
-         </Typography>
-         <Stack direction="row" spacing={1.5}>
-           <Button
-             variant="outlined"
-             disabled={page === 1}
-             onClick={() => setPage((p) => Math.max(p - 1, 1))}
-             className="rounded-2xl border-slate-200 text-slate-500 font-bold hover:bg-slate-50 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 px-6 py-2 transition-all disabled:opacity-30"
-           >
-             Previous
-           </Button>
-           <Box className="flex items-center justify-center px-4 font-black text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
-               {page} / {totalPages}
-           </Box>
-           <Button
-             variant="outlined"
-             disabled={page === totalPages}
-             onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-             className="rounded-2xl border-slate-200 text-slate-500 font-bold hover:bg-slate-50 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 px-6 py-2 transition-all disabled:opacity-30"
-           >
-             Next
-           </Button>
-         </Stack>
-      </Box>
+                    {/* Inspection & Penalty Records */}
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 mt-8">
+                      Inspection & Penalty Records
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        [
+                          "OR Date",
+                          business.orDateHealthCert
+                            ? new Date(
+                              business.orDateHealthCert,
+                            ).toLocaleDateString("en-PH")
+                            : null,
+                        ],
+                        ["Inspection Status", business.inspectionStatus],
+                        [
+                          "Inspections This Year",
+                          business.inspectionCountThisYear,
+                        ],
+                        [
+                          "Penalty Fee",
+                          `₱${(business.penaltyFee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
+                        ],
+                        ["Recorded Violations", business.recordedViolation],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="bg-gray-50 dark:bg-slate-700 p-3 rounded-lg text-center shadow-sm"
+                        >
+                          <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">
+                            {label}
+                          </div>
+                          <div className="font-semibold text-gray-800 dark:text-slate-200 text-sm">
+                            {value ?? "—"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
-      {/* Detail Dialog */}
-      <Dialog
-        open={Boolean(selectedBusiness)}
-        onClose={() => setSelectedBusiness(null)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          className: "rounded-[2.5rem] dark:bg-slate-900 bg-white shadow-2xl shadow-indigo-500/10 overflow-hidden border border-slate-100 dark:border-slate-800",
-        }}
-        slotProps={{
-           backdrop: {
-              className: "bg-slate-900/60 backdrop-blur-sm cursor-pointer"
-           }
-        }}
-        scroll="paper"
-      >
-        {selectedBusiness && (
-          <>
-            <DialogTitle className="px-8 py-6 bg-slate-50/80 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <Box className="flex items-center gap-4">
-                <Box className="p-3.5 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 flex items-center justify-center">
-                  <MdBusiness size={28} />
-                </Box>
-                <Box>
-                  <Typography variant="h5" className="font-extrabold text-slate-900 dark:text-white leading-tight">
-                    {selectedBusiness.businessName}
-                  </Typography>
-                  <Typography component="div" className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 tracking-[0.2em] uppercase flex items-center gap-2 mt-1">
-                    BID: {selectedBusiness.bidNumber}
-                    <Chip size="small" label={selectedBusiness.status || 'ACTIVE'} className="h-[22px] px-1 text-[9px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 font-extrabold tracking-widest uppercase border border-emerald-200 dark:border-emerald-800/80 shadow-xs" />
-                  </Typography>
-                </Box>
-              </Box>
-            </DialogTitle>
-            <DialogContent className="p-8">
-              <Grid container spacing={4} className="mt-2">
-                {[...fields, {label: "Landmark", field: "landmark"}, {label: "Date Created", field: "createdAt"}].map(({ label, field }) => (
-                  <Grid item xs={12} sm={6} md={4} key={field}>
-                    <Box className="px-5 py-4 rounded-[1.5rem] bg-slate-50 hover:bg-indigo-50/50 dark:bg-slate-800/50 dark:hover:bg-indigo-900/20 border border-slate-100 hover:border-indigo-100 dark:border-slate-800 dark:hover:border-indigo-800/50 transition-colors h-full flex flex-col justify-center">
-                       <Typography variant="caption" className="uppercase font-black text-slate-400 tracking-[0.15em] text-[9px] block mb-2">
-                         {label}
-                       </Typography>
-                       <Typography className="font-extrabold text-slate-800 dark:text-slate-100 text-[15px] leading-tight break-words">
-                         {field === "createdAt" || field === "updatedAt"
-                           ? new Date(selectedBusiness[field]).toLocaleString("en-PH", { month: "long", day: "numeric", year: "numeric", hour: 'numeric', minute: 'numeric' })
-                           : selectedBusiness[field] || "—"}
-                       </Typography>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </DialogContent>
-            <DialogActions className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-md">
-              <Button
-                onClick={() => setSelectedBusiness(null)}
-                variant="outlined"
-                className="font-bold py-3.5 px-8 rounded-[1.5rem] border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 shadow-sm transition-all"
-                fullWidth
-              >
-                Close Profile
-              </Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
-    </Box>
+                    {/* Violations detail */}
+                    {business.violations?.length > 0 && (
+                      <div className="mt-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg p-4">
+                        <span className="text-xs font-bold text-red-500 dark:text-red-400 uppercase">
+                          Violation Details
+                        </span>
+                        <ul className="mt-2 space-y-1">
+                          {business.violations.map((v, i) => (
+                            <li
+                              key={i}
+                              className="text-sm text-gray-700 dark:text-slate-300 flex justify-between"
+                            >
+                              <span>{formatViolationCode(v.code)}</span>
+                              <span className="text-red-600 dark:text-red-400 font-medium">
+                                ₱
+                                {v.penalty?.toLocaleString("en-PH", {
+                                  minimumFractionDigits: 2,
+                                })}{" "}
+                                ({v.status})
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Uploaded Documents */}
+                  <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                      Uploaded Documents
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {DocList && (
+                        <>
+                           <DocList
+                             label="Business Documents"
+                             docs={business.businessDocuments}
+                           />
+                           <DocList
+                             label="Permit Documents"
+                             docs={business.permitDocuments}
+                           />
+                           <DocList
+                             label="Personnel & Health Docs"
+                             docs={business.personnelDocuments}
+                           />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
