@@ -128,48 +128,6 @@ export async function PUT(request, { params }) {
       }
 
       ticket.inspectionNumber = completedThisYear + 1;
-
-      // 🧾 Check violations on 2nd inspection
-      if (ticket.inspectionNumber === 2) {
-        const checklist = inspectionChecklist || {};
-        const noSP = checklist.sanitaryPermit === "without";
-        const hcData = checklist.healthCertificates || {};
-        const noHC = hcData.withoutCert > 0;
-        const noCPDW = checklist.certificateOfPotability === "x";
-        const noPC = checklist.pestControl === "x";
-
-        if (noSP || noHC || noCPDW || noPC) {
-          let violationCode = "other";
-          let description = "Failed to comply after 2nd inspection.";
-
-          if (noSP) {
-            violationCode = "no_sanitary_permit";
-            description = "Business failed to secure a Sanitary Permit after 2nd inspection.";
-          } else if (noHC) {
-            violationCode = "no_health_certificate";
-            description = "Employees failed to secure valid Health Certificates after 2nd inspection.";
-          } else if (noCPDW) {
-            violationCode = "failure_renew_sanitary";
-            description = "No valid Certificate of Potability of Drinking Water after 2nd inspection.";
-          } else if (noPC) {
-            violationCode = "pest_control_noncompliance";
-            description = "No valid pest control compliance after 2nd inspection.";
-          }
-
-          const violation = await Violation.create({
-            ticket: ticket._id,
-            code: violationCode,
-            description,
-            penalty: 2000,
-            ordinanceSection: "Ordinance No. 53, s.2022",
-            offenseCount: 1,
-            violationStatus: "pending",
-          });
-
-          ticket.violations.push(violation._id);
-          ticket.resolutionStatus = "for compliance";
-        }
-      }
     }
 
     // ✅ Save the ticket first

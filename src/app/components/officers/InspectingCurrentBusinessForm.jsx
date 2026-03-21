@@ -338,22 +338,27 @@ export default function InspectingCurrentBusinessForm() {
 
             switch (v.code) {
               case "no_sanitary_permit":
+                // 1st offense (2k), 2nd offense (3k), 3rd+ offense (5k)
                 amount =
                   offenseCount === 1 ? 2000 : offenseCount === 2 ? 3000 : 5000;
                 break;
               case "no_health_certificate":
+                // 500 per head without certificate
                 amount = (scores.healthCertificates?.withoutCert || 0) * 500;
                 break;
               case "sanitary_order_01":
+                // Fixed 5k penalty
                 amount = 5000;
                 break;
               case "sanitary_order_02":
+                // 1st offense (1k), 2nd offense (2k), 3rd+ offense (5k)
                 amount =
                   offenseCount === 1 ? 1000 : offenseCount === 2 ? 2000 : 5000;
                 break;
               case "water_potability_violation":
               case "pest_control_violation":
-                amount = 0; // "check po muna namin"
+                // "check po muna namin" - set to 0 as per instructions
+                amount = 0;
                 break;
               default:
                 amount = 0;

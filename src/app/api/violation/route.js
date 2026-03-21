@@ -11,6 +11,7 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get("businessId");
+    const code = searchParams.get("code"); // ✅ Optional code filter
     const page = parseInt(searchParams.get("page") || "1");
     const limit = 10;
     const skip = (page - 1) * limit;
@@ -21,7 +22,10 @@ export async function GET(request) {
 
     const ticketIds = await Ticket.distinct("_id", { business: businessId });
 
-    const violations = await Violation.find({ ticket: { $in: ticketIds } })
+    const query = { ticket: { $in: ticketIds } };
+    if (code) query.code = code; // ✅ Apply code filter if provided
+
+    const violations = await Violation.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -57,19 +61,23 @@ export async function POST(request) {
 
     // Determine penalty amount based on code if not explicitly provided
     let computedPenalty = penalty;
-    if (!computedPenalty) {
+    if (computedPenalty === undefined || computedPenalty === null) {
       switch (code) {
         case "sanitary_permit":
+        case "no_sanitary_permit":
         case "failure_renew_sanitary":
           computedPenalty = 2000;
           break;
         case "pest_control_noncompliance":
+        case "pest_control_violation":
           computedPenalty = 2000;
           break;
         case "health_certificate_missing":
+        case "no_health_certificate":
           computedPenalty = 500 * (offenseCount || 1);
           break;
         case "water_potability":
+        case "water_potability_violation":
           computedPenalty = 500;
           break;
         case "msr_violation":
@@ -102,4 +110,3 @@ export async function POST(request) {
     return NextResponse.json({ error: "Failed to create violation" }, { status: 500 });
   }
 }
-
