@@ -46,9 +46,13 @@ export async function GET(request) {
 
     const enriched = await Promise.all(
       businesses.map(async (b) => {
-        const latestTicket = await Ticket.findOne({ business: b._id })
+        const inspectionRecords = await Ticket.find({ business: b._id })
           .sort({ createdAt: -1 })
+          .populate("officerInCharge", "fullName email")
+          .populate("violations")
           .lean();
+
+        const latestTicket = inspectionRecords[0] || null;
 
         const inspectionCountThisYear = await Ticket.countDocuments({
           business: b._id,
@@ -83,7 +87,8 @@ export async function GET(request) {
           inspectionCountThisYear,
           recordedViolation: latestTicket?.violation || "-",
           checklist: latestTicket?.checklist || null,
-          permitStatus, // ✅ added
+          permitStatus,
+          inspectionRecords, // ✅ returning all inspection records
         };
       })
     );

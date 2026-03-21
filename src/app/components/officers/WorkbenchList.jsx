@@ -1058,6 +1058,9 @@ export default function WorkbenchList({ title, filterStatus }) {
                               Status
                             </th>
                             <th className="p-2 border dark:border-slate-600">
+                              Violations & Penalties
+                            </th>
+                            <th className="p-2 border dark:border-slate-600">
                               Officer
                             </th>
                           </tr>
@@ -1078,6 +1081,27 @@ export default function WorkbenchList({ title, filterStatus }) {
                               </td>
                               <td className="p-2 border dark:border-slate-600 uppercase font-semibold text-blue-500">
                                 {rec.inspectionStatus}
+                              </td>
+                              <td className="p-2 border dark:border-slate-600">
+                                {rec.violations?.length > 0 ? (
+                                  <ul className="list-none space-y-1">
+                                    {rec.violations.map((v, i) => (
+                                      <li key={i} className="flex flex-col">
+                                        <span className="font-semibold text-red-500">
+                                          {v.code.replace(/_/g, " ").toUpperCase()}
+                                        </span>
+                                        <span className="text-[10px] text-gray-500">
+                                          P {Number(v.penalty).toLocaleString()}
+                                        </span>
+                                      </li>
+                                    ))}
+                                    <li className="mt-2 pt-1 border-t border-gray-200 dark:border-slate-600 text-[10px] font-bold">
+                                      Total: P {rec.violations.reduce((sum, v) => sum + (v.penalty || 0), 0).toLocaleString()}
+                                    </li>
+                                  </ul>
+                                ) : (
+                                  <span className="text-gray-400 italic">None</span>
+                                )}
                               </td>
                               <td className="p-2 border dark:border-slate-600">
                                 {rec.officerInCharge?.fullName || "—"}

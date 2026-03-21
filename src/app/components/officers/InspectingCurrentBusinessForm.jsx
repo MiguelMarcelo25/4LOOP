@@ -364,7 +364,7 @@ export default function InspectingCurrentBusinessForm() {
               ticketId: currentTicket._id,
               businessId,
               offenseCount,
-              penaltyAmount: amount,
+              penalty: amount,
               violationStatus: "pending",
             });
 
@@ -1217,6 +1217,13 @@ export default function InspectingCurrentBusinessForm() {
                                     ok:
                                       (checklist.healthCertificates
                                         ?.withoutCert || 0) === 0,
+                                  },
+                                  {
+                                    label: "Violations",
+                                    val: t.violations?.length > 0
+                                      ? `${t.violations.length} Found`
+                                      : "None",
+                                    ok: (t.violations?.length || 0) === 0,
                                   },
                                 ].map((item, i) => (
                                   <Grid item xs={6} key={i}>

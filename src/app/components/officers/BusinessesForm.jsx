@@ -691,39 +691,77 @@ export default function BusinessesForm() {
                       <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
                         Inspection Records
                       </h3>
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {biz.inspectionRecords.map((rec, i) => (
                           <div
                             key={i}
-                            className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-2 justify-between border border-gray-100 dark:border-slate-600"
+                            className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-slate-600 shadow-xs"
                           >
-                            <div>
-                              <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">
-                                {rec.inspectionDate
-                                  ? new Date(
-                                      rec.inspectionDate,
-                                    ).toLocaleDateString("en-PH")
-                                  : "—"}
-                              </span>
-                              <span className="mx-2 text-gray-300">|</span>
-                              <span className="text-xs text-gray-500 dark:text-slate-400">
-                                {rec.officerInCharge?.fullName ||
-                                  "Unknown Officer"}
-                              </span>
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              <span
-                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${rec.inspectionStatus === "completed" ? "bg-green-100 text-green-700 border-green-200" : "bg-yellow-100 text-yellow-700 border-yellow-200"}`}
-                              >
-                                {rec.inspectionStatus || "—"}
-                              </span>
-                              {rec.violations?.length > 0 && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-700 border border-red-200">
-                                  {rec.violations.length} violation
-                                  {rec.violations.length > 1 ? "s" : ""}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-gray-900 dark:text-white px-2 py-1 bg-white dark:bg-slate-800 rounded border border-gray-100 dark:border-slate-600">
+                                  {rec.inspectionDate
+                                    ? new Date(
+                                        rec.inspectionDate,
+                                      ).toLocaleDateString("en-PH")
+                                    : "—"}
                                 </span>
-                              )}
+                                <span className="text-xs text-gray-500 dark:text-slate-400">
+                                  by {rec.officerInCharge?.fullName ||
+                                    "Unknown Officer"}
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${rec.inspectionStatus === "completed" ? "bg-green-100 text-green-700 border-green-200" : "bg-yellow-100 text-yellow-700 border-yellow-200"}`}
+                                >
+                                  {rec.inspectionStatus || "—"}
+                                </span>
+                                {rec.violations?.length > 0 && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-700 border border-red-200 uppercase tracking-wider">
+                                    {rec.violations.length} violation
+                                    {rec.violations.length > 1 ? "s" : ""}
+                                  </span>
+                                )}
+                              </div>
                             </div>
+
+                            {/* Violation Details if they exist */}
+                            {rec.violations?.length > 0 && (
+                              <div className="mt-2 space-y-2">
+                                {rec.violations.map((v, vi) => (
+                                  <div
+                                    key={vi}
+                                    className="flex justify-between items-center text-xs p-2 bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/20 rounded-lg"
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-bold text-red-700 dark:text-red-400">
+                                        {v.code?.replace(/_/g, " ").toUpperCase()}
+                                      </span>
+                                      <span className="text-[10px] text-gray-500 truncate max-w-[200px]">
+                                        {v.description}
+                                      </span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-bold text-red-600 dark:text-red-400">
+                                        ₱{Number(v.penalty).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                                <div className="flex justify-end pt-1">
+                                  <span className="text-[11px] font-extrabold text-red-800 dark:text-red-300 px-2 py-1 rounded bg-red-50 dark:bg-red-900/30">
+                                    Total Penalty: ₱{rec.violations.reduce((sum, v) => sum + (v.penalty || 0), 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {rec.remarks && (
+                              <div className="mt-3 text-xs text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-800 p-2 rounded italic">
+                                "{rec.remarks}"
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -70,6 +70,7 @@ export async function GET(request, { params }) {
     const inspectionRecords = await Ticket.find({ business: business._id })
       .sort({ createdAt: -1 })
       .populate("officerInCharge", "fullName email")
+      .populate("violations") // ✅ Populating violations
       .lean();
 
     const latestTicket = inspectionRecords[0] || null;

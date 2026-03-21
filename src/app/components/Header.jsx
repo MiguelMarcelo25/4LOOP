@@ -16,12 +16,12 @@ export default function Header() {
             />
           </Link>
           <div className="flex flex-col">
-            <span className="text-xs font-extralight tracking-wide">
+            <span className="text-xs font-light tracking-widest opacity-90">
               LUNGSOD NG
             </span>
-            <span className="text-lg font-semibold tracking-wide">PASIG</span>
-            <span className="text-xs font-extralight tracking-wide">
-              UMAAGOS ANG PAG-ASA
+            <span className="text-lg font-bold tracking-wider">PASIG</span>
+            <span className="text-xs font-light tracking-widest opacity-90 uppercase">
+              Umaagos ang Pag-asa
             </span>
           </div>
         </div>
