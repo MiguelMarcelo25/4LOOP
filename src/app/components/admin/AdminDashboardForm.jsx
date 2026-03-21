@@ -4,7 +4,12 @@ import { useRouter } from 'next/navigation';
 import { 
   Box, 
   CircularProgress, 
-  Typography 
+  Typography,
+  Grid,
+  Paper,
+  Stack,
+  Tooltip as MuiTooltip,
+  IconButton
 } from '@mui/material';
 import {
   LineChart, Line, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
@@ -17,8 +22,11 @@ import {
   MdAddBusiness,
   MdBarChart,
   MdTimeline,
-  MdCalendarToday
+  MdCalendarToday,
+  MdShowChart,
+  MdInfoOutline
 } from 'react-icons/md';
+import { HiOutlineLightBulb, HiOutlinePresentationChartBar } from 'react-icons/hi';
 
 export default function AdminDashboardForm() {
   const router = useRouter();
@@ -96,7 +104,6 @@ export default function AdminDashboardForm() {
         } catch (forecastErr) {
           console.warn('Forecast data unavailable:', forecastErr);
           setForecastWarning(true);
-          // Continue with empty forecast data
         }
 
       } catch (err) {
@@ -121,7 +128,7 @@ export default function AdminDashboardForm() {
   const projectedRenewals = getLatestStat(renewalData, 'Renewals');
   const projectedNew = getLatestStat(newBusinessData, 'NewBusiness');
 
-  // Calculate Growth (Simple comparison of last 2 years of total forecast)
+  // Calculate Growth
   let growthRate = 0;
   if (totalForecastData.length >= 2) {
     const last = totalForecastData[totalForecastData.length - 1].TotalForecast;
@@ -131,108 +138,156 @@ export default function AdminDashboardForm() {
 
   if (loading) {
     return (
-      <Box className="flex flex-col items-center justify-center min-h-[60vh]">
-        <CircularProgress size={60} thickness={4} className="text-blue-600" />
-        <Typography className="mt-4 text-gray-700 dark:text-gray-300 font-semibold">Loading Dashboard...</Typography>
+      <Box className="flex flex-col items-center justify-center min-h-[70vh]">
+        <Box className="relative">
+          <CircularProgress size={80} thickness={4} className="text-blue-600 opacity-20" />
+          <CircularProgress size={80} thickness={4} className="text-blue-600 absolute left-0 top-0" />
+        </Box>
+        <Typography className="mt-6 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">
+            Synchronizing Analytics...
+        </Typography>
       </Box>
     );
   }
 
   if (!isAdmin) return null;
-  if (error) return <div className="p-8 text-center text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 rounded-xl border border-red-200 dark:border-red-800 mx-6 mt-6 font-medium">{error}</div>;
+  if (error) return (
+    <Box className="max-w-4xl mx-auto mt-20 p-12 text-center bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-[2rem] animate-in fade-in slide-in-from-top-4 duration-500">
+       <Typography variant="h5" className="text-red-700 dark:text-red-400 font-black mb-2">Service Outage</Typography>
+       <Typography className="text-red-600 dark:text-red-500/70 font-medium">{error}</Typography>
+    </Box>
+  );
 
   const StatCard = ({ title, value, icon: Icon, color, subtext, trend }) => (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-start justify-between hover:shadow-md transition-all duration-200">
-      <div>
-        <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold mb-1">{title}</p>
-        <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{value.toLocaleString()}</h3>
+    <Paper 
+      elevation={0} 
+      className="group relative bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none hover:border-blue-500/50 transition-all duration-500 overflow-hidden"
+    >
+      <Box className={`absolute top-0 right-0 w-32 h-32 ${color.replace('bg-', 'bg-')}/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
+      
+      <Stack spacing={4}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Box className={`p-4 rounded-2xl ${color} text-white shadow-xl shadow-slate-200/50 dark:shadow-none`}>
+               <Icon size={28} />
+            </Box>
+            <MuiTooltip title={title}>
+               <IconButton size="small" className="text-slate-300">
+                  <MdInfoOutline />
+               </IconButton>
+            </MuiTooltip>
+        </Stack>
+
+        <Box>
+           <Typography variant="body2" className="text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest text-[10px] mb-1">
+              {title}
+           </Typography>
+           <Typography variant="h3" className="text-slate-800 dark:text-white font-black tracking-tight">
+              {value.toLocaleString()}
+           </Typography>
+        </Box>
+
         {subtext && (
-          <div className="flex items-center mt-2 gap-1">
-            {trend === 'up' ? <MdTrendingUp className="text-green-600 dark:text-green-400" /> : trend === 'down' ? <MdTrendingDown className="text-red-600 dark:text-red-400" /> : null}
-            <span className={`text-xs font-semibold ${trend === 'up' ? 'text-green-700 dark:text-green-400' : trend === 'down' ? 'text-red-700 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+          <Box className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full w-fit ${trend === 'up' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : trend === 'down' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-500'}`}>
+            {trend === 'up' ? <MdTrendingUp size={16} /> : trend === 'down' ? <MdTrendingDown size={16} /> : <MdShowChart size={16} />}
+            <span className="text-[11px] font-black uppercase tracking-tight">
               {subtext}
             </span>
-          </div>
+          </Box>
         )}
-      </div>
-      <div className={`p-3 rounded-xl ${color} text-white shadow-lg shadow-${color.split('-')[1]}/30`}>
-        <Icon size={24} />
-      </div>
-    </div>
+      </Stack>
+    </Paper>
   );
 
   return (
-    <div className="p-2 md:p-6 max-w-7xl mx-auto">
-      {/* 🟢 Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className=" mt-1 font-medium text-gray-600 dark:text-gray-400">Overview of business sanitation trends & forecasts.</p>
-        </div>
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm text-sm text-gray-700 dark:text-gray-300 font-medium">
-          <MdCalendarToday className="text-blue-600 dark:text-blue-400" />
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </div>
-      </div>
+    <Box className="w-full animate-in fade-in duration-700 p-6 lg:p-10">
+      {/* 🟢 Header - Premium Glassmorphism */}
+      <Box className="mb-12 flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b border-gray-100 dark:border-slate-800 pb-10">
+        <Box>
+          <Typography variant="h3" className="font-black text-slate-800 dark:text-white tracking-tighter leading-none mb-4 flex items-center gap-4">
+             <span className="p-4 bg-linear-to-br from-blue-600 to-indigo-700 rounded-[2rem] text-white shadow-2xl shadow-blue-500/30">
+                <HiOutlinePresentationChartBar size={40} />
+             </span>
+             Central Intelligence
+          </Typography>
+          <Typography variant="h6" className="text-slate-400 dark:text-slate-500 font-medium max-w-2xl leading-relaxed">
+             Advanced monitoring and predictive sanitation analytics for the municipality of Pasig. 
+             Review forecasts, track registration growth, and identify critical pending tasks.
+          </Typography>
+        </Box>
+        
+        <Paper elevation={0} className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 px-6 py-4 rounded-3xl flex items-center gap-4 shadow-xl shadow-slate-200/40 dark:shadow-none translate-y-2">
+           <Box className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+              <MdCalendarToday size={20} />
+           </Box>
+           <Box>
+              <Typography variant="caption" className="font-black text-slate-400 uppercase tracking-widest text-[9px] block">System Date</Typography>
+              <Typography variant="body2" className="font-extrabold text-slate-700 dark:text-slate-200">
+                {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </Typography>
+           </Box>
+        </Paper>
+      </Box>
 
       {/* Warning if forecast data unavailable */}
       {forecastWarning && (
-        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <div className="flex items-start gap-3">
-            <MdTimeline className="text-yellow-600 dark:text-yellow-400 mt-0.5" size={20} />
-            <div>
-              <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Forecast Service Unavailable</p>
-              <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-                The forecasting service is currently unavailable or slow. Showing pending requests only. 
-                Please ensure the Python backend is running at {API_URL}.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Box className="mb-10 p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-3xl animate-in slide-in-from-left-4 duration-500">
+          <Stack direction="row" spacing={3} alignItems="center">
+            <Box className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+               <HiOutlineLightBulb size={24} />
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" className="font-black text-amber-800 dark:text-amber-400 uppercase tracking-tight">Analytics Service Sync Error</Typography>
+              <Typography variant="body2" className="text-amber-700 dark:text-amber-500/70 font-medium">
+                Predictive engines are currently offline. Displaying real-time administrative metrics only.
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
       )}
 
-      {/* 🟢 Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard 
-          title={`Total Forecast (${currentYear})`} 
-          value={projectedTotal} 
-          icon={MdBusiness} 
-          color="bg-indigo-500"
-          subtext={projectedTotal > 0 ? `${Math.abs(growthRate).toFixed(1)}% vs previous year` : 'Data unavailable'}
-          trend={growthRate >= 0 ? 'up' : 'down'}
-        />
-        <StatCard 
-          title={`Projected Renewals (${currentYear})`} 
-          value={projectedRenewals} 
-          icon={MdAutorenew} 
-          color="bg-emerald-500"
-          subtext={projectedRenewals > 0 ? "Retained businesses" : 'Data unavailable'}
-          trend="up"
-        />
-        <StatCard 
-          title={`Projected New (${currentYear})`} 
-          value={projectedNew} 
-          icon={MdAddBusiness} 
-          color="bg-amber-500"
-          subtext={projectedNew > 0 ? "New registrations" : 'Data unavailable'}
-          trend="up"
-        />
-         <StatCard 
-          title="Pending Requests" 
-          value={pendingCount} 
-          icon={MdTimeline} 
-          color="bg-rose-500"
-          subtext="Requires attention"
-          trend={pendingCount > 0 ? 'down' : 'neutral'}
-        />
-      </div>
-
-      {/* 🟢 Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* Charts are commented out - uncomment when needed */}
-
-      </div>
-    </div>
+      {/* 🟢 Stats Grid - Responsive and Spaced */}
+      <Grid container spacing={4} className="mb-12">
+        <Grid item xs={12} sm={6} lg={3}>
+           <StatCard 
+            title={`Projected Volume (${currentYear})`} 
+            value={projectedTotal} 
+            icon={MdBusiness} 
+            color="bg-indigo-600"
+            subtext={projectedTotal > 0 ? `${Math.abs(growthRate).toFixed(1)}% YOY Growth` : 'Forecast Pending'}
+            trend={growthRate >= 0 ? 'up' : 'down'}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} lg={3}>
+           <StatCard 
+            title={`Renewal Target (${currentYear})`} 
+            value={projectedRenewals} 
+            icon={MdAutorenew} 
+            color="bg-emerald-600"
+            subtext={projectedRenewals > 0 ? "Projected Retention" : 'Target Unknown'}
+            trend="up"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} lg={3}>
+           <StatCard 
+            title={`Expansion Target (${currentYear})`} 
+            value={projectedNew} 
+            icon={MdAddBusiness} 
+            color="bg-amber-500"
+            subtext={projectedNew > 0 ? "New Registrations" : 'Growth Pending'}
+            trend="up"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} lg={3}>
+           <StatCard 
+            title="Active Pending Tasks" 
+            value={pendingCount} 
+            icon={MdTimeline} 
+            color="bg-rose-600"
+            subtext={pendingCount > 0 ? "Requires Review" : "Healthy Queue"}
+            trend={pendingCount > 0 ? 'down' : 'neutral'}
+          />
+        </Grid>
+      </Grid>
+    </Box>
   );
 }

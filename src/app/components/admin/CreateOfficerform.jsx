@@ -1,14 +1,34 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { MdPersonAdd } from 'react-icons/md';
-import FormInput from '@/app/components/ui/FormInput';
-import FormButton from '@/app/components/ui/FormButton';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  TextField, 
+  Button, 
+  Stack, 
+  InputAdornment, 
+  IconButton,
+  CircularProgress,
+  Divider
+} from '@mui/material';
+import { 
+  HiOutlineUserAdd, 
+  HiOutlineMail, 
+  HiOutlineLockClosed, 
+  HiOutlineUser,
+  HiOutlineShieldCheck,
+  HiEye,
+  HiEyeOff
+} from 'react-icons/hi';
 import StatusModal from '@/app/components/ui/StatusModal';
 
 export default function CreateOfficerForm() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -17,10 +37,6 @@ export default function CreateOfficerForm() {
     confirmPassword: '',
   });
 
-  const [loading, setLoading] = useState(false);
-  const [officers, setOfficers] = useState([]);
-
-  // Modal state
   const [modal, setModal] = useState({
     open: false,
     type: 'success',
@@ -28,31 +44,8 @@ export default function CreateOfficerForm() {
     message: '',
   });
 
-  const closeModal = useCallback(() => {
-    setModal((prev) => ({ ...prev, open: false }));
-  }, []);
-
-  const showModal = (type, title, message) => {
-    setModal({ open: true, type, title, message });
-  };
-
-  // Fetch officers
-  useEffect(() => {
-    const fetchOfficers = async () => {
-      try {
-        const res = await fetch('/api/users?role=officer');
-        const data = await res.json();
-        if (res.ok) {
-          setOfficers(data.users || []);
-        } else {
-          console.error('Failed to fetch officers:', data.error);
-        }
-      } catch (err) {
-        console.error('Error fetching officers:', err);
-      }
-    };
-    fetchOfficers();
-  }, []);
+  const closeModal = useCallback(() => setModal((prev) => ({ ...prev, open: false })), []);
+  const showModal = (type, title, message) => setModal({ open: true, type, title, message });
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -61,12 +54,11 @@ export default function CreateOfficerForm() {
     }));
   };
 
-  // Create officer account
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      showModal('error', 'Password Mismatch', 'The passwords you entered do not match. Please try again.');
+      showModal('error', 'Validation Error', 'The passwords provided do not match.');
       return;
     }
 
@@ -89,70 +81,30 @@ export default function CreateOfficerForm() {
       setLoading(false);
 
       if (!res.ok) {
-        showModal('error', 'Creation Failed', data.error || 'Something went wrong. Please try again.');
+        showModal('error', 'Registration Failed', data.error || 'Unable to create account.');
         return;
       }
 
-      showModal('success', 'Officer Created', `${formData.fullName}'s account has been created successfully.`);
-
-      if (data.user) {
-        setOfficers((prev) => [...prev, data.user]);
-      } else {
-        const refreshRes = await fetch('/api/users?role=officer');
-        const updated = await refreshRes.json();
-        setOfficers(updated.users || []);
-      }
-
+      showModal('success', 'Account Registered', `${formData.fullName} has been successfully added to the personnel list.`);
+      
       setFormData({
         fullName: '',
         email: '',
         password: '',
         confirmPassword: '',
       });
+
+      // Redirect after a brief delay so they see the success
+      setTimeout(() => router.push('/admin/officers'), 2500);
+
     } catch (err) {
       setLoading(false);
       showModal('error', 'Network Error', err.message);
     }
   };
 
-  // Disable or Re-enable officer
-  const handleStatusChange = async (id, fullName, action) => {
-    const label = action === 'disable' ? 'disable' : 're-enable';
-    const confirm = window.confirm(
-      `Are you sure you want to ${label} ${fullName}'s account?`
-    );
-    if (!confirm) return;
-
-    try {
-      const res = await fetch(`/api/users/${id}/${action}`, { method: 'PUT' });
-      const data = await res.json();
-
-      if (!res.ok) {
-        showModal('error', 'Action Failed', data.error || 'Unknown error');
-        return;
-      }
-
-      showModal(
-        'success',
-        action === 'disable' ? 'Account Disabled' : 'Account Re-enabled',
-        `${fullName}'s account has been ${action === 'disable' ? 'disabled' : 're-enabled'} successfully.`
-      );
-
-      setOfficers((prev) =>
-        prev.map((o) =>
-          o._id === id
-            ? { ...o, status: data.user.status, verify: data.user.verify }
-            : o
-        )
-      );
-    } catch (err) {
-      showModal('error', 'Error', err.message);
-    }
-  };
-
   return (
-    <>
-      {/* Status Modal */}
+    <Box className="w-full max-w-2xl mx-auto px-4 py-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
       <StatusModal
         open={modal.open}
         type={modal.type}
@@ -161,93 +113,152 @@ export default function CreateOfficerForm() {
         onClose={closeModal}
       />
 
-      <div className="w-full max-w-lg mx-auto mt-6 md:mt-10 px-4">
-        {/* Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+      {/* 👑 Header Section */}
+      <Box className="mb-10 text-center">
+         <Box className="inline-flex p-5 bg-linear-to-br from-blue-600 to-indigo-700 rounded-[2rem] text-white shadow-2xl shadow-blue-500/30 mb-6">
+            <HiOutlineUserAdd size={40} />
+         </Box>
+         <Typography variant="h3" className="font-black text-slate-800 dark:text-white tracking-tighter mb-2">
+            Personnel Registration
+         </Typography>
+         <Typography variant="body1" className="text-slate-400 dark:text-slate-500 font-medium">
+            Register a new sanitation officer to the administrative system.
+         </Typography>
+      </Box>
 
-          {/* Header */}
-          <div className="bg-blue-900 dark:bg-blue-950 px-6 py-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center">
-                <MdPersonAdd className="text-white" size={22} />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white leading-tight">
-                  Create Officer Account
-                </h1>
-                <p className="text-blue-200 text-xs mt-0.5">
-                  Add a new sanitation officer to the system
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* 📋 Registration Card */}
+      <Paper elevation={0} className="p-10 dark:bg-slate-900 bg-white rounded-[3rem] border border-gray-100 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none overflow-hidden">
+        <form onSubmit={handleSubmit}>
+          <Stack spacing={4}>
+            {/* Full Name */}
+            <Box>
+               <Typography variant="caption" className="font-black text-slate-400 uppercase tracking-[0.2em] mb-3 block ml-1">
+                  Full Name
+               </Typography>
+               <TextField
+                 fullWidth
+                 name="fullName"
+                 placeholder="e.g., Ricardo T. Dalisay"
+                 value={formData.fullName}
+                 onChange={handleChange}
+                 required
+                 InputProps={{
+                   startAdornment: (
+                     <InputAdornment position="start">
+                       <HiOutlineUser className="text-blue-500" size={20} />
+                     </InputAdornment>
+                   ),
+                   className: "rounded-2xl dark:bg-slate-800/50 bg-slate-50 border-none font-bold text-slate-700 dark:text-slate-200",
+                   sx: { '& fieldset': { border: 'none' } }
+                 }}
+               />
+            </Box>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            <FormInput
-              id="fullName"
-              name="fullName"
-              label="Full Name"
-              placeholder="e.g. Juan Dela Cruz"
-              value={formData.fullName}
-              onChange={handleChange}
-              required
-            />
+            {/* Email */}
+            <Box>
+               <Typography variant="caption" className="font-black text-slate-400 uppercase tracking-[0.2em] mb-3 block ml-1">
+                  Official Email
+               </Typography>
+               <TextField
+                 fullWidth
+                 name="email"
+                 type="email"
+                 placeholder="officer.email@pasig.gov.ph"
+                 value={formData.email}
+                 onChange={handleChange}
+                 required
+                 InputProps={{
+                   startAdornment: (
+                     <InputAdornment position="start">
+                       <HiOutlineMail className="text-blue-500" size={20} />
+                     </InputAdornment>
+                   ),
+                   className: "rounded-2xl dark:bg-slate-800/50 bg-slate-50 border-none font-bold text-slate-700 dark:text-slate-200",
+                   sx: { '& fieldset': { border: 'none' } }
+                 }}
+               />
+            </Box>
 
-            <FormInput
-              id="email"
-              name="email"
-              type="email"
-              label="Email Address"
-              placeholder="officer@pasigsanitation.gov.ph"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+            <Divider className="opacity-50" />
 
-            <FormInput
-              id="password"
-              name="password"
-              type="password"
-              label="Password"
-              placeholder="Minimum 8 characters"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={8}
-            />
+            {/* Passwords Row */}
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+               <Box className="flex-1">
+                  <Typography variant="caption" className="font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block ml-1">
+                     Password
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    minLength={8}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <HiOutlineLockClosed className="text-indigo-500" size={20} />
+                        </InputAdornment>
+                      ),
+                      className: "rounded-2xl dark:bg-slate-800/50 bg-slate-50 border-none",
+                      sx: { '& fieldset': { border: 'none' } }
+                    }}
+                  />
+               </Box>
+               <Box className="flex-1">
+                  <Typography variant="caption" className="font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block ml-1">
+                     Verify Password
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    name="confirmPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    minLength={8}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <HiOutlineShieldCheck className="text-indigo-500" size={20} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                           <IconButton onClick={() => setShowPassword(!showPassword)} size="small">
+                              {showPassword ? <HiEyeOff /> : <HiEye />}
+                           </IconButton>
+                        </InputAdornment>
+                      ),
+                      className: "rounded-2xl dark:bg-slate-800/50 bg-slate-50 border-none",
+                      sx: { '& fieldset': { border: 'none' } }
+                    }}
+                  />
+               </Box>
+            </Stack>
 
-            <FormInput
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              label="Confirm Password"
-              placeholder="Re-enter your password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              minLength={8}
-            />
-
-            <FormButton
-              type="submit"
-              variant="primary"
-              loading={loading}
-              fullWidth
-              icon={<MdPersonAdd size={18} />}
-            >
-              {loading ? 'Creating Account...' : 'Create Officer'}
-            </FormButton>
-          </form>
-
-          {/* Footer note */}
-          <div className="px-6 pb-5">
-            <p className="text-xs text-gray-400 dark:text-slate-500 text-center leading-relaxed">
-              The officer will be automatically verified and can log in immediately after creation.
-            </p>
-          </div>
-        </div>
-      </div>
-    </>
+            <Box className="pt-6">
+               <Button
+                 fullWidth
+                 type="submit"
+                 variant="contained"
+                 size="large"
+                 disabled={loading}
+                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <HiOutlineUserAdd />}
+                 className="rounded-[1.5rem] py-5 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-2xl shadow-blue-500/40 capitalize font-black text-lg tracking-tight cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-300"
+               >
+                 {loading ? 'Finalizing Profile...' : 'Authorize Officer'}
+               </Button>
+               <Typography variant="caption" className="text-center block mt-6 text-slate-400 font-medium">
+                  Authorizing a new officer grants them immediate access to the inspection workbench.
+               </Typography>
+            </Box>
+          </Stack>
+        </form>
+      </Paper>
+    </Box>
   );
 }
