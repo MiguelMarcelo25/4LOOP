@@ -14,6 +14,7 @@ import {
   Menu,
   MenuItem,
   CircularProgress,
+  useMediaQuery,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useQuery } from "@tanstack/react-query";
@@ -116,6 +117,7 @@ function sameNotificationList(prev, next) {
 // ─── component ──────────────────────────────────────────────────────────────
 
 export default function DashboardForm() {
+  const isMobile = useMediaQuery("(max-width:639.95px)");
   const [user, setUser] = useState(null);
   const [error, setError] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
@@ -315,11 +317,11 @@ export default function DashboardForm() {
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
-    <div className="relative max-w-7xl mx-auto">
+    <div className="relative max-w-7xl mx-auto px-0.5">
       {/* ── Top Bar ──────────────────────────────────────────────────────── */}
-      <div className="flex justify-between items-center mb-8 px-1">
+      <div className="mb-6 flex flex-col gap-4 px-1 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-slate-200">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-200 sm:text-3xl">
             Welcome{" "}
             <span className="text-blue-600 dark:text-blue-400">
               {user?.fullName ? `, ${user.fullName}` : ""}
@@ -335,11 +337,11 @@ export default function DashboardForm() {
           <IconButton
             color="primary"
             onClick={handleBellClick}
-            sx={{ transform: "scale(1.2)" }}
+            sx={{ transform: `scale(${isMobile ? 1 : 1.08})` }}
             className="dark:text-blue-400"
           >
             <Badge badgeContent={unreadCount} color="error">
-              <HiBell size={30} />
+              <HiBell size={isMobile ? 26 : 30} />
             </Badge>
           </IconButton>
 
@@ -349,7 +351,12 @@ export default function DashboardForm() {
             onClose={handleMenuClose}
             PaperProps={{
               className: "dark:bg-slate-800 dark:text-slate-200",
-              style: { width: 360, maxHeight: 420, padding: "0.5rem 0" },
+              style: {
+                width: isMobile ? 320 : 360,
+                maxWidth: "calc(100vw - 24px)",
+                maxHeight: 420,
+                padding: "0.5rem 0",
+              },
             }}
           >
             {loading ? (
@@ -518,67 +525,69 @@ export default function DashboardForm() {
       {error && <div className="text-red-500 mb-4 text-sm">Error: {error}</div>}
 
       {/* ── Summary Stats ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        {[
-          {
-            label: "Total",
-            value: counts.total,
-            color:
-              "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
-            text: "text-slate-700 dark:text-slate-300",
-          },
-          {
-            label: "Draft",
-            value: counts.draft,
-            color:
-              "bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700",
-            text: "text-gray-600 dark:text-gray-400",
-          },
-          {
-            label: "Submitted",
-            value: counts.submitted,
-            color:
-              "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800",
-            text: "text-indigo-700 dark:text-indigo-300",
-          },
-          {
-            label: "Processing",
-            value: counts.processing,
-            color:
-              "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
-            text: "text-yellow-700 dark:text-yellow-300",
-          },
-          {
-            label: "Valid",
-            value: counts.valid,
-            color:
-              "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
-            text: "text-green-700 dark:text-green-300",
-          },
-          {
-            label: "Completed",
-            value: counts.approved,
-            color:
-              "bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800",
-            text: "text-teal-700 dark:text-teal-300",
-          },
-        ].map(({ label, value, color, text }) => (
-          <div
-            key={label}
-            className={`rounded-xl border p-4 text-center ${color}`}
-          >
-            <div className={`text-3xl font-bold ${text}`}>{value}</div>
-            <div className="text-xs text-gray-500 dark:text-slate-400 mt-1 font-medium uppercase tracking-wide">
-              {label}
+      <div className="mx-auto mb-6 w-full max-w-6xl sm:mb-8">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
+          {[
+            {
+              label: "Total",
+              value: counts.total,
+              color:
+                "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
+              text: "text-slate-700 dark:text-slate-300",
+            },
+            {
+              label: "Draft",
+              value: counts.draft,
+              color:
+                "bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700",
+              text: "text-gray-600 dark:text-gray-400",
+            },
+            {
+              label: "Submitted",
+              value: counts.submitted,
+              color:
+                "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800",
+              text: "text-indigo-700 dark:text-indigo-300",
+            },
+            {
+              label: "Processing",
+              value: counts.processing,
+              color:
+                "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
+              text: "text-yellow-700 dark:text-yellow-300",
+            },
+            {
+              label: "Valid",
+              value: counts.valid,
+              color:
+                "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+              text: "text-green-700 dark:text-green-300",
+            },
+            {
+              label: "Completed",
+              value: counts.approved,
+              color:
+                "bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800",
+              text: "text-teal-700 dark:text-teal-300",
+            },
+          ].map(({ label, value, color, text }) => (
+            <div
+              key={label}
+              className={`rounded-[1rem] border p-3 text-center sm:rounded-xl sm:p-4 ${color}`}
+            >
+              <div className={`text-2xl font-bold sm:text-3xl ${text}`}>{value}</div>
+              <div className="text-xs text-gray-500 dark:text-slate-400 mt-1 font-medium uppercase tracking-wide">
+                {label}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* ── My Businesses List ───────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+      <div className="mx-auto w-full max-w-6xl overflow-hidden rounded-[1.25rem] border border-gray-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-xl">
         {/* Section header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <HiOfficeBuilding className="text-blue-500 text-xl" />
             <h2 className="text-base font-bold text-gray-800 dark:text-slate-200">
@@ -636,7 +645,7 @@ export default function DashboardForm() {
               return (
                 <li
                   key={biz._id}
-                  className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors cursor-pointer"
+                  className="cursor-pointer px-4 py-3 transition-colors hover:bg-gray-50 sm:px-6 sm:py-4 dark:hover:bg-slate-700/40"
                   onClick={() =>
                     router.push("/businessaccount/businesses/businesslist")
                   }

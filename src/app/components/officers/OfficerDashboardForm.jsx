@@ -5,11 +5,11 @@ import {
   Box,
   Grid,
   Card,
-  CardContent,
   CardActionArea,
   Typography,
   CircularProgress,
   Stack,
+  useMediaQuery,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -32,6 +32,7 @@ const fetchBusinesses = async () => {
 
 export default function OfficerDashboardForm() {
   const router = useRouter();
+  const isMobile = useMediaQuery("(max-width:639.95px)");
   const { data: businesses = [], isLoading } = useQuery({
     queryKey: ["officer-stats"],
     queryFn: fetchBusinesses,
@@ -62,7 +63,7 @@ export default function OfficerDashboardForm() {
       count: businesses.filter((b) => b.status === "submitted").length,
       color: "#0ea5e9", // Sky blue
       bg: "rgba(14, 165, 233, 0.1)",
-      icon: <MdList size={32} />,
+      icon: <MdList size={28} />,
       path: "/officers/workbench/onlinerequest",
     },
     {
@@ -70,7 +71,7 @@ export default function OfficerDashboardForm() {
       count: businesses.filter((b) => b.status === "pending").length,
       color: "#8b5cf6", // Violet
       bg: "rgba(139, 92, 246, 0.1)",
-      icon: <MdFactCheck size={32} />,
+      icon: <MdFactCheck size={28} />,
       path: "/officers/workbench/verifications",
     },
     {
@@ -78,7 +79,7 @@ export default function OfficerDashboardForm() {
       count: businesses.filter((b) => b.status === "pending2").length,
       color: "#f59e0b", // Amber
       bg: "rgba(245, 158, 11, 0.1)",
-      icon: <MdRule size={32} />,
+      icon: <MdRule size={28} />,
       path: "/officers/workbench/compliance",
     },
     {
@@ -86,7 +87,7 @@ export default function OfficerDashboardForm() {
       count: businesses.filter((b) => b.status === "pending3").length,
       color: "#10b981", // Emerald
       bg: "rgba(16, 185, 129, 0.1)",
-      icon: <MdCheckCircle size={32} />,
+      icon: <MdCheckCircle size={28} />,
       path: "/officers/workbench/permitapproval",
     },
     {
@@ -96,7 +97,7 @@ export default function OfficerDashboardForm() {
       ).length,
       color: "#ef4444", // Red
       bg: "rgba(239, 68, 68, 0.1)",
-      icon: <MdSend size={32} />,
+      icon: <MdSend size={28} />,
       path: "/officers/workbench/release",
     },
   ];
@@ -107,7 +108,7 @@ export default function OfficerDashboardForm() {
       count: "New",
       color: "#ec4899", // Pink
       bg: "rgba(236, 72, 153, 0.1)",
-      icon: <MdAddCircle size={32} />,
+      icon: <MdAddCircle size={28} />,
       path: "/officers/inspections/createticketinspection",
     },
     {
@@ -115,7 +116,7 @@ export default function OfficerDashboardForm() {
       count: tickets.filter((t) => t.inspectionStatus === "pending").length,
       color: "#6366f1", // Indigo
       bg: "rgba(99, 102, 241, 0.1)",
-      icon: <MdAssignment size={32} />,
+      icon: <MdAssignment size={28} />,
       path: "/officers/inspections/pendinginspections",
     },
   ];
@@ -136,14 +137,50 @@ export default function OfficerDashboardForm() {
     ["submitted", "pending", "pending2", "pending3"].includes(b.status),
   ).length;
 
+  const statCardSx = (accentColor) => ({
+    height: "100%",
+    borderRadius: isMobile ? 4 : 4.5,
+    backgroundColor: (theme) =>
+      theme.palette.mode === "dark"
+        ? "rgba(30, 41, 59, 0.4)"
+        : "rgba(255, 255, 255, 0.72)",
+    backdropFilter: "blur(18px)",
+    border: "1px solid",
+    borderColor: (theme) =>
+      theme.palette.mode === "dark"
+        ? "rgba(255, 255, 255, 0.08)"
+        : "rgba(0, 0, 0, 0.04)",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    position: "relative",
+    overflow: "hidden",
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: (theme) =>
+        theme.palette.mode === "dark"
+          ? "0 18px 24px -8px rgba(0, 0, 0, 0.48)"
+          : "0 18px 24px -8px rgba(15, 23, 42, 0.12)",
+      borderColor: accentColor,
+      "& .stat-icon-bg": {
+        backgroundColor: accentColor,
+        color: "#fff",
+        transform: "scale(1.06)",
+      },
+    },
+  });
+
+  const statActionAreaSx = {
+    height: "100%",
+    p: isMobile ? 1.75 : 2.1,
+  };
+
   return (
-    <Box className="animate-in fade-in duration-700 max-w-7xl mx-auto">
+    <Box className="animate-in fade-in duration-700 max-w-7xl mx-auto px-0.5">
       {/* Header Section */}
-      <Box mb={3}>
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-1">
+      <Box mb={2.5}>
+        <h1 className="mb-1 text-2xl font-bold text-slate-800 dark:text-white sm:text-3xl">
           Dashboard
         </h1>
-        <div className="text-slate-500 text-base dark:text-slate-400 font-medium">
+        <div className="text-sm font-medium text-slate-500 dark:text-slate-400 sm:text-base">
           Welcome back,{" "}
           <span className="text-blue-600 dark:text-blue-400 font-bold">
             {loggedUser?.fullName || "Officer"}
@@ -153,32 +190,34 @@ export default function OfficerDashboardForm() {
       </Box>
 
       {/* Hero Stats Summary */}
-      <Box
-        mb={4}
-        p={3}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl shadow-blue-500/10"
-      >
-        <div className="absolute top-0 right-0 -m-8 opacity-10">
-          <MdWork size={200} className="text-white" />
-        </div>
-        <Stack direction="row" alignItems="center">
-          <Box>
-            <Typography variant="h5" className="text-white font-bold mb-0.5">
-              {activeCount} Active Requests
-            </Typography>
-            <Typography
-              variant="body2"
-              className="text-blue-100/80 font-medium"
-            >
-              Tasks requiring attention.
-            </Typography>
-          </Box>
-        </Stack>
+      <Box className="mx-auto w-full max-w-6xl">
+        <Box
+          mb={3.5}
+          p={isMobile ? 2.25 : 3}
+          className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl shadow-blue-500/10 sm:rounded-2xl"
+        >
+          <div className="absolute top-0 right-0 -m-8 opacity-10">
+            <MdWork size={isMobile ? 120 : 180} className="text-white" />
+          </div>
+          <Stack direction="row" alignItems="center">
+            <Box>
+              <Typography variant="h5" className="mb-0.5 text-xl font-bold text-white sm:text-2xl">
+                {activeCount} Active Requests
+              </Typography>
+              <Typography
+                variant="body2"
+                className="text-sm font-medium text-blue-100/80"
+              >
+                Tasks requiring attention.
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
       </Box>
 
       {/* Detailed Stats Grid */}
-      <Box mb={5}>
-        <div className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+      <Box mb={5} className="mx-auto w-full max-w-6xl">
+        <div className="mb-4 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:mb-5">
           <Box
             sx={{
               width: 8,
@@ -189,47 +228,18 @@ export default function OfficerDashboardForm() {
           />
           Workbench Statistics
         </div>
-        <Grid container spacing={2.5}>
+        <Grid container spacing={{ xs: 1.75, sm: 2 }} justifyContent="center">
           {workbenchStats.map((stat, index) => (
             <Grid item xs={6} sm={4} md={3} lg={2.4} key={index}>
               <Card
                 elevation={0}
-                sx={{
-                  height: "100%",
-                  borderRadius: 5,
-                  backgroundColor: (theme) =>
-                    theme.palette.mode === "dark"
-                      ? "rgba(30, 41, 59, 0.4)"
-                      : "rgba(255, 255, 255, 0.6)",
-                  backdropFilter: "blur(20px)",
-                  border: "1px solid",
-                  borderColor: (theme) =>
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 255, 255, 0.08)"
-                      : "rgba(0, 0, 0, 0.04)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  position: "relative",
-                  overflow: "hidden",
-                  "&:hover": {
-                    transform: "translateY(-6px)",
-                    boxShadow: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? `0 20px 25px -5px rgba(0, 0, 0, 0.5)`
-                        : `0 20px 25px -5px rgba(0, 0, 0, 0.1)`,
-                    borderColor: stat.color,
-                    "& .stat-icon-bg": {
-                      backgroundColor: stat.color,
-                      color: "#fff",
-                      transform: "scale(1.1)",
-                    },
-                  },
-                }}
+                sx={statCardSx(stat.color)}
               >
                 <CardActionArea
                   onClick={() => router.push(stat.path)}
-                  sx={{ height: "100%", p: 2.5 }}
+                  sx={statActionAreaSx}
                 >
-                  <Stack spacing={2.5}>
+                  <Stack spacing={1.75}>
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -239,10 +249,10 @@ export default function OfficerDashboardForm() {
                         className="stat-icon-bg"
                         sx={{
                           color: stat.color,
-                          width: 48,
-                          height: 48,
+                          width: isMobile ? 40 : 44,
+                          height: isMobile ? 40 : 44,
                           backgroundColor: stat.bg,
-                          borderRadius: 3.5,
+                          borderRadius: isMobile ? 3 : 3.5,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -253,7 +263,7 @@ export default function OfficerDashboardForm() {
                       </Box>
                       <Box textAlign="right">
                         <Typography
-                          variant="h4"
+                          variant={isMobile ? "h5" : "h4"}
                           sx={{
                             fontWeight: 900,
                             color: (theme) =>
@@ -276,7 +286,7 @@ export default function OfficerDashboardForm() {
                           fontWeight: 700,
                           color: "text.secondary",
                           textTransform: "uppercase",
-                          fontSize: "0.65rem",
+                          fontSize: isMobile ? "0.58rem" : "0.63rem",
                           letterSpacing: "0.1em",
                           mb: 0.5,
                         }}
@@ -302,8 +312,8 @@ export default function OfficerDashboardForm() {
       </Box>
 
       {/* Inspections Grid */}
-      <Box mb={4}>
-        <div className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+      <Box mb={4} className="mx-auto w-full max-w-6xl">
+        <div className="mb-4 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:mb-5">
           <Box
             sx={{
               width: 8,
@@ -314,45 +324,18 @@ export default function OfficerDashboardForm() {
           />
           Inspections
         </div>
-        <Grid container spacing={2.5}>
+        <Grid container spacing={{ xs: 1.75, sm: 2 }} justifyContent="center">
           {inspectionStats.map((stat, index) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
               <Card
                 elevation={0}
-                sx={{
-                  height: "100%",
-                  borderRadius: 5,
-                  backgroundColor: (theme) =>
-                    theme.palette.mode === "dark"
-                      ? "rgba(30, 41, 59, 0.4)"
-                      : "rgba(255, 255, 255, 0.6)",
-                  backdropFilter: "blur(20px)",
-                  border: "1px solid",
-                  borderColor: (theme) =>
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 255, 255, 0.08)"
-                      : "rgba(0, 0, 0, 0.04)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    transform: "translateY(-6px)",
-                    boxShadow: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? `0 20px 25px -5px rgba(0, 0, 0, 0.5)`
-                        : `0 20px 25px -5px rgba(0, 0, 0, 0.1)`,
-                    borderColor: stat.color,
-                    "& .stat-icon-bg": {
-                      backgroundColor: stat.color,
-                      color: "#fff",
-                      transform: "scale(1.1)",
-                    },
-                  },
-                }}
+                sx={statCardSx(stat.color)}
               >
                 <CardActionArea
                   onClick={() => router.push(stat.path)}
-                  sx={{ height: "100%", p: 2.5 }}
+                  sx={statActionAreaSx}
                 >
-                  <Stack spacing={2.5}>
+                  <Stack spacing={1.75}>
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -362,10 +345,10 @@ export default function OfficerDashboardForm() {
                         className="stat-icon-bg"
                         sx={{
                           color: stat.color,
-                          width: 48,
-                          height: 48,
+                          width: isMobile ? 40 : 44,
+                          height: isMobile ? 40 : 44,
                           backgroundColor: stat.bg,
-                          borderRadius: 3.5,
+                          borderRadius: isMobile ? 3 : 3.5,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -376,7 +359,7 @@ export default function OfficerDashboardForm() {
                       </Box>
                       <Box textAlign="right">
                         <Typography
-                          variant="h4"
+                          variant={isMobile ? "h5" : "h4"}
                           sx={{
                             fontWeight: 900,
                             color: (theme) =>
@@ -399,7 +382,7 @@ export default function OfficerDashboardForm() {
                           fontWeight: 700,
                           color: "text.secondary",
                           textTransform: "uppercase",
-                          fontSize: "0.65rem",
+                          fontSize: isMobile ? "0.58rem" : "0.63rem",
                           letterSpacing: "0.1em",
                           mb: 0.5,
                         }}

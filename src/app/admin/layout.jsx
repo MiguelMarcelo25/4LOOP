@@ -4,9 +4,9 @@ import Sidebar from "@/app/components/Sidebar";
 
 export default function AdminLayout({ children }) {
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
+    <div className="flex min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
       <Sidebar />
-      <main className="flex-1 p-6 lg:p-10 relative">{children}</main>
+      <main className="relative min-w-0 flex-1 p-4 pt-20 sm:p-6 sm:pt-24 lg:p-8 lg:pt-8">{children}</main>
     </div>
   );
 }
