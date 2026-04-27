@@ -34,11 +34,13 @@ import {
   MdCalendarToday,
   MdShowChart,
   MdInfoOutline,
+  MdPrint,
 } from "react-icons/md";
 import {
   HiOutlineLightBulb,
   HiOutlinePresentationChartBar,
 } from "react-icons/hi";
+import StatusModal from "@/app/components/ui/StatusModal";
 
 const CHART_COLORS = {
   renewals: "#10b981",
@@ -108,6 +110,144 @@ const normalizeChartSeries = (rows, metricKeys) => {
   return Array.from(normalizedByYear.values()).sort(sortYearsAscending);
 };
 
+const drawDashboardReportPdf = (doc, report) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 48;
+  const contentWidth = pageWidth - margin * 2;
+  const safeRows = Array.isArray(report.rows) ? report.rows : [];
+  let y = margin;
+
+  const addPageIfNeeded = (neededHeight = 32) => {
+    if (y + neededHeight <= pageHeight - margin) return;
+    doc.addPage();
+    y = margin;
+  };
+
+  const writeWrappedText = (text, x, maxWidth, lineHeight = 16) => {
+    const lines = doc.splitTextToSize(String(text || ""), maxWidth);
+    doc.text(lines, x, y);
+    y += lines.length * lineHeight;
+  };
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(37, 99, 235);
+  doc.text("ADMIN DASHBOARD", margin, y);
+  y += 20;
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(24);
+  writeWrappedText(report.title, margin, contentWidth, 28);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Generated ${report.generatedAt}`, margin, y);
+  y += 22;
+
+  doc.setDrawColor(226, 232, 240);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 24;
+
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(219, 234, 254);
+  doc.roundedRect(margin, y, contentWidth, 92, 8, 8, "FD");
+  doc.setFillColor(37, 99, 235);
+  doc.rect(margin, y, 6, 92, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text("CURRENT VALUE", margin + 24, y + 24);
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(34);
+  doc.text(formatMetricValue(report.value), margin + 24, y + 58);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(71, 85, 105);
+  doc.text(String(report.subtext || ""), margin + 24, y + 78);
+  y += 118;
+
+  addPageIfNeeded(80);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(15, 23, 42);
+  doc.text("Interpretation", margin, y);
+  y += 20;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(71, 85, 105);
+  writeWrappedText(report.insight, margin, contentWidth, 15);
+  y += 18;
+
+  addPageIfNeeded(96);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(15, 23, 42);
+  doc.text(report.tableTitle || "Yearly Data", margin, y);
+  y += 18;
+
+  const tableWidth = contentWidth;
+  const yearColumnWidth = 150;
+  const valueColumnWidth = tableWidth - yearColumnWidth;
+  const rowHeight = 30;
+
+  doc.setFillColor(15, 23, 42);
+  doc.rect(margin, y, tableWidth, rowHeight, "F");
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.text(report.periodLabel || "Year", margin + 12, y + 19);
+  doc.text(
+    report.columns[0]?.label || "Value",
+    margin + yearColumnWidth + 12,
+    y + 19,
+  );
+  y += rowHeight;
+
+  if (safeRows.length === 0) {
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, y, tableWidth, rowHeight, "FD");
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text(
+      report.emptyMessage || "Forecast data unavailable",
+      margin + 12,
+      y + 19,
+    );
+    return;
+  }
+
+  safeRows.forEach((row, index) => {
+    addPageIfNeeded(rowHeight + 8);
+
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(
+      index % 2 === 0 ? 255 : 248,
+      index % 2 === 0 ? 255 : 250,
+      index % 2 === 0 ? 255 : 252,
+    );
+    doc.rect(margin, y, tableWidth, rowHeight, "FD");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text(String(row.registrationYear ?? ""), margin + 12, y + 19);
+
+    doc.setFont("helvetica", "bold");
+    const value = formatMetricValue(row[report.columns[0]?.key]);
+    doc.text(value, margin + yearColumnWidth + valueColumnWidth - 12, y + 19, {
+      align: "right",
+    });
+
+    y += rowHeight;
+  });
+};
+
 function ChartTooltipContent({ active, label, payload }) {
   if (!active || !payload?.length) return null;
 
@@ -147,8 +287,20 @@ export default function AdminDashboardForm() {
   const [error, setError] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
   const [forecastWarning, setForecastWarning] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [modal, setModal] = useState({
+    open: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+  const closeModal = () => setModal((prev) => ({ ...prev, open: false }));
+  const showModal = (type, title, message) => {
+    setModal({ open: true, type, title, message });
+  };
 
   // Check Auth
   useEffect(() => {
@@ -260,6 +412,120 @@ export default function AdminDashboardForm() {
     growthRate = prev ? ((last - prev) / prev) * 100 : 0;
   }
 
+  const projectedTotalSubtext =
+    projectedTotal > 0
+      ? `${Math.abs(growthRate).toFixed(1)}% YOY Growth`
+      : "Forecast Pending";
+  const renewalSubtext =
+    projectedRenewals > 0 ? "Projected Retention" : "Target Unknown";
+  const newBusinessSubtext =
+    projectedNew > 0 ? "New Registrations" : "Growth Pending";
+  const pendingSubtext = pendingCount > 0 ? "Requires Review" : "Healthy Queue";
+
+  const getLatestYear = (data) =>
+    data.length > 0 ? data[data.length - 1].registrationYear : currentYear;
+
+  const pdfReports = {
+    projectedVolume: {
+      title: `Projected Volume (${currentYear})`,
+      fileName: `projected-volume-${currentYear}.pdf`,
+      value: projectedTotal,
+      subtext: projectedTotalSubtext,
+      insight:
+        projectedTotal > 0
+          ? `The latest total forecast is ${formatMetricValue(projectedTotal)} for ${getLatestYear(totalChartData)}, with ${Math.abs(growthRate).toFixed(1)}% ${growthRate >= 0 ? "growth" : "decline"} compared with the previous available year.`
+          : "No total forecast value is currently available from the predictive service.",
+      rows: totalChartData,
+      columns: [{ key: "TotalForecast", label: "Total Forecast" }],
+      tableTitle: "Yearly Forecast Data",
+      emptyMessage: "Forecast data unavailable",
+    },
+    renewalTarget: {
+      title: `Renewal Target (${currentYear})`,
+      fileName: `renewal-target-${currentYear}.pdf`,
+      value: projectedRenewals,
+      subtext: renewalSubtext,
+      insight:
+        projectedRenewals > 0
+          ? `The latest renewal projection is ${formatMetricValue(projectedRenewals)} for ${getLatestYear(renewalChartData)}, based on the cached renewal forecast series.`
+          : "Renewal projections are not currently available from the predictive service.",
+      rows: renewalChartData,
+      columns: [{ key: "Renewals", label: "Renewals" }],
+      tableTitle: "Yearly Renewal Data",
+      emptyMessage: "Forecast data unavailable",
+    },
+    expansionTarget: {
+      title: `Expansion Target (${currentYear})`,
+      fileName: `expansion-target-${currentYear}.pdf`,
+      value: projectedNew,
+      subtext: newBusinessSubtext,
+      insight:
+        projectedNew > 0
+          ? `The latest new business projection is ${formatMetricValue(projectedNew)} for ${getLatestYear(newBusinessChartData)}, showing the expected registration expansion for that forecast year.`
+          : "New business projections are not currently available from the predictive service.",
+      rows: newBusinessChartData,
+      columns: [{ key: "NewBusiness", label: "New Business" }],
+      tableTitle: "Yearly New Business Data",
+      emptyMessage: "Forecast data unavailable",
+    },
+    pendingTasks: {
+      title: "Active Pending Tasks",
+      fileName: `active-pending-tasks-${currentYear}.pdf`,
+      value: pendingCount,
+      subtext: pendingSubtext,
+      insight:
+        pendingCount > 0
+          ? `There are ${formatMetricValue(pendingCount)} active pending tasks that require administrative review.`
+          : "There are no active pending tasks in the current dashboard queue.",
+      rows: [{ registrationYear: currentYear, PendingTasks: pendingCount }],
+      columns: [{ key: "PendingTasks", label: "Pending Tasks" }],
+      tableTitle: "Current Queue Snapshot",
+      periodLabel: "Period",
+      emptyMessage: "No pending task data available",
+    },
+  };
+
+  const handlePrintReport = async (report) => {
+    if (isGeneratingPdf) return;
+
+    setIsGeneratingPdf(true);
+    showModal("loading", "Generating PDF", "Preparing dashboard report...");
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const generatedAt = new Date().toLocaleString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "letter",
+      });
+
+      drawDashboardReportPdf(doc, { ...report, generatedAt });
+      doc.save(report.fileName);
+
+      showModal(
+        "success",
+        "PDF Generated",
+        `${report.title} report has been downloaded.`,
+      );
+    } catch (error) {
+      console.error("Dashboard PDF generation failed:", error);
+      showModal(
+        "error",
+        "PDF Failed",
+        error?.message || "Unable to generate the dashboard report.",
+      );
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box className="flex flex-col items-center justify-center min-h-[70vh]">
@@ -298,7 +564,15 @@ export default function AdminDashboardForm() {
       </Box>
     );
 
-  const StatCard = ({ title, value, icon: Icon, color, subtext, trend }) => (
+  const StatCard = ({
+    title,
+    value,
+    icon: Icon,
+    color,
+    subtext,
+    trend,
+    onPrint,
+  }) => (
     <Paper
       elevation={0}
       className="group relative overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white p-4 shadow-2xl shadow-slate-200/50 transition-all duration-500 hover:border-blue-500/50 sm:rounded-[1.75rem] sm:p-5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
@@ -318,11 +592,26 @@ export default function AdminDashboardForm() {
           >
             <Icon size={isMobile ? 22 : 24} />
           </Box>
-          <MuiTooltip title={title}>
-            <IconButton size="small" className="text-slate-300">
-              <MdInfoOutline />
-            </IconButton>
-          </MuiTooltip>
+          <Stack direction="row" spacing={0.5}>
+            <MuiTooltip title={`Print ${title}`}>
+              <span>
+                <IconButton
+                  size="small"
+                  className="text-slate-300 transition hover:text-blue-500 disabled:opacity-40"
+                  disabled={isGeneratingPdf || !onPrint}
+                  aria-label={`Print ${title} report`}
+                  onClick={onPrint}
+                >
+                  <MdPrint />
+                </IconButton>
+              </span>
+            </MuiTooltip>
+            <MuiTooltip title={title}>
+              <IconButton size="small" className="text-slate-300">
+                <MdInfoOutline />
+              </IconButton>
+            </MuiTooltip>
+          </Stack>
         </Stack>
 
         <Box>
@@ -482,48 +771,46 @@ export default function AdminDashboardForm() {
       >
         <div>
           <StatCard
-            title={`Projected Volume (${currentYear})`}
+            title={pdfReports.projectedVolume.title}
             value={projectedTotal}
             icon={MdBusiness}
             color="bg-indigo-600"
-            subtext={
-              projectedTotal > 0
-                ? `${Math.abs(growthRate).toFixed(1)}% YOY Growth`
-                : "Forecast Pending"
-            }
+            subtext={projectedTotalSubtext}
             trend={growthRate >= 0 ? "up" : "down"}
+            onPrint={() => handlePrintReport(pdfReports.projectedVolume)}
           />
         </div>
         <div>
           <StatCard
-            title={`Renewal Target (${currentYear})`}
+            title={pdfReports.renewalTarget.title}
             value={projectedRenewals}
             icon={MdAutorenew}
             color="bg-emerald-600"
-            subtext={
-              projectedRenewals > 0 ? "Projected Retention" : "Target Unknown"
-            }
+            subtext={renewalSubtext}
             trend="up"
+            onPrint={() => handlePrintReport(pdfReports.renewalTarget)}
           />
         </div>
         <div>
           <StatCard
-            title={`Expansion Target (${currentYear})`}
+            title={pdfReports.expansionTarget.title}
             value={projectedNew}
             icon={MdAddBusiness}
             color="bg-amber-500"
-            subtext={projectedNew > 0 ? "New Registrations" : "Growth Pending"}
+            subtext={newBusinessSubtext}
             trend="up"
+            onPrint={() => handlePrintReport(pdfReports.expansionTarget)}
           />
         </div>
         <div>
           <StatCard
-            title="Active Pending Tasks"
+            title={pdfReports.pendingTasks.title}
             value={pendingCount}
             icon={MdTimeline}
             color="bg-rose-600"
-            subtext={pendingCount > 0 ? "Requires Review" : "Healthy Queue"}
+            subtext={pendingSubtext}
             trend={pendingCount > 0 ? "down" : "neutral"}
+            onPrint={() => handlePrintReport(pdfReports.pendingTasks)}
           />
         </div>
       </div>
@@ -772,6 +1059,13 @@ export default function AdminDashboardForm() {
           </ChartCard>
         </div>
       </div>
+      <StatusModal
+        open={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={closeModal}
+      />
     </Box>
   );
 }
